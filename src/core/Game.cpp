@@ -245,9 +245,9 @@ CGame::InitialiseRenderWare(void)
 
 #ifdef LIBRW
 #ifdef PS2_MATFX
-	rw::MatFX::modulateEnvMap = true;
+	rw::MatFX::envMapApplyLight = true;
 #else
-	rw::MatFX::modulateEnvMap = false;
+	rw::MatFX::envMapApplyLight = false;
 #endif
 #else
 #ifdef PS2_MATFX

@@ -25,6 +25,12 @@ int16 CObject::nNoTempObjects;
 //int16 CObject::nBodyCastHealth = 1000;
 float CObject::fDistToNearestTree;
 
+CObject *CObject::NT_ROADBLOCKCI = nullptr;
+CObject *CObject::NT_ROADBLOCKGF = nullptr;
+CObject *CObject::WSH_ROADBLOCK = nullptr;
+CObject *CObject::COMGATE1CLOSED = nullptr;
+CObject *CObject::COMGATE2CLOSED = nullptr;
+
 void *CObject::operator new(size_t sz) { return CPools::GetObjectPool()->New();  }
 void *CObject::operator new(size_t sz, int handle) { return CPools::GetObjectPool()->New(handle);};
 void CObject::operator delete(void *p, size_t sz) { CPools::GetObjectPool()->Delete((CObject*)p); }

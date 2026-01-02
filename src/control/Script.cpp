@@ -4494,6 +4494,14 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_OBJECT);
+		switch(mi) {
+			case 2446: CObject::COMGATE1CLOSED = pObj; break;
+			case 2447: CObject::COMGATE2CLOSED = pObj; break;
+			case 590: CObject::NT_ROADBLOCKCI = pObj; break;
+			case 2141: CObject::NT_ROADBLOCKGF = pObj; break;
+			case 3518: CObject::WSH_ROADBLOCK = pObj; break;
+			default: break;
+		}
 		return 0;
 	}
 	case COMMAND_DELETE_OBJECT:

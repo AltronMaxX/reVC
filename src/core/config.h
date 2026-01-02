@@ -266,6 +266,7 @@ enum Config {
 #ifdef DEBUGMENU
 #define RELOADABLES			// some debug menu options to reload TXD files
 #define MISSION_SWITCHER // from debug menu
+#define UNLOCK_BRIDGES // unlock bridges without complition phnom penh 86
 #endif
 
 // Rendering/display
