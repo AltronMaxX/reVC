@@ -863,7 +863,6 @@ UnlockBridges(void) // Just porting from main.scm
 	pObj->ObjectCreatedBy = 2;
 	pos = CVector(-712.524, -489.428, 12.549);
 	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	pos.z += pObj->GetDistanceFromCentreOfMassToBaseOfModel();
 	pObj->SetPosition(pos);
 	pObj->SetOrientation(0.0f, 0.0f, 0.0f);
 	pObj->GetMatrix().UpdateRW();
@@ -879,7 +878,6 @@ UnlockBridges(void) // Just porting from main.scm
 	pObj->ObjectCreatedBy = 2;
 	pos = CVector(-183.824, -473.223, 12.615);
 	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	pos.z += pObj->GetDistanceFromCentreOfMassToBaseOfModel();
 	pObj->SetPosition(pos);
 	pObj->SetOrientation(0.0f, 0.0f, 0.0f);
 	pObj->GetMatrix().UpdateRW();
