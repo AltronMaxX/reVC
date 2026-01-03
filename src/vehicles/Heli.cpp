@@ -471,7 +471,7 @@ CHeli::ProcessControl(void)
 			DMAudio.PlayOneShot(m_audioEntityId, SOUND_PED_HELI_PLAYER_FOUND, 0.0f);
 			m_nPoliceShoutTimer = CTimer::GetTimeInMilliseconds() + 4500 + (CGeneral::GetRandomNumber() & 0xFFF);
 		}
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 		if (!CReplay::IsPlayingBack())
 #endif
 		{
@@ -815,7 +815,7 @@ CHeli::UpdateHelis(void)
 
 	// Spawn new police helis
 	int numHelisRequired = 
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 		CReplay::IsPlayingBack() ? 0 :
 #endif
 		FindPlayerPed()->m_pWanted->NumOfHelisRequired();

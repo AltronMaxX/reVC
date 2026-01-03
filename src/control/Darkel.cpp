@@ -199,7 +199,7 @@ CDarkel::ReadStatus()
 void
 CDarkel::RegisterCarBlownUpByPlayer(CVehicle *vehicle)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS && !defined DONT_FIX_REPLAY_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -230,7 +230,7 @@ CDarkel::RegisterCarBlownUpByPlayer(CVehicle *vehicle)
 void
 CDarkel::RegisterKillByPlayer(CPed *victim, eWeaponType weapon, bool headshot)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS && !defined DONT_FIX_REPLAY_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -259,7 +259,7 @@ CDarkel::RegisterKillByPlayer(CPed *victim, eWeaponType weapon, bool headshot)
 void
 CDarkel::RegisterKillNotByPlayer(CPed* victim, eWeaponType weapontype)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS && !defined DONT_FIX_REPLAY_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -348,7 +348,7 @@ CDarkel::StartFrenzy(eWeaponType weaponType, int32 time, uint16 kill, int32 mode
 void
 CDarkel::Update()
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS && !defined DONT_FIX_REPLAY_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif

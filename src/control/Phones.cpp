@@ -37,7 +37,7 @@ CPed *CPhoneInfo::pCallBackPed; // ped who picking up the phone (reset after pic
 void
 CPhoneInfo::Update(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif

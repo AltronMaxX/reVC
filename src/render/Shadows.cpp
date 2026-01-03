@@ -2414,7 +2414,7 @@ CShadows::CalcPedShadowValues(CVector vecLightDir,
 void
 CShadows::RenderExtraPlayerShadows(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif

@@ -100,7 +100,7 @@ CPlayerInfo::Clear(void)
 void
 CPlayerInfo::Process(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -652,7 +652,7 @@ CPlayerInfo::GetPos()
 CVector
 FindPlayerCoors(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if (CReplay::IsPlayingBack())
 		return TheCamera.GetPosition();
 #endif
@@ -666,7 +666,7 @@ FindPlayerCoors(void)
 const CVector &
 FindPlayerSpeed(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	static CVector vecTmpVector(0.0f, 0.0f, 0.0f);
 	if (CReplay::IsPlayingBack())
 		return vecTmpVector;
@@ -714,7 +714,7 @@ FindPlayerPed(void)
 const CVector &
 FindPlayerCentreOfWorld(int32 player)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if(CReplay::IsPlayingBack()) return TheCamera.GetPosition();
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
@@ -726,7 +726,7 @@ FindPlayerCentreOfWorld(int32 player)
 const CVector &
 FindPlayerCentreOfWorld_NoSniperShift(void)
 {
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	if (CReplay::IsPlayingBack()) return TheCamera.GetPosition();
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();

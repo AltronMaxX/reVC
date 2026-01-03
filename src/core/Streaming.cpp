@@ -1631,7 +1631,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 
 	if(CRecordDataForGame::IsRecording() ||
 	   CRecordDataForGame::IsPlayingBack()
-#ifdef FIX_BUGS
+#if(defined FIX_BUGS)
 	   || CReplay::IsPlayingBack()
 #endif
 		)

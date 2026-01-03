@@ -357,7 +357,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			}
 		}
 
-		if (isPickupTouched) {
+		if(isPickupTouched) {
 			eWeaponType weaponType = CPickups::WeaponForModel(m_pObject->GetModelIndex());
 			if (weaponType < WEAPONTYPE_TOTALWEAPONS && CDarkel::FrenzyOnGoing()) {
 				isPickupTouched = false;
@@ -933,7 +933,7 @@ CPickups::AddToCollectedPickupsArray(int32 index)
 void
 CPickups::Update()
 {
-#ifdef FIX_BUGS // RIP speedrunning (solution from SA)
+#if(defined FIX_BUGS  && !defined DONT_FIX_REPLAY_BUGS) // RIP speedrunning (solution from SA)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
