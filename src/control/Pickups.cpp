@@ -933,7 +933,7 @@ CPickups::AddToCollectedPickupsArray(int32 index)
 void
 CPickups::Update()
 {
-#if(defined FIX_BUGS  && !defined DONT_FIX_REPLAY_BUGS) // RIP speedrunning (solution from SA)
+#if(defined FIX_BUGS && !defined DONT_FIX_REPLAY_BUGS) // RIP speedrunning (solution from SA)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
