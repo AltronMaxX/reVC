@@ -142,6 +142,10 @@ CPhoneInfo::Update(void)
 				m_aPhones[phoneId].m_visibleToCam = true;
 		}
 	}
+
+	if(player->m_nPedState == PED_ANSWER_MOBILE && CPad::GetPad(0)->GetEnterJustDown()) { 
+		player->ClearAnswerMobile();
+	}
 }
 
 int
