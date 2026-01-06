@@ -9538,28 +9538,32 @@ CPed::Say(uint16 audio, int32 time)
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+#define CopyFromBuf(buf, data)\
+	memcpy(&data, buf, sizeof(data));\
+	SkipSaveBuf(buf, sizeof(data));
+#define CopyToBuf(buf, data)\
+	memcpy(buf, &data, sizeof(data));\
+	SkipSaveBuf(buf, sizeof(data));
 void
-CPed::Save(uint8*& buf)
+CPed::Save(uint8 *&buf)
 {
-	SkipSaveBuf(buf, 52);
+	ZeroSaveBuf(buf, 52);
 	CopyToBuf(buf, GetPosition().x);
 	CopyToBuf(buf, GetPosition().y);
 	CopyToBuf(buf, GetPosition().z);
-	SkipSaveBuf(buf, 288);
+	ZeroSaveBuf(buf, 288);
 	CopyToBuf(buf, CharCreatedBy);
-	SkipSaveBuf(buf, 499);
+	ZeroSaveBuf(buf, 499);
 	CopyToBuf(buf, m_fHealth);
 	CopyToBuf(buf, m_fArmour);
-	SkipSaveBuf(buf, 172);
-	for (int i = 0; i < 10; i++) // has to be hardcoded
+	ZeroSaveBuf(buf, 172);
+	for(int i = 0; i < 10; i++) // has to be hardcoded
 		m_weapons[i].Save(buf);
-	SkipSaveBuf(buf, 252);
+	ZeroSaveBuf(buf, 252);
 }
 
 void
-CPed::Load(uint8*& buf)
+CPed::Load(uint8 *&buf)
 {
 	SkipSaveBuf(buf, 52);
 	CopyFromBuf(buf, GetMatrix().GetPosition().x);
@@ -9574,16 +9578,15 @@ CPed::Load(uint8*& buf)
 	m_currentWeapon = WEAPONTYPE_UNARMED;
 
 	CWeapon bufWeapon;
-	for (int i = 0; i < 10; i++) { // has to be hardcoded
+	for(int i = 0; i < 10; i++) { // has to be hardcoded
 		bufWeapon.Load(buf);
 
-		if (bufWeapon.m_eWeaponType != WEAPONTYPE_UNARMED) {
+		if(bufWeapon.m_eWeaponType != WEAPONTYPE_UNARMED) {
 			int modelId = CWeaponInfo::GetWeaponInfo(bufWeapon.m_eWeaponType)->m_nModelId;
-			if (modelId != -1) {
+			if(modelId != -1) {
 				CStreaming::RequestModel(modelId, STREAMFLAGS_DEPENDENCY);
 				int modelId2 = CWeaponInfo::GetWeaponInfo(bufWeapon.m_eWeaponType)->m_nModel2Id;
-				if (modelId2 != -1)
-					CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+				if(modelId2 != -1) CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
 
 				CStreaming::LoadAllRequestedModels(false);
 			}

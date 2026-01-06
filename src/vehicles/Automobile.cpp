@@ -5866,18 +5866,18 @@ CAutomobile::KnockPedOutCar(eWeaponType weapon, uint16 door, CPed *ped)
 
 #ifdef COMPATIBLE_SAVES
 void
-CAutomobile::Save(uint8*& buf)
+CAutomobile::Save(uint8 *&buf)
 {
 	CVehicle::Save(buf);
-	WriteSaveBuf<CDamageManager>(buf, Damage);
-	SkipSaveBuf(buf, 1500 - 672 - sizeof(CDamageManager));
+	WriteSaveBuf(buf, Damage);
+	ZeroSaveBuf(buf, 1500 - 672 - sizeof(CDamageManager));
 }
 
 void
-CAutomobile::Load(uint8*& buf)
+CAutomobile::Load(uint8 *&buf)
 {
 	CVehicle::Load(buf);
-	Damage = ReadSaveBuf<CDamageManager>(buf);
+	ReadSaveBuf(&Damage, buf);
 	SkipSaveBuf(buf, 1500 - 672 - sizeof(CDamageManager));
 	SetupDamageAfterLoad();
 }

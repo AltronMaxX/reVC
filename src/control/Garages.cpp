@@ -2279,9 +2279,54 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 			WriteSaveBuf(buf, aCarsInSafeHouses[j][i]);
 		}
 	}
-	for (int i = 0; i < NUM_GARAGES; i++)
-		WriteSaveBuf(buf, aGarages[i]);
-//VALIDATESAVEBUF(*size);
+	for(int i = 0; i < NUM_GARAGES; i++) { 
+	#ifdef COMPATIBLE_SAVES
+		WriteSaveBuf(buf, aGarages[i].m_eGarageType);
+		WriteSaveBuf(buf, aGarages[i].m_eGarageState);
+		WriteSaveBuf(buf, aGarages[i].m_nMaxStoredCars);
+		WriteSaveBuf(buf, aGarages[i].field_2);
+		WriteSaveBuf(buf, aGarages[i].m_bClosingWithoutTargetCar);
+		WriteSaveBuf(buf, aGarages[i].m_bDeactivated);
+		WriteSaveBuf(buf, aGarages[i].m_bResprayHappened);
+		ZeroSaveBuf(buf, 1);
+		WriteSaveBuf(buf, aGarages[i].m_nTargetModelIndex);
+		ZeroSaveBuf(buf, 4 + 4);
+		WriteSaveBuf(buf, aGarages[i].m_bDoor1PoolIndex);
+		WriteSaveBuf(buf, aGarages[i].m_bDoor2PoolIndex);
+		WriteSaveBuf(buf, aGarages[i].m_bDoor1IsDummy);
+		WriteSaveBuf(buf, aGarages[i].m_bDoor2IsDummy);
+		WriteSaveBuf(buf, aGarages[i].m_bRecreateDoorOnNextRefresh);
+		WriteSaveBuf(buf, aGarages[i].m_bRotatedDoor);
+		WriteSaveBuf(buf, aGarages[i].m_bCameraFollowsPlayer);
+		ZeroSaveBuf(buf, 1);
+		WriteSaveBuf(buf, aGarages[i].m_vecCorner1);
+		WriteSaveBuf(buf, aGarages[i].m_fInfZ);
+		WriteSaveBuf(buf, aGarages[i].m_vDir1);
+		WriteSaveBuf(buf, aGarages[i].m_vDir2);
+		WriteSaveBuf(buf, aGarages[i].m_fSupZ);
+		WriteSaveBuf(buf, aGarages[i].m_fDir1Len);
+		WriteSaveBuf(buf, aGarages[i].m_fDir2Len);
+		WriteSaveBuf(buf, aGarages[i].m_fInfX);
+		WriteSaveBuf(buf, aGarages[i].m_fSupX);
+		WriteSaveBuf(buf, aGarages[i].m_fInfY);
+		WriteSaveBuf(buf, aGarages[i].m_fSupY);
+		WriteSaveBuf(buf, aGarages[i].m_fDoorPos);
+		WriteSaveBuf(buf, aGarages[i].m_fDoorHeight);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor1X);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor1Y);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor2X);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor2Y);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor1Z);
+		WriteSaveBuf(buf, aGarages[i].m_fDoor2Z);
+		WriteSaveBuf(buf, aGarages[i].m_nTimeToStartAction);
+		WriteSaveBuf(buf, aGarages[i].m_bCollectedCarsState);
+		ZeroSaveBuf(buf, 3 + 4);
+		ZeroSaveBuf(buf, sizeof(aGarages[i].m_sStoredCar));
+#else
+		WriteSaveBuf(buf, aGarages[i]); 
+#endif
+	}
+	//VALIDATESAVEBUF(*size);
 }
 
 const CStoredCar &CStoredCar::operator=(const CStoredCar & other)
@@ -2309,22 +2354,69 @@ void CGarages::Load(uint8* buf, uint32 size)
 	assert(size = 7876);
 	//assert(size == (6 * sizeof(uint32) + TOTAL_COLLECTCARS_GARAGES * sizeof(*CarTypesCollected) + sizeof(uint32) + TOTAL_HIDEOUT_GARAGES * NUM_GARAGE_STORED_CARS * sizeof(CStoredCar) + NUM_GARAGES * sizeof(CGarage)));
 	CloseHideOutGaragesBeforeSave();
-	NumGarages = ReadSaveBuf<uint32>(buf);
-	BombsAreFree = ReadSaveBuf<uint32>(buf);
-	RespraysAreFree = ReadSaveBuf<uint32>(buf);
-	CarsCollected = ReadSaveBuf<int32>(buf);
-	BankVansCollected = ReadSaveBuf<int32>(buf);
-	PoliceCarsCollected = ReadSaveBuf<int32>(buf);
-	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
-		CarTypesCollected[i] = ReadSaveBuf<uint32>(buf);
-	LastTimeHelpMessage = ReadSaveBuf<uint32>(buf);
+	ReadSaveBuf(&NumGarages, buf);
+	int32 tempInt;
+	ReadSaveBuf(&tempInt, buf);
+	BombsAreFree = tempInt ? true : false;
+	ReadSaveBuf(&tempInt, buf);
+	RespraysAreFree = tempInt ? true : false;
+	ReadSaveBuf(&CarsCollected, buf);
+	ReadSaveBuf(&BankVansCollected, buf);
+	ReadSaveBuf(&PoliceCarsCollected, buf);
+	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++) 
+		ReadSaveBuf(&CarTypesCollected[i], buf);
+	ReadSaveBuf(&LastTimeHelpMessage, buf);
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
-		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
-			aCarsInSafeHouses[j][i] = ReadSaveBuf<CStoredCar>(buf);
+		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) { 
+			ReadSaveBuf(&aCarsInSafeHouses[j][i], buf);
 		}
 	}
 	for (int i = 0; i < NUM_GARAGES; i++) {
-		aGarages[i] = ReadSaveBuf<CGarage>(buf);
+#ifdef COMPATIBLE_SAVES
+		ReadSaveBuf(&aGarages[i].m_eGarageType, buf);
+		ReadSaveBuf(&aGarages[i].m_eGarageState, buf);
+		ReadSaveBuf(&aGarages[i].m_nMaxStoredCars, buf);
+		ReadSaveBuf(&aGarages[i].field_2, buf);
+		ReadSaveBuf(&aGarages[i].m_bClosingWithoutTargetCar, buf);
+		ReadSaveBuf(&aGarages[i].m_bDeactivated, buf);
+		ReadSaveBuf(&aGarages[i].m_bResprayHappened, buf);
+		SkipSaveBuf(buf, 1);
+		ReadSaveBuf(&aGarages[i].m_nTargetModelIndex, buf);
+		SkipSaveBuf(buf, 4 + 4);
+		ReadSaveBuf(&aGarages[i].m_bDoor1PoolIndex, buf);
+		ReadSaveBuf(&aGarages[i].m_bDoor2PoolIndex, buf);
+		ReadSaveBuf(&aGarages[i].m_bDoor1IsDummy, buf);
+		ReadSaveBuf(&aGarages[i].m_bDoor2IsDummy, buf);
+		ReadSaveBuf(&aGarages[i].m_bRecreateDoorOnNextRefresh, buf);
+		ReadSaveBuf(&aGarages[i].m_bRotatedDoor, buf);
+		ReadSaveBuf(&aGarages[i].m_bCameraFollowsPlayer, buf);
+		SkipSaveBuf(buf, 1);
+		ReadSaveBuf(&aGarages[i].m_vecCorner1, buf);
+		ReadSaveBuf(&aGarages[i].m_fInfZ, buf);
+		ReadSaveBuf(&aGarages[i].m_vDir1, buf);
+		ReadSaveBuf(&aGarages[i].m_vDir2, buf);
+		ReadSaveBuf(&aGarages[i].m_fSupZ, buf);
+		ReadSaveBuf(&aGarages[i].m_fDir1Len, buf);
+		ReadSaveBuf(&aGarages[i].m_fDir2Len, buf);
+		ReadSaveBuf(&aGarages[i].m_fInfX, buf);
+		ReadSaveBuf(&aGarages[i].m_fSupX, buf);
+		ReadSaveBuf(&aGarages[i].m_fInfY, buf);
+		ReadSaveBuf(&aGarages[i].m_fSupY, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoorPos, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoorHeight, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor1X, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor1Y, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor2X, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor2Y, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor1Z, buf);
+		ReadSaveBuf(&aGarages[i].m_fDoor2Z, buf);
+		ReadSaveBuf(&aGarages[i].m_nTimeToStartAction, buf);
+		ReadSaveBuf(&aGarages[i].m_bCollectedCarsState, buf);
+		SkipSaveBuf(buf, 3 + 4);
+		SkipSaveBuf(buf, sizeof(aGarages[i].m_sStoredCar));
+#else
+		ReadSaveBuf(&aGarages[i], buf);
+#endif
 		aGarages[i].m_pDoor1 = nil;
 		aGarages[i].m_pDoor2 = nil;
 		aGarages[i].m_pTarget = nil;

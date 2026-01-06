@@ -34,6 +34,12 @@
 #include "Messages.h"
 #include "Streaming.h"
 
+#ifdef COMPATIBLE_SAVES
+#define PICKUPS_SAVE_SIZE 0x4440
+#else
+#define PICKUPS_SAVE_SIZE sizeof(aPickUps)
+#endif
+
 CPickup CPickups::aPickUps[NUMPICKUPS];
 int16 CPickups::NumMessages;
 int32 CPickups::aPickUpsCollected[NUMCOLLECTEDPICKUPS];
@@ -1426,56 +1432,108 @@ CPickups::RemoveUnnecessaryPickups(const CVector& center, float radius)
 void
 CPickups::Load(uint8 *buf, uint32 size)
 {
-INITSAVEBUF
+	INITSAVEBUF
 
-	for (int32 i = 0; i < NUMPICKUPS; i++) {
-		aPickUps[i] = ReadSaveBuf<CPickup>(buf);
+	for(int32 i = 0; i < NUMPICKUPS; i++) {
+#ifdef COMPATIBLE_SAVES
+		ReadSaveBuf(&aPickUps[i].m_vecPos, buf);
+		ReadSaveBuf(&aPickUps[i].m_fRevenue, buf);
+		int32 tmp_pObject;
+		ReadSaveBuf(&tmp_pObject, buf);
+		int32 tmp_pExtraObject;
+		ReadSaveBuf(&tmp_pExtraObject, buf);
+		ReadSaveBuf(&aPickUps[i].m_nQuantity, buf);
+		ReadSaveBuf(&aPickUps[i].m_nTimer, buf);
+		ReadSaveBuf(&aPickUps[i].m_nMoneySpeed, buf);
+		ReadSaveBuf(&aPickUps[i].m_eModelIndex, buf);
+		ReadSaveBuf(&aPickUps[i].m_nIndex, buf);
+		memcpy(aPickUps[i].m_sTextKey, buf, sizeof(aPickUps[i].m_sTextKey));
+		SkipSaveBuf(buf, sizeof(aPickUps[i].m_sTextKey));
+		ReadSaveBuf(&aPickUps[i].m_eType, buf);
+		ReadSaveBuf(&aPickUps[i].m_bRemoved, buf);
+		uint8 flags;
+		ReadSaveBuf(&flags, buf);
+		aPickUps[i].m_bWasAmmoCollected = !!(flags & BIT(0));
+		aPickUps[i].m_bWasControlMessageShown = !!(flags & BIT(1));
+		SkipSaveBuf(buf, 3);
 
-		if (aPickUps[i].m_eType != PICKUP_NONE) {
-			if (aPickUps[i].m_pObject != nil)
-				aPickUps[i].m_pObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pObject - 1);
-			if (aPickUps[i].m_pExtraObject != nil)
+		aPickUps[i].m_pObject = aPickUps[i].m_eType != PICKUP_NONE && tmp_pObject != 0 ? CPools::GetObjectPool()->GetSlot(tmp_pObject - 1) : nil;
+		aPickUps[i].m_pExtraObject =
+		    aPickUps[i].m_eType != PICKUP_NONE && tmp_pExtraObject != 0 ? CPools::GetObjectPool()->GetSlot(tmp_pExtraObject - 1) : nil;
+#else
+		ReadSaveBuf(&aPickUps[i], buf);
+
+		if(aPickUps[i].m_eType != PICKUP_NONE) {
+			if(aPickUps[i].m_pObject != nil) aPickUps[i].m_pObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pObject - 1);
+			if(aPickUps[i].m_pExtraObject != nil)
 				aPickUps[i].m_pExtraObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pExtraObject - 1);
 		}
-			
+#endif
 	}
 
-	CollectedPickUpIndex = ReadSaveBuf<uint16>(buf);
-	ReadSaveBuf<uint16>(buf);
+	ReadSaveBuf(&CollectedPickUpIndex, buf);
+	SkipSaveBuf(buf, 2);
 	NumMessages = 0;
 
-	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
-		aPickUpsCollected[i] = ReadSaveBuf<int32>(buf);
+	for(uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++) ReadSaveBuf(&aPickUpsCollected[i], buf);
 
-VALIDATESAVEBUF(size)
+	VALIDATESAVEBUF(size)
 }
 
 void
 CPickups::Save(uint8 *buf, uint32 *size)
 {
-	*size = sizeof(aPickUps);
+	*size = PICKUPS_SAVE_SIZE;
 	*size += sizeof(uint16) + sizeof(uint16) + sizeof(aPickUpsCollected);
 
-INITSAVEBUF
+	INITSAVEBUF
 
-	for (int32 i = 0; i < NUMPICKUPS; i++) {
+	for(int32 i = 0; i < NUMPICKUPS; i++) {
+#ifdef COMPATIBLE_SAVES
+		WriteSaveBuf(buf, aPickUps[i].m_vecPos);
+		WriteSaveBuf(buf, aPickUps[i].m_fRevenue);
+		int32 tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pObject != nil
+		                ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pObject) + 1
+		                : 0;
+		WriteSaveBuf(buf, tmp);
+		tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pExtraObject != nil
+		          ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pExtraObject) + 1
+		          : 0;
+		WriteSaveBuf(buf, tmp);
+		WriteSaveBuf(buf, aPickUps[i].m_nQuantity);
+		WriteSaveBuf(buf, aPickUps[i].m_nTimer);
+		WriteSaveBuf(buf, aPickUps[i].m_nMoneySpeed);
+		WriteSaveBuf(buf, aPickUps[i].m_eModelIndex);
+		WriteSaveBuf(buf, aPickUps[i].m_nIndex);
+		memcpy(buf, aPickUps[i].m_sTextKey, sizeof(aPickUps[i].m_sTextKey));
+		SkipSaveBuf(buf, sizeof(aPickUps[i].m_sTextKey));
+		WriteSaveBuf(buf, aPickUps[i].m_eType);
+		WriteSaveBuf(buf, aPickUps[i].m_bRemoved);
+		uint8 flags = 0;
+		if(aPickUps[i].m_bWasAmmoCollected) flags |= BIT(0);
+		if(aPickUps[i].m_bWasControlMessageShown) flags |= BIT(1);
+		WriteSaveBuf(buf, flags);
+		ZeroSaveBuf(buf, 3);
+#else
 		CPickup *buf_pickup = WriteSaveBuf(buf, aPickUps[i]);
-		if (buf_pickup->m_eType != PICKUP_NONE) {
-			if (buf_pickup->m_pObject != nil)
-				buf_pickup->m_pObject = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pObject) + 1);
-			if (buf_pickup->m_pExtraObject != nil)
-				buf_pickup->m_pExtraObject = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pExtraObject) + 1);
+		if(buf_pickup->m_eType != PICKUP_NONE) {
+			if(buf_pickup->m_pObject != nil)
+				buf_pickup->m_pObject = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pObject) + 1);
+			if(buf_pickup->m_pExtraObject != nil)
+				buf_pickup->m_pExtraObject = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pExtraObject) + 1);
 		}
+#endif
 	}
 
 	WriteSaveBuf(buf, CollectedPickUpIndex);
 	WriteSaveBuf(buf, (uint16)0); // possibly was NumMessages
 
-	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
+	for(uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++) 
 		WriteSaveBuf(buf, aPickUpsCollected[i]);
 
-VALIDATESAVEBUF(*size)
+	VALIDATESAVEBUF(*size)
 }
+
 
 void
 CPacManPickup::Update()

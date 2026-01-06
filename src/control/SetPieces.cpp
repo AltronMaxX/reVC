@@ -67,10 +67,10 @@ VALIDATESAVEBUF(*size)
 void CSetPieces::Load(uint8* buf, uint32 size)
 {
 INITSAVEBUF
-	NumSetPieces = ReadSaveBuf<uint32>(buf);
-	for (int i = 0; i < NUM_SETPIECES; i++)
-		aSetPieces[i] = ReadSaveBuf<CSetPiece>(buf);
-VALIDATESAVEBUF(size)
+	ReadSaveBuf(&NumSetPieces, buf);
+	for (int i = 0; i < NUM_SETPIECES; i++) 
+		ReadSaveBuf(&aSetPieces[i], buf);
+	VALIDATESAVEBUF(size)
 }
 
 void CSetPiece::Update(void)

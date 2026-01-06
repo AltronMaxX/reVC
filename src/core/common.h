@@ -528,13 +528,14 @@ inline void SkipSaveBuf(uint8*& buf, uint32 &length, int32 skip)
 #endif
 }
 
-template<typename T>
-inline const T ReadSaveBuf(uint8 *&buf)
+template <typename T>
+inline void
+ReadSaveBuf(T *out, uint8 *&buf)
 {
-	T &value = *(T*)buf;
+	*out = *(T *)buf;
 	SkipSaveBuf(buf, sizeof(T));
-	return value;
 }
+
 
 template<typename T>
 inline const T ReadSaveBuf(uint8 *&buf, uint32 &length)
@@ -544,14 +545,24 @@ inline const T ReadSaveBuf(uint8 *&buf, uint32 &length)
 	return value;
 }
 
-template<typename T>
-inline T *WriteSaveBuf(uint8 *&buf, const T &value)
+template <typename T>
+inline T *
+WriteSaveBuf(uint8 *&buf, const T &value)
 {
-	T *p = (T*)buf;
+	T *p = (T *)buf;
 	*p = value;
 	SkipSaveBuf(buf, sizeof(T));
 	return p;
 }
+
+#ifdef COMPATIBLE_SAVES
+inline void
+ZeroSaveBuf(uint8 *&buf, uint32 length)
+{
+	memset(buf, 0, length);
+	SkipSaveBuf(buf, length);
+}
+#endif
 
 template<typename T>
 inline T *WriteSaveBuf(uint8 *&buf, uint32 &length, const T &value)
@@ -580,11 +591,19 @@ inline T *WriteSaveBuf(uint8 *&buf, uint32 &length, const T &value)
 	WriteSaveBuf<uint32>(buf, len, size);
 
 #define CheckSaveHeader(buf,a,b,c,d,size)\
-	assert(ReadSaveBuf<char>(buf) == a);\
-	assert(ReadSaveBuf<char>(buf) == b);\
-	assert(ReadSaveBuf<char>(buf) == c);\
-	assert(ReadSaveBuf<char>(buf) == d);\
-	assert(ReadSaveBuf<uint32>(buf) == size);
+	char _c;\
+	uint32 _size;\
+	ReadSaveBuf(&_c, buf);                                                                                                                                 \
+	assert(_c == a);                                                                                                                                       \
+	ReadSaveBuf(&_c, buf);                                                                                                                                 \
+	assert(_c == b);                                                                                                                                       \
+	ReadSaveBuf(&_c, buf);                                                                                                                                 \
+	assert(_c == c);                                                                                                                                       \
+	ReadSaveBuf(&_c, buf);                                                                                                                                 \
+	assert(_c == d);                                                                                                                                       \
+	ReadSaveBuf(&_size, buf);                                                                                                                              \
+	assert(_size == size);
+
 
 #define CheckSaveHeaderWithLength(buf,len,a,b,c,d,size)\
 	assert(ReadSaveBuf<char>(buf,len) == a);\

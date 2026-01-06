@@ -610,13 +610,13 @@ VALIDATESAVEBUF(*size)
 void
 CGameLogic::Load(uint8* buf, uint32 size)
 {
-INITSAVEBUF
-	NumAfterDeathStartPoints = ReadSaveBuf<uint32>(buf);
+INITSAVEBUF 
+	ReadSaveBuf(&NumAfterDeathStartPoints, buf);
 	for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
-		AfterDeathStartPoints[i].x = ReadSaveBuf<float>(buf);
-		AfterDeathStartPoints[i].y = ReadSaveBuf<float>(buf);
-		AfterDeathStartPoints[i].z = ReadSaveBuf<float>(buf);
-		AfterDeathStartPointOrientation[i] = ReadSaveBuf<float>(buf);
+		ReadSaveBuf(&AfterDeathStartPoints[i].x, buf);
+		ReadSaveBuf(&AfterDeathStartPoints[i].y, buf);
+		ReadSaveBuf(&AfterDeathStartPoints[i].z, buf);
+		ReadSaveBuf(&AfterDeathStartPointOrientation[i], buf);
 	}
 VALIDATESAVEBUF(size)
 }

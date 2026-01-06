@@ -3269,10 +3269,14 @@ CWeapon::CheckForShootingVehicleOccupant(CEntity **victim, CColPoint *point, eWe
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+#define CopyFromBuf(buf, data)                                                                                                                                 \
+	memcpy(&data, buf, sizeof(data));                                                                                                                      \
+	SkipSaveBuf(buf, sizeof(data));
+#define CopyToBuf(buf, data)                                                                                                                                   \
+	memcpy(buf, &data, sizeof(data));                                                                                                                      \
+	SkipSaveBuf(buf, sizeof(data));
 void
-CWeapon::Save(uint8*& buf)
+CWeapon::Save(uint8 *&buf)
 {
 	CopyToBuf(buf, m_eWeaponType);
 	CopyToBuf(buf, m_eWeaponState);
@@ -3280,11 +3284,11 @@ CWeapon::Save(uint8*& buf)
 	CopyToBuf(buf, m_nAmmoTotal);
 	CopyToBuf(buf, m_nTimer);
 	CopyToBuf(buf, m_bAddRotOffset);
-	SkipSaveBuf(buf, 3);
+	ZeroSaveBuf(buf, 3);
 }
 
 void
-CWeapon::Load(uint8*& buf)
+CWeapon::Load(uint8 *&buf)
 {
 	CopyFromBuf(buf, m_eWeaponType);
 	CopyFromBuf(buf, m_eWeaponState);

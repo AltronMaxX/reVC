@@ -118,7 +118,7 @@ void CGangs::LoadAllGangData(uint8 *buf, uint32 size)
 INITSAVEBUF
 	CheckSaveHeader(buf, 'G','N','G','\0', size - SAVE_HEADER_SIZE);
 
-	for (int i = 0; i < NUM_GANGS; i++)
-		Gang[i] = ReadSaveBuf<CGangInfo>(buf);
-VALIDATESAVEBUF(size);
+	for (int i = 0; i < NUM_GANGS; i++) 
+		ReadSaveBuf(&Gang[i], buf);
+	VALIDATESAVEBUF(size);
 }

@@ -2946,14 +2946,14 @@ CBike::ReduceHornCounter(void)
 
 #ifdef COMPATIBLE_SAVES
 void
-CBike::Save(uint8*& buf)
+CBike::Save(uint8 *&buf)
 {
 	CVehicle::Save(buf);
-	SkipSaveBuf(buf, 1260 - 672);
+	ZeroSaveBuf(buf, 1260 - 672);
 }
 
 void
-CBike::Load(uint8*& buf)
+CBike::Load(uint8 *&buf)
 {
 	CVehicle::Load(buf);
 	SkipSaveBuf(buf, 1260 - 672);

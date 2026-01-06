@@ -200,9 +200,9 @@ INITSAVEBUF
 	// original: SkipSaveBuf(buf, SAVE_HEADER_SIZE);
 	CheckSaveHeader(buf, 'P', 'T', 'P', '\0', size - SAVE_HEADER_SIZE);
 
-	for(int i = 0; i < NUM_PEDTYPES; i++)
-		*ms_apPedType[i] = ReadSaveBuf<CPedType>(buf);
-VALIDATESAVEBUF(size)
+	for(int i = 0; i < NUM_PEDTYPES; i++) 
+		ReadSaveBuf(ms_apPedType[i], buf);
+	VALIDATESAVEBUF(size)
 }
 
 void

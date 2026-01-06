@@ -2181,24 +2181,28 @@ CPlayerPed::FindMeleeAttackPoint(CPed *victim, CVector &dist, uint32 &endOfAttac
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+#define CopyFromBuf(buf, data)                                                                                                                                 \
+	memcpy(&data, buf, sizeof(data));                                                                                                                      \
+	SkipSaveBuf(buf, sizeof(data));
+#define CopyToBuf(buf, data)                                                                                                                                   \
+	memcpy(buf, &data, sizeof(data));                                                                                                                      \
+	SkipSaveBuf(buf, sizeof(data));
 void
-CPlayerPed::Save(uint8*& buf)
+CPlayerPed::Save(uint8 *&buf)
 {
 	CPed::Save(buf);
-	SkipSaveBuf(buf, 16);
+	ZeroSaveBuf(buf, 16);
 	CopyToBuf(buf, m_fMaxStamina);
-	SkipSaveBuf(buf, 28);
+	ZeroSaveBuf(buf, 28);
 	CopyToBuf(buf, m_nTargettableObjects[0]);
 	CopyToBuf(buf, m_nTargettableObjects[1]);
 	CopyToBuf(buf, m_nTargettableObjects[2]);
 	CopyToBuf(buf, m_nTargettableObjects[3]);
-	SkipSaveBuf(buf, 164);
+	ZeroSaveBuf(buf, 164);
 }
 
 void
-CPlayerPed::Load(uint8*& buf)
+CPlayerPed::Load(uint8 *&buf)
 {
 	CPed::Load(buf);
 	SkipSaveBuf(buf, 16);
