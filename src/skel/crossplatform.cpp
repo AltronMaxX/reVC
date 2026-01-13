@@ -54,8 +54,11 @@ HANDLE FindFirstFile(const char* pathname, WIN32_FIND_DATA* firstfile) {
         free(realFolder);
 
 	HANDLE d;
-	if ((d = (HANDLE)opendir(firstfile->folder)) == NULL || !FindNextFile(d, firstfile))
+    if((d = (HANDLE)opendir(firstfile->folder)) == NULL || !FindNextFile(d, firstfile)) {
+	    if(d != NULL) { closedir((DIR *)d); }
+
 		return NULL;
+    }
 
 	return d;
 }
