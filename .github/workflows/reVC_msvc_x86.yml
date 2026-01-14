@@ -20,6 +20,8 @@ jobs:
     steps:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
+      with:
+        vs-prerelease: true
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
