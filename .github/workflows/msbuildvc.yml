@@ -21,7 +21,7 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
       with:
-        vs-version: '[18)'
+        vs-version: '18'
 
     - name: Build
       working-directory: ${{env.SOLUTION_FILE_PATH}}
