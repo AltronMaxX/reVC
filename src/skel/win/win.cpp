@@ -4,6 +4,7 @@
 #define WINVER 0x0500
 
 #include <winerror.h>
+#define NOMINMAX
 #include <windows.h>
 #include <mmsystem.h>
 #include <shellapi.h>

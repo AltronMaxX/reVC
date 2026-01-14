@@ -28,7 +28,7 @@ static Shader *envShader, *envShader_noAT;
 static Shader *envShader_fullLight, *envShader_fullLight_noAT;
 static int32 u_texMatrix;
 static int32 u_fxparams;
-static int32 u_colorClamp;
+static int32 u_colorCLAMP;
 static int32 u_envColor;
 
 void
@@ -117,11 +117,11 @@ matfxEnvRender(InstanceDataHeader *header, InstanceData *inst, int32 vsBits, uin
 	setUniform(u_fxparams, fxparams);
 	static float zero[4];
 	static float one[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	// This clamps the vertex color below. With it we can achieve both PC and PS2 style matfx
+	// This CLAMPs the vertex color below. With it we can achieve both PC and PS2 style matfx
 	if(MatFX::envMapApplyLight)
-		setUniform(u_colorClamp, zero);
+		setUniform(u_colorCLAMP, zero);
 	else
-		setUniform(u_colorClamp, one);
+		setUniform(u_colorCLAMP, one);
 	RGBAf envcol[4];
 	if(MatFX::envMapUseMatColor)
 		convColor(envcol, &m->color);
@@ -240,7 +240,7 @@ initMatFX(void)
 {
 	u_texMatrix = registerUniform("u_texMatrix", UNIFORM_MAT4);
 	u_fxparams = registerUniform("u_fxparams", UNIFORM_VEC4);
-	u_colorClamp = registerUniform("u_colorClamp", UNIFORM_VEC4);
+	u_colorCLAMP = registerUniform("u_colorCLAMP", UNIFORM_VEC4);
 	u_envColor = registerUniform("u_envColor", UNIFORM_VEC4);
 
 	Driver::registerPlugin(PLATFORM_GL3, 0, ID_MATFX,

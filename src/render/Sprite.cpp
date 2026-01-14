@@ -401,13 +401,13 @@ CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(float x, float y, float z, f
 
 	// Colour factors, cx/y is the direction in which colours change from rgb1 to rgb2
 	cf[0] = (cx*(-c-s) + cy*(-c+s))*0.5f + 0.5f;
-	cf[0] = clamp(cf[0], 0.0f, 1.0f);
+	cf[0] = CLAMP(cf[0], 0.0f, 1.0f);
 	cf[1] = (cx*(-c+s) + cy*( c+s))*0.5f + 0.5f;
-	cf[1] = clamp(cf[1], 0.0f, 1.0f);
+	cf[1] = CLAMP(cf[1], 0.0f, 1.0f);
 	cf[2] = (cx*( c+s) + cy*( c-s))*0.5f + 0.5f;
-	cf[2] = clamp(cf[2], 0.0f, 1.0f);
+	cf[2] = CLAMP(cf[2], 0.0f, 1.0f);
 	cf[3] = (cx*( c-s) + cy*(-c-s))*0.5f + 0.5f;
-	cf[3] = clamp(cf[3], 0.0f, 1.0f);
+	cf[3] = CLAMP(cf[3], 0.0f, 1.0f);
 
 	float screenz = m_f2DNearScreenZ +
 		(z-CDraw::GetNearClipZ())*(m_f2DFarScreenZ-m_f2DNearScreenZ)*CDraw::GetFarClipZ() /

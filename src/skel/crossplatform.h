@@ -24,6 +24,7 @@ char *_strdate(char *buf);
 	#ifndef __MWERKS__
 		#include <IntSafe.h>
 	#else
+        #define NOMINMAX
 		#include <Windows.h>
 	#endif
 #endif

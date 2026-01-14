@@ -366,7 +366,7 @@ hanimInterpCB(void *vout, void *vin1, void *vin2, float32 t, void*)
 	HAnimKeyFrame *in2 = (HAnimKeyFrame*)vin2;
 assert(t >= in1->time && t <= in2->time);
 	float32 a = (t - in1->time)/(in2->time - in1->time);
-	out->t =  lerp(in1->t, in2->t, a);
+	out->t =  LERP(in1->t, in2->t, a);
 	out->q = slerp(in1->q, in2->q, a);
 }
 

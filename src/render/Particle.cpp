@@ -970,15 +970,15 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 			int32 ColorVariation = CGeneral::GetRandomNumberInRange(-psystem->m_InitialColorVariation, psystem->m_InitialColorVariation);
 			//float ColorVariation = CGeneral::GetRandomNumberInRange((float)-psystem->m_InitialColorVariation, (float)psystem->m_InitialColorVariation);
   
-			pParticle->m_Color.red   = clamp(pParticle->m_Color.red +
+			pParticle->m_Color.red   = CLAMP(pParticle->m_Color.red +
 				PERCENT(pParticle->m_Color.red, ColorVariation),
 				0, 255);
 			
-			pParticle->m_Color.green = clamp(pParticle->m_Color.green +
+			pParticle->m_Color.green = CLAMP(pParticle->m_Color.green +
 				PERCENT(pParticle->m_Color.green, ColorVariation),
 				0, 255);
 			
-			pParticle->m_Color.blue  = clamp(pParticle->m_Color.blue +
+			pParticle->m_Color.blue  = CLAMP(pParticle->m_Color.blue +
 				PERCENT(pParticle->m_Color.blue, ColorVariation),
 				0, 255);
 		}
@@ -1384,15 +1384,15 @@ void CParticle::Update()
 				{
 					float colorMul = 1.0f - float(particle->m_nTimeWhenColorWillBeChanged - CTimer::GetTimeInMilliseconds()) / float(psystem->m_ColorFadeTime);
 				
-					particle->m_Color.red = clamp(
+					particle->m_Color.red = CLAMP(
 						psystem->m_RenderColouring.red + int32(float(psystem->m_FadeDestinationColor.red - psystem->m_RenderColouring.red) * colorMul),
 						0, 255);
 					
-					particle->m_Color.green = clamp(
+					particle->m_Color.green = CLAMP(
 						psystem->m_RenderColouring.green + int32(float(psystem->m_FadeDestinationColor.green - psystem->m_RenderColouring.green) * colorMul),
 						0, 255);
 						
-					particle->m_Color.blue = clamp(
+					particle->m_Color.blue = CLAMP(
 						psystem->m_RenderColouring.blue + int32(float(psystem->m_FadeDestinationColor.blue - psystem->m_RenderColouring.blue) * colorMul),
 						0, 255);
 				}
@@ -1702,13 +1702,13 @@ void CParticle::Update()
 
 			if ( particle->m_nFadeToBlackTimer != 0 )
 			{
-				particle->m_nColorIntensity = clamp(particle->m_nColorIntensity - particle->m_nFadeToBlackTimer,
+				particle->m_nColorIntensity = CLAMP(particle->m_nColorIntensity - particle->m_nFadeToBlackTimer,
 														0, 255);
 			}
 
 			if ( particle->m_nFadeAlphaTimer != 0 )
 			{
-				particle->m_nAlpha = clamp(particle->m_nAlpha - particle->m_nFadeAlphaTimer,
+				particle->m_nAlpha = CLAMP(particle->m_nAlpha - particle->m_nFadeAlphaTimer,
 														0, 255);
 				if ( particle->m_nAlpha == 0 )
 				{

@@ -124,5 +124,5 @@ vec3 DoDynamicLight(vec3 V, vec3 N)
 
 float DoFog(float w)
 {
-	return clamp((w - u_fogEnd)*u_fogRange, u_fogDisable, 1.0);
+	return CLAMP((w - u_fogEnd)*u_fogRange, u_fogDisable, 1.0);
 }

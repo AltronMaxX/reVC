@@ -218,9 +218,9 @@ CObject::Render(void)
 	float green = (0.8f * CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen_Obj()) * 165.75f;
 	float blue = (0.8f * CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue_Obj()) * 165.75f;
 
-	red = clamp(red, 0.0f, 255.0f);
-	green = clamp(green, 0.0f, 255.0f);
-	blue = clamp(blue, 0.0f, 255.0f);
+	red = CLAMP(red, 0.0f, 255.0f);
+	green = CLAMP(green, 0.0f, 255.0f);
+	blue = CLAMP(blue, 0.0f, 255.0f);
 
 	int alpha = CGeneral::GetRandomNumberInRange(196, 225);
 

@@ -194,21 +194,30 @@ namespace linb
                     size_type pos;
                     
                     // Trims an string
-                    auto trim = [](string_type& s, bool trimLeft, bool trimRight) -> string_type&
-                    {
-                        if(s.size())
-                        {
-                            // Ignore UTF-8 BOM
-                            while(s.size() >= 3 && s[0] == (char)(0xEF) && s[1] == (char)(0xBB) && s[2] == (char)(0xBF))
-                                s.erase(s.begin(), s.begin() + 3);
+		            auto trim = [](string_type &s, bool trimLeft, bool trimRight) -> string_type & {
+			            auto not_space = [](unsigned char ch) { return !std::isspace(ch); };
 
-                            if(trimLeft)
-                                s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::function<int(int)>(::isspace))));
-                            if(trimRight)
-                                s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::function<int(int)>(::isspace))).base(), s.end());
-                        }
-                        return s;
-                    };
+			            if(!s.empty()) {
+				            // Ignore UTF-8 BOM
+				            while(s.size() >= 3 && static_cast<unsigned char>(s[0]) == 0xEF && static_cast<unsigned char>(s[1]) == 0xBB &&
+					          static_cast<unsigned char>(s[2]) == 0xBF) {
+					            s.erase(s.begin(), s.begin() + 3);
+				            }
+
+				            if(trimLeft) {
+					            s.erase(s.begin(),
+						            std::find_if(s.begin(), s.end(), [&](char_type c) { return not_space(static_cast<unsigned char>(c)); }));
+				            }
+
+				            if(trimRight) {
+					            s.erase(std::find_if(s.rbegin(), s.rend(), [&](char_type c) { return not_space(static_cast<unsigned char>(c)); })
+						                .base(),
+						            s.end());
+				            }
+			            }
+
+			            return s;
+		            };
                     
                     // Start parsing
                     while(fgets(buf, sizeof(buf), f))

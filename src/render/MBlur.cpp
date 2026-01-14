@@ -283,10 +283,10 @@ CMBlur::CreateImmediateModeData(RwCamera *cam, RwRect *rect, RwIm2DVertex *verts
 		v1 = y1/height + v1Off;
 		u2 = x2/width + u2Off;
 		v2 = y2/height + v2Off;
-		u1 = clamp(u1, 0.0f, 1.0f);
-		v1 = clamp(v1, 0.0f, 1.0f);
-		u2 = clamp(u2, 0.0f, 1.0f);
-		v2 = clamp(v2, 0.0f, 1.0f);
+		u1 = CLAMP(u1, 0.0f, 1.0f);
+		v1 = CLAMP(v1, 0.0f, 1.0f);
+		u2 = CLAMP(u2, 0.0f, 1.0f);
+		v2 = CLAMP(v2, 0.0f, 1.0f);
 	}
 
 	float recipz = 1.0f/z;
@@ -406,7 +406,7 @@ CMBlur::OverlayRender(RwCamera *cam, RwRaster *raster, RwRGBA color, int32 type,
 	}
 
 	if(!BlurOn){
-		// gta clamps these to 255 (probably a macro or inlined function)
+		// gta CLAMPs these to 255 (probably a macro or inlined function)
 		int ovR = r * 0.6f;
 		int ovG = g * 0.6f;
 		int ovB = b * 0.6f;
@@ -517,7 +517,7 @@ CMBlur::OverlayRender(RwCamera *cam, RwRaster *raster, RwRGBA color, int32 type,
 void
 CMBlur::SetDrunkBlur(float drunkness)
 {
-	Drunkness = clamp(drunkness, 0.0f, 1.0f);
+	Drunkness = CLAMP(drunkness, 0.0f, 1.0f);
 }
 
 void
@@ -598,9 +598,9 @@ CMBlur::OverlayRenderFx(RwCamera *cam, RwRaster *frontBuf)
 	int red = (0.75f*CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed())*0.55f * 255;
 	int green = (0.75f*CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen())*0.55f * 255;
 	int blue = (0.75f*CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue())*0.55f * 255;
-	red = clamp(red, 0, 255);
-	green = clamp(green, 0, 255);
-	blue = clamp(blue, 0, 255);
+	red = CLAMP(red, 0, 255);
+	green = CLAMP(green, 0, 255);
+	blue = CLAMP(blue, 0, 255);
 
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
@@ -695,7 +695,7 @@ CMBlur::OverlayRenderFx(RwCamera *cam, RwRaster *frontBuf)
 				int alpha = FrontEndMenuManager.m_PrefsBrightness > 255 ?
 					FrontEndMenuManager.m_PrefsBrightness - 90 :
 					FrontEndMenuManager.m_PrefsBrightness - 130;
-				alpha = clamp(alpha, 16, 200)/2;
+				alpha = CLAMP(alpha, 16, 200)/2;
 
 				CreateImmediateModeData(cam, &fxRect[i], verts, CRGBA(0, 0, 0, alpha), 0.0f, 0.0f, 0.0f, 0.0f, fxZ[i], true);
 				RwRenderStateSet(rwRENDERSTATETEXTURERASTER, gpHeatHazeRaster);

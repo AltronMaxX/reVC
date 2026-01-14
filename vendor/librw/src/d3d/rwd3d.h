@@ -347,7 +347,7 @@ struct D3dShaderState
 		float32 start;
 		float32 end;
 		float32 range;	// 1/(start-end)
-		float32 disable;	// lower clamp
+		float32 disable;	// lower CLAMP
 	} fogData, fogDisable;
 	RGBA matColor;
 	SurfaceProperties surfProps;

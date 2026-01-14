@@ -447,7 +447,7 @@ int8 cSampleManager::SetCurrent3DProvider(uint8 nProvider)
 {
 	int savedprovider = curprovider;
 
-	nProvider = clamp(nProvider, 0, m_nNumberOfProviders - 1);
+	nProvider = CLAMP(nProvider, 0, m_nNumberOfProviders - 1);
 
 	if ( set_new_provider(nProvider) )
 		return curprovider;
@@ -1446,7 +1446,7 @@ bool cSampleManager::UpdateReverb(void)
 #undef CALCULATE_RATIO
 #undef MIN_DIST
 	
-	fRatio = clamp(fRatio, 0.0f, 0.6f);
+	fRatio = CLAMP(fRatio, 0.0f, 0.6f);
 	
 	if ( fRatio == _fPrevEaxRatioDestination )
 		return false;

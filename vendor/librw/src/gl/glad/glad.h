@@ -110,12 +110,12 @@ typedef khronos_int16_t GLshort;
 typedef khronos_uint16_t GLushort;
 typedef int GLint;
 typedef unsigned int GLuint;
-typedef khronos_int32_t GLclampx;
+typedef khronos_int32_t GLCLAMPx;
 typedef int GLsizei;
 typedef khronos_float_t GLfloat;
-typedef khronos_float_t GLclampf;
+typedef khronos_float_t GLCLAMPf;
 typedef double GLdouble;
-typedef double GLclampd;
+typedef double GLCLAMPd;
 typedef void *GLeglClientBufferEXT;
 typedef void *GLeglImageOES;
 typedef char GLchar;
@@ -1829,9 +1829,9 @@ GLAPI PFNGLTRANSFORMFEEDBACKVARYINGSPROC glad_glTransformFeedbackVaryings;
 typedef void (APIENTRYP PFNGLGETTRANSFORMFEEDBACKVARYINGPROC)(GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLsizei *size, GLenum *type, GLchar *name);
 GLAPI PFNGLGETTRANSFORMFEEDBACKVARYINGPROC glad_glGetTransformFeedbackVarying;
 #define glGetTransformFeedbackVarying glad_glGetTransformFeedbackVarying
-typedef void (APIENTRYP PFNGLCLAMPCOLORPROC)(GLenum target, GLenum clamp);
-GLAPI PFNGLCLAMPCOLORPROC glad_glClampColor;
-#define glClampColor glad_glClampColor
+typedef void (APIENTRYP PFNGLCLAMPCOLORPROC)(GLenum target, GLenum CLAMP);
+GLAPI PFNGLCLAMPCOLORPROC glad_glCLAMPColor;
+#define glCLAMPColor glad_glCLAMPColor
 typedef void (APIENTRYP PFNGLBEGINCONDITIONALRENDERPROC)(GLuint id, GLenum mode);
 GLAPI PFNGLBEGINCONDITIONALRENDERPROC glad_glBeginConditionalRender;
 #define glBeginConditionalRender glad_glBeginConditionalRender

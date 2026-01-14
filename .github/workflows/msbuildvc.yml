@@ -27,5 +27,5 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
         git submodule update --init --recursive
-        .\premake-vs2019.cmd
+        .\premake-vs2026.cmd
         msbuild /m /p:Configuration=Release build/reVC.sln

@@ -175,7 +175,7 @@ PFNGLBLITFRAMEBUFFERPROC glad_glBlitFramebuffer = NULL;
 PFNGLBUFFERDATAPROC glad_glBufferData = NULL;
 PFNGLBUFFERSUBDATAPROC glad_glBufferSubData = NULL;
 PFNGLCHECKFRAMEBUFFERSTATUSPROC glad_glCheckFramebufferStatus = NULL;
-PFNGLCLAMPCOLORPROC glad_glClampColor = NULL;
+PFNGLCLAMPCOLORPROC glad_glCLAMPColor = NULL;
 PFNGLCLEARPROC glad_glClear = NULL;
 PFNGLCLEARBUFFERFIPROC glad_glClearBufferfi = NULL;
 PFNGLCLEARBUFFERFVPROC glad_glClearBufferfv = NULL;
@@ -867,7 +867,7 @@ static void load_GL_VERSION_3_0(GLADloadproc load) {
 	glad_glBindBufferBase = (PFNGLBINDBUFFERBASEPROC)load("glBindBufferBase");
 	glad_glTransformFeedbackVaryings = (PFNGLTRANSFORMFEEDBACKVARYINGSPROC)load("glTransformFeedbackVaryings");
 	glad_glGetTransformFeedbackVarying = (PFNGLGETTRANSFORMFEEDBACKVARYINGPROC)load("glGetTransformFeedbackVarying");
-	glad_glClampColor = (PFNGLCLAMPCOLORPROC)load("glClampColor");
+	glad_glCLAMPColor = (PFNGLCLAMPCOLORPROC)load("glCLAMPColor");
 	glad_glBeginConditionalRender = (PFNGLBEGINCONDITIONALRENDERPROC)load("glBeginConditionalRender");
 	glad_glEndConditionalRender = (PFNGLENDCONDITIONALRENDERPROC)load("glEndConditionalRender");
 	glad_glVertexAttribIPointer = (PFNGLVERTEXATTRIBIPOINTERPROC)load("glVertexAttribIPointer");

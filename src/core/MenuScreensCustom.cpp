@@ -1,5 +1,6 @@
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
+#define NOMINMAX
 #include <windows.h>
 #include <xinput.h>
 #if !defined(PSAPI_VERSION) || (PSAPI_VERSION > 1)

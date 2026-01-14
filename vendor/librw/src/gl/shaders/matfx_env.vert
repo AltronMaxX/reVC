@@ -1,5 +1,5 @@
 uniform mat4 u_texMatrix;
-uniform vec4 u_colorClamp;
+uniform vec4 u_colorCLAMP;
 uniform vec4 u_envColor;
 
 VSIN(ATTRIB_POS)	vec3 in_pos;
@@ -23,8 +23,8 @@ main(void)
 	v_color = in_color;
 	v_color.rgb += u_ambLight.rgb*surfAmbient;
 	v_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;
-	v_color = clamp(v_color, 0.0, 1.0);
-	v_envColor = max(v_color, u_colorClamp) * u_envColor;
+	v_color = CLAMP(v_color, 0.0, 1.0);
+	v_envColor = max(v_color, u_colorCLAMP) * u_envColor;
 	v_color *= u_matColor;
 
 	v_fog = DoFog(gl_Position.w);

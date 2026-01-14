@@ -58,6 +58,7 @@ end
 
 workspace "reVC"
 	language "C++"
+	cppdialect "C++23"
 	configurations { "Debug", "Release", "Vanilla" }
 	startproject "reVC"
 	location "build"
@@ -70,6 +71,8 @@ workspace "reVC"
 	end
 
 	filter { "system:windows" }
+		toolset "v145"
+		preferredtoolarchitecture "x86_64"
 		platforms {
 			"win-x86-RW34_d3d8-mss",
 			"win-x86-librw_d3d9-mss",

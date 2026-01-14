@@ -30,6 +30,7 @@
 #endif
 
 #if defined _WIN32 && defined WITHWINDOWS && !defined _INC_WINDOWS
+#define NOMINMAX
 #include <windows.h>
 #endif
 
@@ -283,9 +284,9 @@ extern int strncasecmp(const char *str1, const char *str2, size_t len);
 
 extern wchar *AllocUnicode(const char*src);
 
-#define clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
+#define CLAMP(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 
-#define clamp2(v, center, radius) ((v) < (center) ? Max(v, center - radius) : Min(v, center + radius))
+#define CLAMP2(v, center, radius) ((v) < (center) ? Max(v, center - radius) : Min(v, center + radius))
 
 inline float sq(float x) { return x*x; }
 #define SQR(x) ((x) * (x))
@@ -379,7 +380,7 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 
 #define ABS(a)  (((a) < 0) ? (-(a)) : (a))
 #define norm(value, min, max) (((value) < (min)) ? 0 : (((value) > (max)) ? 1 : (((value) - (min)) / ((max) - (min)))))
-#define lerp(norm, min, max) ( (norm) * ((max) - (min)) + (min) )
+#define LERP(norm, min, max) ( (norm) * ((max) - (min)) + (min) )
 
 #define STRINGIFY(x)                    #x
 #define STR(x)                          STRINGIFY(x)
