@@ -20,8 +20,6 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v2
-      with:
-        vs-version: '18'
 
     - name: Build
       working-directory: ${{env.SOLUTION_FILE_PATH}}
@@ -29,5 +27,5 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: |
         git submodule update --init --recursive
-        .\premake-vs2026.cmd
+        .\premake5 vs2022 --with-librw
         msbuild /m /p:Configuration=Release build/reVC.sln

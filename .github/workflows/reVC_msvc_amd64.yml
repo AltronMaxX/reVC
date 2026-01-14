@@ -12,7 +12,7 @@ env:
   GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.3.2/glfw-3.3.2.bin.WIN64.zip"
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-latest
     strategy:
       matrix:
         platform: [win-amd64-librw_d3d9-oal] #, win-amd64-librw_gl3_glfw-oal]
@@ -20,8 +20,6 @@ jobs:
     steps:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v2
-      with:
-        vs-version: '18'
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
@@ -36,13 +34,10 @@ jobs:
           7z x ${{env.GLFW_FILE}}
     - name: Configure build
       run: |
-        ./premake5 vs2026 --with-librw --glfwdir64=${{env.GLFW_BASE}}
+        ./premake5 vs2022 --with-librw --glfwdir64=${{env.GLFW_BASE}}
     - name: Build
       run: |
         msbuild -m build/reVC.sln /property:Configuration=${{matrix.buildtype}} /property:Platform=${{matrix.platform}}
-    # - name: Pack artifacts
-      # run: |
-        # 7z a reVC_${{matrix.buildtype}}_${{matrix.platform}}.zip ./bin/${{matrix.platform}}/${{matrix.buildtype}}/*
     - name: Move binaries to gamefiles
       run: |
         mv ./bin/${{matrix.platform}}/${{matrix.buildtype}}/reVC.exe ./gamefiles/
@@ -56,12 +51,3 @@ jobs:
       with:
         name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
         path: ./gamefiles/*
-#    - name: Upload artifact to Bintray
-#      uses: hpcsc/upload-bintray-docker-action@v1
-#      with:
-#        repository: reVC
-#        package: ${{matrix.buildtype}}_${{matrix.platform}}
-#        version:  1.0-$(echo ${GITHUB_SHA}
-#        sourcePath: ./bin/${{matrix.platform}}/${{matrix.buildtype}}
-#        username: gtamodding
-#        apiKey: ${{secrets.BINTRAY_API_KEY}}
