@@ -6,16 +6,16 @@ on:
   release:
     types: published
 env:
-  GLFW_VER: "3.3.2"
-  GLFW_BASE: "glfw-3.3.2.bin.WIN64"
-  GLFW_FILE: "glfw-3.3.2.bin.WIN64.zip"
-  GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.3.2/glfw-3.3.2.bin.WIN64.zip"
+  GLFW_VER: "3.4"
+  GLFW_BASE: "glfw-3.4.bin.WIN64"
+  GLFW_FILE: "glfw-3.4.bin.WIN64.zip"
+  GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip"
 jobs:
   build:
     runs-on: windows-latest
     strategy:
       matrix:
-        platform: [win-amd64-librw_d3d9-oal] #, win-amd64-librw_gl3_glfw-oal]
+        platform: [win-amd64-librw_d3d9-oal, win-amd64-librw_gl3_glfw-oal]
         buildtype: [Debug, Release, Vanilla]
     steps:
     - name: Add msbuild to PATH

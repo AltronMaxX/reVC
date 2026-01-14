@@ -2,14 +2,14 @@ newoption {
 	trigger     = "glfwdir64",
 	value       = "PATH",
 	description = "Directory of glfw",
-	default     = "vendor/glfw-3.3.2.bin.WIN64",
+	default     = "vendor/glfw-3.4.bin.WIN64",
 }
 
 newoption {
 	trigger     = "glfwdir32",
 	value       = "PATH",
 	description = "Directory of glfw",
-	default     = "vendor/glfw-3.3.2.bin.WIN32",
+	default     = "vendor/glfw-3.4.bin.WIN32",
 }
 
 newoption {
@@ -152,6 +152,7 @@ workspace "reVC"
 		
 	filter "platforms:*librw_gl3_glfw*"
 		defines { "RW_GL3" }
+		defines { "LIBRW_GLFW" }
 		if(not _OPTIONS["with-librw"]) then
 			libdirs { path.join(Librw, "lib/%{getsys(cfg.system)}-%{getarch(cfg.architecture)}-gl3/%{cfg.buildcfg}") }
 		end
