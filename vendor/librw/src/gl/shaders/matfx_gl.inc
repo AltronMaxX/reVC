@@ -1,6 +1,6 @@
 const char *matfx_env_vert_src =
 "uniform mat4 u_texMatrix;\n"
-"uniform vec4 u_colorCLAMP;\n"
+"uniform vec4 u_colorClamp;\n"
 "uniform vec4 u_envColor;\n"
 
 "VSIN(ATTRIB_POS)	vec3 in_pos;\n"
@@ -24,8 +24,8 @@ const char *matfx_env_vert_src =
 "	v_color = in_color;\n"
 "	v_color.rgb += u_ambLight.rgb*surfAmbient;\n"
 "	v_color.rgb += DoDynamicLight(Vertex.xyz, Normal)*surfDiffuse;\n"
-"	v_color = CLAMP(v_color, 0.0, 1.0);\n"
-"	v_envColor = max(v_color, u_colorCLAMP) * u_envColor;\n"
+"	v_color = clamp(v_color, 0.0, 1.0);\n"
+"	v_envColor = max(v_color, u_colorClamp) * u_envColor;\n"
 "	v_color *= u_matColor;\n"
 
 "	v_fog = DoFog(gl_Position.w);\n"

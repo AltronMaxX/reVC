@@ -171,7 +171,7 @@ inline bool32 equal(const RGBAf &c1, const RGBAf &c2) { return c1.red == c2.red 
 inline RGBAf add(const RGBAf &a, const RGBAf &b) { return makeRGBAf(a.red+b.red, a.green+b.green, a.blue+b.blue, a.alpha+b.alpha); }
 inline RGBAf modulate(const RGBAf &a, const RGBAf &b) { return makeRGBAf(a.red*b.red, a.green*b.green, a.blue*b.blue, a.alpha*b.alpha); }
 inline RGBAf scale(const RGBAf &a, float32 f) { return makeRGBAf(a.red*f, a.green*f, a.blue*f, a.alpha*f); }
-inline void CLAMP(RGBAf *a) {
+inline void clamp(RGBAf *a) {
 	if(a->red > 1.0f) a->red = 1.0f;
 	if(a->red < 0.0f) a->red = 0.0f;
 	if(a->green > 1.0f) a->green = 1.0f;
@@ -248,7 +248,7 @@ inline V3d normalize(const V3d &v) { return scale(v, 1.0f/length(v)); }
 inline V3d setlength(const V3d &v, float32 l) { return scale(v, l/length(v)); }
 V3d cross(const V3d &a, const V3d &b);
 inline float32 dot(const V3d &a, const V3d &b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
-inline V3d LERP(const V3d &a, const V3d &b, float32 r){
+inline V3d lerp(const V3d &a, const V3d &b, float32 r){
 	return makeV3d(a.x + r*(b.x - a.x),
 	               a.y + r*(b.y - a.y),
 	               a.z + r*(b.z - a.z));
@@ -297,7 +297,7 @@ inline Quat normalize(const Quat &q) { return scale(q, 1.0f/length(q)); }
 inline Quat conj(const Quat &q) { return makeQuat(q.w, -q.x, -q.y, -q.z); }
 Quat mult(const Quat &q, const Quat &p);
 inline V3d rotate(const V3d &v, const Quat &q) { return mult(mult(q, makeQuat(0.0f, v)), conj(q)).vec(); }
-Quat LERP(const Quat &q, const Quat &p, float32 r);
+Quat lerp(const Quat &q, const Quat &p, float32 r);
 Quat slerp(const Quat &q, const Quat &p, float32 a);
 
 struct RawMatrix

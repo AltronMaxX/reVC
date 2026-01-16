@@ -1,19 +1,18 @@
 [submodule "vendor/ogg"]
 	path = vendor/ogg
 	url = https://github.com/xiph/ogg.git
-	branch = master
+	branch = main
 [submodule "vendor/opus"]
 	path = vendor/opus
 	url = https://github.com/xiph/opus.git
-	branch = master
+	branch = main
 [submodule "vendor/opusfile"]
 	path = vendor/opusfile
 	url = https://github.com/xiph/opusfile.git
-	branch = master
-[submodule "vendor/librw"]
-	path = vendor/librw
-	url = https://github.com/aap/librw.git
-	branch = master
+	branch = main
 [submodule "vendor/discord-rpc"]
 	path = vendor/discord-rpc
 	url = https://github.com/discord/discord-rpc.git
+[submodule "vendor/librw"]
+	path = vendor/librw
+	url = https://github.com/aap/librw.git

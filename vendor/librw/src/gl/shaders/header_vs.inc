@@ -125,6 +125,6 @@ const char *header_vert_src =
 
 "float DoFog(float w)\n"
 "{\n"
-"	return CLAMP((w - u_fogEnd)*u_fogRange, u_fogDisable, 1.0);\n"
+"	return clamp((w - u_fogEnd)*u_fogRange, u_fogDisable, 1.0);\n"
 "}\n"
 ;
