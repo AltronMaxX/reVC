@@ -95,7 +95,9 @@
 #ifdef USE_TEXTURE_POOL
 #include "TexturePools.h"
 #endif
+#ifdef USE_DISCORD_RPC
 #include <DiscordRPC.h>
+#endif
 
 eLevelName CGame::currLevel;
 int32 CGame::currArea;

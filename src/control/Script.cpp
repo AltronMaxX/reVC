@@ -52,6 +52,9 @@
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 #include <stdarg.h>
 #endif
+#ifdef USE_DISCORD_RPC
+#include "DiscordRPC.h"
+#endif
 
 uint8 CTheScripts::ScriptSpace[SIZE_SCRIPT_SPACE];
 CRunningScript CTheScripts::ScriptsArray[MAX_NUM_SCRIPTS];
@@ -4129,6 +4132,9 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_PRINT_BIG:
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
+#ifdef USE_DISCORD_RPC
+		DiscordRPC::CurMissionName = key;
+#endif
 #ifdef MISSION_REPLAY
 		if (strcmp((char*)&CTheScripts::ScriptSpace[m_nIp], "M_FAIL") == 0 && CanAllowMissionReplay())
 			AllowMissionReplay = 1;

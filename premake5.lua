@@ -240,9 +240,9 @@ project "discord-rpc"
 		path.join(Dsrpc, "thirdparty/rapidjson/include")
 	}
 
-	defines {
-		"DISCORD_DISABLE_IO_THREAD"
-	}
+	--defines {
+		--"DISCORD_DISABLE_IO_THREAD"
+	--}
 
 	files {
 		path.join(Dsrpc, "include/*"),
@@ -252,9 +252,6 @@ project "discord-rpc"
 		path.join(Dsrpc, "src/connection_win.cpp"),
 		path.join(Dsrpc, "src/discord_register_win.cpp"),
 	}
-
-	filter "platforms:win*"
-		staticruntime "on"
 	
 	--filter "architecture:not x86"
 		--flags { "ExcludeFromBuild" }
