@@ -32,10 +32,21 @@ newoption {
 	description = "Use link time optimization"
 }
 
+newoption {
+	trigger     = "with-discord-rpc",
+	description = "Build and use discord-rpc from this solution"
+}
+
 if(_OPTIONS["with-librw"]) then
 	Librw = "vendor/librw"
 else
 	Librw = os.getenv("LIBRW") or "vendor/librw"
+end
+
+if(_OPTIONS["with-discord-rpc"]) then
+	Dsrpc = "vendor/discord-rpc"
+else
+	Dsrpc = os.getenv("discordrpc") or "vendor/discord-rpc"
 end
 
 function getsys(a)
@@ -219,6 +230,39 @@ project "librw"
 	filter  {}
 end
 
+if(_OPTIONS["with-discord-rpc"]) then
+project "discord-rpc"
+	kind "StaticLib"
+	targetname "discord-rpc"
+
+	includedirs {
+		path.join(Dsrpc, "include"),
+		path.join(Dsrpc, "thirdparty/rapidjson/include")
+	}
+
+	defines {
+		"DISCORD_DISABLE_IO_THREAD"
+	}
+
+	files {
+		path.join(Dsrpc, "include/*"),
+		path.join(Dsrpc, "src/discord_rpc.cpp"),
+		path.join(Dsrpc, "src/rpc_connection.cpp"),
+		path.join(Dsrpc, "src/serialization.cpp"),
+		path.join(Dsrpc, "src/connection_win.cpp"),
+		path.join(Dsrpc, "src/discord_register_win.cpp"),
+	}
+
+	filter "platforms:win*"
+		staticruntime "on"
+	
+	--filter "architecture:not x86"
+		--flags { "ExcludeFromBuild" }
+	filter "system:not windows"
+		flags { "ExcludeFromBuild" }
+	filter {}
+end
+
 local function addSrcFiles( prefix )
 	return prefix .. "/*cpp", prefix .. "/*.h", prefix .. "/*.c", prefix .. "/*.ico", prefix .. "/*.rc"
 end
@@ -230,6 +274,13 @@ project "reVC"
 
 	if(_OPTIONS["with-librw"]) then
 		dependson "librw"
+	end
+
+	if(_OPTIONS["with-discord-rpc"]) then
+		defines { "USE_DISCORD_RPC" }
+		dependson "discord-rpc"
+		includedirs { path.join(Dsrpc, "include") }
+    	links { "discord-rpc" } 
 	end
 
 	files { addSrcFiles("src") }

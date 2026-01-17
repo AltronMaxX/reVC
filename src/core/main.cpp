@@ -78,6 +78,9 @@
 #ifdef USE_OUR_VERSIONING
 #include "GitSHA1.h"
 #endif
+#ifdef USE_DISCORD_RPC
+#include "DiscordRPC.h"
+#endif
 
 GlobalScene Scene;
 
@@ -1714,6 +1717,9 @@ InitialiseGame(void)
 {
 	LoadingScreen(nil, nil, "loadsc0");
 	CGame::Initialise("DATA\\GTA_VC.DAT");
+#ifdef USE_DISCORD_RPC
+	DiscordRPC::Initialize();
+#endif
 }
 
 RsEventStatus
@@ -1751,6 +1757,9 @@ AppEventHandler(RsEvent event, void *param)
 		case rsTERMINATE:
 		{
 			CGame::FinalShutdown();
+#ifdef USE_DISCORD_RPC
+			DiscordRPC::Shutdown();
+#endif
 
 			return rsEVENTPROCESSED;
 		}

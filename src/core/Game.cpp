@@ -95,6 +95,7 @@
 #ifdef USE_TEXTURE_POOL
 #include "TexturePools.h"
 #endif
+#include <DiscordRPC.h>
 
 eLevelName CGame::currLevel;
 int32 CGame::currArea;
@@ -947,6 +948,10 @@ void CGame::Process(void)
 	}
 #ifdef GTA_PS2
 	CMemCheck::DoTest();
+#endif
+
+#ifdef USE_DISCORD_RPC
+	DiscordRPC::Update();
 #endif
 }
 

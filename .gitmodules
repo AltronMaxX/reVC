@@ -10,9 +10,6 @@
 	path = vendor/opusfile
 	url = https://github.com/xiph/opusfile.git
 	branch = main
-[submodule "vendor/discord-rpc"]
-	path = vendor/discord-rpc
-	url = https://github.com/discord/discord-rpc.git
 [submodule "vendor/librw"]
 	path = vendor/librw
 	url = https://github.com/aap/librw.git
