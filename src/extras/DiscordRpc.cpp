@@ -5,7 +5,6 @@
 #include <World.h>
 #include <Zones.h>
 #include "PlayerPed.h"
-#include <string>
 #include "Ped.h"
 
 #ifdef USE_DISCORD_RPC
@@ -74,7 +73,7 @@ void DiscordRPC::Update()
 
 	//TODO
 	/* if(CTheScripts::IsPlayerOnAMission()) {
-		if(CurMissionName == nullptr) return; 
+		if(CurMissionName == nullptr) return;
 		discordPresence.state = WideToUtf8(CurMissionName);
 		discordPresence.details = "On mission ";
 		discordPresence.instance = 1;
@@ -89,12 +88,12 @@ void DiscordRPC::Update()
 		if(playerPed->Driving()) {
 			if(playerPed->m_pMyVehicle->IsBoat()) {
 				discordPresence.details = "Sailing in ";
-			} else if(playerPed->m_pMyVehicle->IsPlane() || playerPed->m_pMyVehicle->IsHeli() 
+			} else if(playerPed->m_pMyVehicle->IsPlane() || playerPed->m_pMyVehicle->IsHeli()
 				|| playerPed->m_pMyVehicle->IsRealHeli() || playerPed->m_pMyVehicle->IsRealPlane()) {
 				discordPresence.details = "Flying in ";
 			} else {
 				discordPresence.details = "Driving in ";
-			}	
+			}
 		} else {
 			discordPresence.details = "Walking in ";
 		}

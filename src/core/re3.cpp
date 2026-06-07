@@ -307,7 +307,7 @@ void StoreIni(const char *cat, const char *key, char *val, int size)
 }
 
 const char *iniControllerActions[] = { "PED_FIREWEAPON", "PED_CYCLE_WEAPON_RIGHT", "PED_CYCLE_WEAPON_LEFT", "GO_FORWARD", "GO_BACK", "GO_LEFT", "GO_RIGHT", "PED_SNIPER_ZOOM_IN",
-	"PED_SNIPER_ZOOM_OUT", "VEHICLE_ENTER_EXIT", "CAMERA_CHANGE_VIEW_ALL_SITUATIONS", "PED_JUMPING", "PED_SPRINT", "PED_LOOKBEHIND", "PED_DUCK", "PED_ANSWER_PHONE", 
+	"PED_SNIPER_ZOOM_OUT", "VEHICLE_ENTER_EXIT", "CAMERA_CHANGE_VIEW_ALL_SITUATIONS", "PED_JUMPING", "PED_SPRINT", "PED_LOOKBEHIND", "PED_DUCK", "PED_ANSWER_PHONE",
 #ifdef BIND_VEHICLE_FIREWEAPON
 	"VEHICLE_FIREWEAPON",
 #endif
@@ -528,13 +528,13 @@ bool LoadINISettings()
 #endif
 
 #ifdef PROPER_SCALING
-	ReadIniIfExists("Draw", "ProperScaling", &CDraw::ms_bProperScaling);	
+	ReadIniIfExists("Draw", "ProperScaling", &CDraw::ms_bProperScaling);
 #endif
 #ifdef FIX_RADAR
-	ReadIniIfExists("Draw", "FixRadar", &CDraw::ms_bFixRadar);	
+	ReadIniIfExists("Draw", "FixRadar", &CDraw::ms_bFixRadar);
 #endif
 #ifdef FIX_SPRITES
-	ReadIniIfExists("Draw", "FixSprites", &CDraw::ms_bFixSprites);	
+	ReadIniIfExists("Draw", "FixSprites", &CDraw::ms_bFixSprites);
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	ReadIniIfExists("General", "DrawVersionText", &gbDrawVersionText);
@@ -550,7 +550,7 @@ bool LoadINISettings()
 			CMenuScreenCustom::CMenuEntry &option = aScreens[i].m_aEntries[j];
 			if (option.m_Action == MENUACTION_NOTHING)
 				break;
-				
+
 			// CFO check
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
 				// CFO only supports saving uint8 right now
@@ -626,14 +626,14 @@ void SaveINISettings()
 	StoreIni("Rendering", "NewRenderer", gbNewRenderer);
 #endif
 
-#ifdef PROPER_SCALING	
-	StoreIni("Draw", "ProperScaling", CDraw::ms_bProperScaling);	
+#ifdef PROPER_SCALING
+	StoreIni("Draw", "ProperScaling", CDraw::ms_bProperScaling);
 #endif
 #ifdef FIX_RADAR
 	StoreIni("Draw", "FixRadar", CDraw::ms_bFixRadar);
 #endif
 #ifdef FIX_SPRITES
-	StoreIni("Draw", "FixSprites", CDraw::ms_bFixSprites);	
+	StoreIni("Draw", "FixSprites", CDraw::ms_bFixSprites);
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	StoreIni("General", "DrawVersionText", gbDrawVersionText);
@@ -647,7 +647,7 @@ void SaveINISettings()
 			CMenuScreenCustom::CMenuEntry &option = aScreens[i].m_aEntries[j];
 			if (option.m_Action == MENUACTION_NOTHING)
 				break;
-				
+
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
 				// Beware: CFO only supports saving uint8 right now
 				StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *option.m_CFO->value);
@@ -921,7 +921,7 @@ void CTweakVars::Add(CTweakVar *var)
 
 	TweakVarsList[TweakVarsListSize++] = var;
 //	TweakVarsList.push_back(var);
-	
+
 	if ( bAddTweakVarsNow )
 		var->AddDBG(pTweakVarsDefaultPath);
 }
@@ -932,16 +932,16 @@ void CTweakVars::AddDBG(const char *path)
 
 	for(int i = 0; i < TweakVarsListSize; ++i)
 		TweakVarsList[i]->AddDBG(pTweakVarsDefaultPath);
-	
+
 	bAddTweakVarsNow = true;
 }
 
 void CTweakSwitch::AddDBG(const char *path)
-{		
+{
 	DebugMenuEntry *e = DebugMenuAddVar(m_pPath == NULL ? path : m_pPath, m_pVarName, (int32_t *)m_pIntVar, m_pFunc, 1, m_nMin, m_nMax, m_aStr);
 	DebugMenuEntrySetWrap(e, true);
 }
-	
+
 void CTweakFunc::AddDBG  (const char *path) { DebugMenuAddCmd     (m_pPath == NULL ? path : m_pPath, m_pVarName, m_pFunc); }
 void CTweakBool::AddDBG  (const char *path) { DebugMenuAddVarBool8(m_pPath == NULL ? path : m_pPath, m_pVarName, (int8_t *)m_pBoolVar,  NULL); }
 void CTweakInt8::AddDBG  (const char *path) { DebugMenuAddVar     (m_pPath == NULL ? path : m_pPath, m_pVarName, (int8_t *)m_pIntVar,   NULL, m_nStep, m_nLoawerBound, m_nUpperBound, NULL); }
@@ -957,7 +957,7 @@ static const char *wt[] = {
 			"Sunny", "Cloudy", "Rainy", "Foggy"
 		};
 
-SETTWEAKPATH("TEST");		
+SETTWEAKPATH("TEST");
 TWEAKSWITCH(CWeather::NewWeatherType, 0, 3, wt, NULL);
 */
 
@@ -1078,7 +1078,7 @@ DebugMenuPopulate(void)
 		DebugMenuAddCmd("Spawn", "Spawn Skimmer", [](){ SpawnCar(MI_SKIMMER); });
 
 		DebugMenuAddVarBool8("Render", "Draw hud", &CHud::m_Wants_To_Draw_Hud, nil);
-#ifdef PROPER_SCALING	
+#ifdef PROPER_SCALING
 		DebugMenuAddVarBool8("Render", "Proper Scaling", &CDraw::ms_bProperScaling, nil);
 #endif
 #ifdef FIX_RADAR
@@ -1153,8 +1153,8 @@ extern bool gbRenderWorld2;
 		DebugMenuAddVarBool8("Debug Render", "Don't render Vehicles", &gbDontRenderVehicles, nil);
 		DebugMenuAddVarBool8("Debug Render", "Don't render Objects", &gbDontRenderObjects, nil);
 		DebugMenuAddVarBool8("Debug Render", "Don't Render Water", &gbDontRenderWater, nil);
-		
-		
+
+
 #ifdef DRAW_GAME_VERSION_TEXT
 		DebugMenuAddVarBool8("Debug", "Version Text", &gbDrawVersionText, nil);
 #endif
@@ -1178,7 +1178,7 @@ extern bool gbRenderWorld2;
 		//DebugMenuAddCmd("Debug", "Stop Credits", CCredits::Stop);
 
 #ifdef RELOADABLES
-// maybe put it back if we have more to reload 
+// maybe put it back if we have more to reload
 //		DebugMenuAddCmd("Reload", "HUD.TXD", CHud::ReloadTXD);
 #endif
 
@@ -1250,20 +1250,20 @@ void re3_assert(const char *expr, const char *filename, unsigned int lineno, con
 	int nCode;
 
 	strcpy_s(re3_buff, re3_buffsize, "Assertion failed!" );
-	strcat_s(re3_buff, re3_buffsize, "\n" );	
-	
+	strcat_s(re3_buff, re3_buffsize, "\n" );
+
 	strcat_s(re3_buff, re3_buffsize, "File: ");
 	strcat_s(re3_buff, re3_buffsize, filename );
-	strcat_s(re3_buff, re3_buffsize, "\n" );	
+	strcat_s(re3_buff, re3_buffsize, "\n" );
 
 	strcat_s(re3_buff, re3_buffsize, "Line: " );
 	_itoa_s( lineno, re3_buff + strlen(re3_buff), re3_buffsize - strlen(re3_buff), 10 );
 	strcat_s(re3_buff, re3_buffsize, "\n");
-	
+
 	strcat_s(re3_buff, re3_buffsize, "Function: ");
 	strcat_s(re3_buff, re3_buffsize, func );
-	strcat_s(re3_buff, re3_buffsize, "\n" );	
-	
+	strcat_s(re3_buff, re3_buffsize, "\n" );
+
 	strcat_s(re3_buff, re3_buffsize, "Expression: ");
 	strcat_s(re3_buff, re3_buffsize, expr);
 	strcat_s(re3_buff, re3_buffsize, "\n");
@@ -1293,23 +1293,8 @@ void re3_assert(const char *expr, const char *filename, unsigned int lineno, con
 	abort();
 #else
 	// TODO
-	fflush(stdout);
-	fflush(stderr);
-	dbglog(DBG_CRITICAL, "\nRE3 ASSERT FAILED\n\tFile: %s\n\tLine: %d\n\tFunction: %s\n\tExpression: %s\n", filename, lineno, func, expr);
-	dbglog(DBG_CRITICAL, "POSIX error (may not be relevant): %s\n", strerror(errno));
-#if defined(DC_SIM) || defined(DC_TEXCONV)
-	for(;;)
-		;
-#else
-	stacktrace();
-	dbgio_dev_select("fb");
-	sleep(1);
-	dbglog(DBG_CRITICAL, "RE3 ASSERT FAILED\n\tFile: %s\n\tLine: %d\n\tFunction: %s\n\tExpression: %s\n", filename, lineno, func, expr);
-	dbglog(DBG_CRITICAL, "POSIX error (may not be relevant): %s\n", strerror(errno));
-	stacktrace();
-	dbgio_flush();
-	abort();
-#endif
+	printf("\nREVC ASSERT FAILED\n\tFile: %s\n\tLine: %d\n\tFunction: %s\n\tExpression: %s\n",filename,lineno,func,expr);
+	assert(false);
 
 #endif
 }
@@ -1341,12 +1326,12 @@ void re3_trace(const char *filename, unsigned int lineno, const char *func, cons
 #ifdef _WIN32
 	vsprintf_s(re3_buff, re3_buffsize, format, va);
 	va_end(va);
-	
+
 	sprintf_s(buff, re3_buffsize * 2, "[%s.%s:%d]: %s", filename, func, lineno, re3_buff);
 #else
 	vsprintf(re3_buff, format, va);
 	va_end(va);
-	
+
 	sprintf(buff, "[%s.%s:%d]: %s", filename, func, lineno, re3_buff);
 #endif
 
@@ -1360,7 +1345,7 @@ void re3_usererror(const char *format, ...)
 #ifdef _WIN32
 	vsprintf_s(re3_buff, re3_buffsize, format, va);
 	va_end(va);
-	
+
 	::MessageBoxA(nil, re3_buff, "REVC Error!",
 		MB_OK|MB_ICONHAND|MB_SETFOREGROUND|MB_TASKMODAL);
 
