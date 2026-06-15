@@ -333,6 +333,12 @@ cDMAudio::FinishMobileMissionAudio(bool finishUpcoming)
 	return AudioManager.FinishMobileMissionAudio(finishUpcoming);
 }
 
+bool
+cDMAudio::IsMobileMissionAudioSkipActive(void)
+{
+	return AudioManager.IsMobileMissionAudioSkipActive();
+}
+
 uint8
 cDMAudio::GetRadioInCar(void)
 {

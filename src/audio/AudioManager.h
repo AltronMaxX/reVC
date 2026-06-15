@@ -270,6 +270,7 @@ public:
 	void ClearMissionAudio(uint8 slot);                                                                                    // done (inlined in vc)
 	void ClearMobileMissionAudioSkip(void);
 	bool FinishMobileMissionAudio(bool finishUpcoming = false);
+	bool IsMobileMissionAudioSkipActive(void);
 	void ClearRequestedQueue();                                                                                            // done (inlined in vc)
 	uint32 ComputeDopplerEffectedFrequency(uint32 oldFreq, float position1, float position2, float speedMultiplier) const; // done
 	int32 ComputePan(float, CVector *);                                                                                    // done
