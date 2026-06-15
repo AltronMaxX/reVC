@@ -9841,16 +9841,18 @@ cAudioManager::ClearMissionAudio(uint8 slot)
 	}
 }
 
-void
+bool
 cAudioManager::FinishMobileMissionAudio(void)
 {
-	if (!m_bIsInitialised) return;
+	if (!m_bIsInitialised) return false;
+
+	bool skipped = false;
 
 	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
-		if (!m_sMissionAudio.m_bIsMobile[slot] && !IsMobilePhoneMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
+		if (m_sMissionAudio.m_nPlayStatus[slot] == PLAY_STATUS_FINISHED ||
+		    (!m_sMissionAudio.m_bIsMobile[slot] && !IsMobilePhoneMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot])))
 			continue;
 
-		m_sMissionAudio.m_nSampleIndex[slot] = NO_SAMPLE;
 		m_sMissionAudio.m_nLoadingStatus[slot] = LOADING_STATUS_LOADED;
 		m_sMissionAudio.m_nPlayStatus[slot] = PLAY_STATUS_FINISHED;
 		m_sMissionAudio.m_bIsPlaying[slot] = false;
@@ -9859,7 +9861,10 @@ cAudioManager::FinishMobileMissionAudio(void)
 		m_sMissionAudio.m_nMissionAudioCounter[slot] = 0;
 		m_sMissionAudio.m_bIsMobile[slot] = false;
 		SampleManager.StopStreamedFile(slot + 1);
+		skipped = true;
 	}
+
+	return skipped;
 }
 
 void

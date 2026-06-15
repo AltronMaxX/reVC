@@ -6,6 +6,7 @@
 #include "CarCtrl.h"
 #include "Cranes.h"
 #include "Darkel.h"
+#include "DMAudio.h"
 #include "Explosion.h"
 #include "Fire.h"
 #include "Frontend.h"
@@ -301,14 +302,29 @@ CPlayerInfo::Process(void)
 
 	m_fRoadDensity = CLAMP(m_fRoadDensity, 0.5f, 1.45f);
 
+	CPad *pad = CPad::GetPad(0);
+	static bool bPhoneSkipHoldingVehicleKey = false;
+	if (!pad->GetChar('F'))
+		bPhoneSkipHoldingVehicleKey = false;
+
+	if (pad->GetCharJustDown('F')) {
+		if (DMAudio.FinishMobileMissionAudio()) {
+			bPhoneSkipHoldingVehicleKey = true;
+		}
+		if (m_pPed->m_nPedState == PED_ANSWER_MOBILE) {
+			m_pPed->ClearAnswerMobile();
+			bPhoneSkipHoldingVehicleKey = true;
+		}
+	}
+
 	// Because vehicle enter/exit use same key binding.
 	bool enterOrExitVeh;
 	if (m_pPed->bVehExitWillBeInstant && m_pPed->bInVehicle)
-		enterOrExitVeh = CPad::GetPad(0)->ExitVehicleJustDown();
+		enterOrExitVeh = pad->ExitVehicleJustDown();
 	else
-		enterOrExitVeh = CPad::GetPad(0)->GetExitVehicle();
+		enterOrExitVeh = pad->GetExitVehicle();
 
-	if (enterOrExitVeh && m_pPed->m_nPedState != PED_ANSWER_MOBILE && m_pPed->m_nPedState != PED_SNIPER_MODE && m_pPed->m_nPedState != PED_ROCKET_MODE) {
+	if (!bPhoneSkipHoldingVehicleKey && enterOrExitVeh && m_pPed->m_nPedState != PED_ANSWER_MOBILE && m_pPed->m_nPedState != PED_SNIPER_MODE && m_pPed->m_nPedState != PED_ROCKET_MODE) {
 		if (m_pPed->bInVehicle) {
 			if (!m_pRemoteVehicle) {
 				CEntity *surfaceBelowVeh = m_pPed->m_pMyVehicle->m_pCurGroundEntity;
@@ -340,7 +356,7 @@ CPlayerInfo::Process(void)
 			}
 		} else {
 			// Enter vehicle
-			if (CPad::GetPad(0)->ExitVehicleJustDown()) {
+			if (pad->ExitVehicleJustDown()) {
 				bool weAreOnBoat = false;
 				float lastCloseness = 0.0f;
 				CVehicle *carBelow = nil;

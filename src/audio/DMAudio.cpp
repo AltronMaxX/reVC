@@ -321,10 +321,10 @@ cDMAudio::ClearMissionAudio(uint8 slot)
 	AudioManager.ClearMissionAudio(slot);
 }
 
-void
+bool
 cDMAudio::FinishMobileMissionAudio(void)
 {
-	AudioManager.FinishMobileMissionAudio();
+	return AudioManager.FinishMobileMissionAudio();
 }
 
 uint8

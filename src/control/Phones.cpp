@@ -55,6 +55,8 @@ CPhoneInfo::Update(void)
 				if (pPhoneDisplayingMessages->m_apMessages[i])
 					CMessages::ClearThisPrint(pPhoneDisplayingMessages->m_apMessages[i]);
 			}
+			if (pPhoneDisplayingMessages->m_nState == PHONE_STATE_REPEATED_MESSAGE_STARTED)
+				pPhoneDisplayingMessages->m_nState = PHONE_STATE_ONETIME_MESSAGE_STARTED;
 		}
 		PhoneEnableControlsTimer = 0;
 	}
