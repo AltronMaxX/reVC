@@ -308,10 +308,12 @@ CPlayerInfo::Process(void)
 		bPhoneSkipHoldingVehicleKey = false;
 
 	if (pad->GetCharJustDown('F')) {
-		if (DMAudio.FinishMobileMissionAudio()) {
+		const bool isAnsweringMobile = m_pPed->m_nPedState == PED_ANSWER_MOBILE;
+
+		if (DMAudio.FinishMobileMissionAudio(isAnsweringMobile)) {
 			bPhoneSkipHoldingVehicleKey = true;
 		}
-		if (m_pPed->m_nPedState == PED_ANSWER_MOBILE) {
+		if (isAnsweringMobile) {
 			m_pPed->ClearAnswerMobile();
 			bPhoneSkipHoldingVehicleKey = true;
 		}

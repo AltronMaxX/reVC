@@ -268,7 +268,8 @@ public:
 	bool CheckForAnAudioFileOnCD() const;                                                                                  // done
 	void ClearActiveSamples();                                                                                             // done
 	void ClearMissionAudio(uint8 slot);                                                                                    // done (inlined in vc)
-	bool FinishMobileMissionAudio(void);
+	void ClearMobileMissionAudioSkip(void);
+	bool FinishMobileMissionAudio(bool finishUpcoming = false);
 	void ClearRequestedQueue();                                                                                            // done (inlined in vc)
 	uint32 ComputeDopplerEffectedFrequency(uint32 oldFreq, float position1, float position2, float speedMultiplier) const; // done
 	int32 ComputePan(float, CVector *);                                                                                    // done
