@@ -53,12 +53,10 @@ enum LOADING_STATUS { LOADING_STATUS_NOT_LOADED = 0, LOADING_STATUS_LOADED, LOAD
 static const int32 MOBILE_MISSION_AUDIO_GROUP_NONE = -1;
 static const int32 MOBILE_MISSION_AUDIO_GROUP_ANY = -2;
 static const uint32 MOBILE_MISSION_AUDIO_PENDING_SKIP_TIME = 10000;
-static const uint32 MOBILE_MISSION_AUDIO_PHONE_BLOCK_TIME = 3000;
 static bool g_bSkipMobileMissionAudio[MISSION_AUDIO_SLOTS];
 static int32 g_nSkippedMobileMissionAudioGroup[MISSION_AUDIO_SLOTS];
 static int32 g_nMobileMissionAudioGroup[MISSION_AUDIO_SLOTS];
 static uint32 g_nSkipMobileMissionAudioExpireTime[MISSION_AUDIO_SLOTS];
-static uint32 g_nSkipMobileMissionAudioPhoneBlockTime[MISSION_AUDIO_SLOTS];
 
 void
 cAudioManager::PreInitialiseGameSpecificSetup() const
@@ -130,7 +128,6 @@ cAudioManager::PostInitialiseGameSpecificSetup()
 		g_nSkippedMobileMissionAudioGroup[slot] = MOBILE_MISSION_AUDIO_GROUP_NONE;
 		g_nMobileMissionAudioGroup[slot] = MOBILE_MISSION_AUDIO_GROUP_NONE;
 		g_nSkipMobileMissionAudioExpireTime[slot] = 0;
-		g_nSkipMobileMissionAudioPhoneBlockTime[slot] = 0;
 	}
 
 	ResetAudioLogicTimers(CTimer::GetTimeInMilliseconds());
@@ -9774,13 +9771,6 @@ ClearMobileMissionAudioSkipSlot(uint8 slot)
 	g_bSkipMobileMissionAudio[slot] = false;
 	g_nSkippedMobileMissionAudioGroup[slot] = MOBILE_MISSION_AUDIO_GROUP_NONE;
 	g_nSkipMobileMissionAudioExpireTime[slot] = 0;
-	g_nSkipMobileMissionAudioPhoneBlockTime[slot] = 0;
-}
-
-static void
-BlockSkippedMobileMissionAudioPhone(uint8 slot)
-{
-	g_nSkipMobileMissionAudioPhoneBlockTime[slot] = CTimer::GetTimeInMilliseconds() + MOBILE_MISSION_AUDIO_PHONE_BLOCK_TIME;
 }
 
 static int32
@@ -9820,7 +9810,6 @@ static void
 RememberSkippedMobileMissionAudioGroup(uint8 slot, int32 group)
 {
 	g_bSkipMobileMissionAudio[slot] = true;
-	BlockSkippedMobileMissionAudioPhone(slot);
 	if (group != MOBILE_MISSION_AUDIO_GROUP_NONE) {
 		g_nSkippedMobileMissionAudioGroup[slot] = group;
 	} else if (g_nSkippedMobileMissionAudioGroup[slot] == MOBILE_MISSION_AUDIO_GROUP_NONE) {
@@ -9992,34 +9981,6 @@ cAudioManager::ClearMobileMissionAudioSkip(void)
 }
 
 bool
-cAudioManager::HasMobileMissionAudio(void)
-{
-	if (!m_bIsInitialised)
-		return false;
-
-	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
-		if (m_sMissionAudio.m_nPlayStatus[slot] != PLAY_STATUS_FINISHED && IsMobilePhoneMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
-			return true;
-	}
-
-	return false;
-}
-
-bool
-cAudioManager::IsMobileMissionAudioSkipActive(void)
-{
-	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
-		if (MobileMissionAudioSkipExpired(slot))
-			ClearMobileMissionAudioSkipSlot(slot);
-		if (g_nSkipMobileMissionAudioPhoneBlockTime[slot] != 0 && CTimer::GetTimeInMilliseconds() <= g_nSkipMobileMissionAudioPhoneBlockTime[slot])
-			return true;
-		g_nSkipMobileMissionAudioPhoneBlockTime[slot] = 0;
-	}
-
-	return false;
-}
-
-bool
 cAudioManager::FinishMobileMissionAudio(bool finishUpcoming)
 {
 	if (!m_bIsInitialised) return false;
@@ -10031,7 +9992,6 @@ cAudioManager::FinishMobileMissionAudio(bool finishUpcoming)
 			g_bSkipMobileMissionAudio[slot] = true;
 			g_nSkippedMobileMissionAudioGroup[slot] = MOBILE_MISSION_AUDIO_GROUP_ANY;
 			g_nSkipMobileMissionAudioExpireTime[slot] = CTimer::GetTimeInMilliseconds() + MOBILE_MISSION_AUDIO_PENDING_SKIP_TIME;
-			BlockSkippedMobileMissionAudioPhone(slot);
 		}
 		skipped = true;
 	}

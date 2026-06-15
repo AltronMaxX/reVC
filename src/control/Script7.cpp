@@ -884,16 +884,11 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
-		static bool bSuppressEmptyMobileAnswer = false;
 
 		if (ScriptParams[1]) {
-			const bool hasMobileMissionAudio = DMAudio.HasMobileMissionAudio();
-			if (DMAudio.IsMobileMissionAudioSkipActive() || (bSuppressEmptyMobileAnswer && !hasMobileMissionAudio) || !pPed->SetAnswerMobile()) {
-				bSuppressEmptyMobileAnswer = true;
+			if (!pPed->SetAnswerMobile()) {
 				DMAudio.FinishMobileMissionAudio(true);
 				pPed->ClearAnswerMobile();
-			} else {
-				bSuppressEmptyMobileAnswer = false;
 			}
 		} else {
 			pPed->ClearAnswerMobile();
