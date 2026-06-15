@@ -89,6 +89,7 @@ public:
 	void ClearMissionAudio(uint8 slot);
 	void ClearMobileMissionAudioSkip(void);
 	bool FinishMobileMissionAudio(bool finishUpcoming = false);
+	bool HasMobileMissionAudio(void);
 	bool IsMobileMissionAudioSkipActive(void);
 
 	uint8 GetRadioInCar(void);

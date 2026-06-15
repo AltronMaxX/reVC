@@ -334,6 +334,12 @@ cDMAudio::FinishMobileMissionAudio(bool finishUpcoming)
 }
 
 bool
+cDMAudio::HasMobileMissionAudio(void)
+{
+	return AudioManager.HasMobileMissionAudio();
+}
+
+bool
 cDMAudio::IsMobileMissionAudioSkipActive(void)
 {
 	return AudioManager.IsMobileMissionAudioSkipActive();

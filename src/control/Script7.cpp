@@ -884,13 +884,20 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		static bool bSuppressEmptyMobileAnswer = false;
+
 		if (ScriptParams[1]) {
-			if (DMAudio.IsMobileMissionAudioSkipActive() || !pPed->SetAnswerMobile()) {
+			const bool hasMobileMissionAudio = DMAudio.HasMobileMissionAudio();
+			if (DMAudio.IsMobileMissionAudioSkipActive() || (bSuppressEmptyMobileAnswer && !hasMobileMissionAudio) || !pPed->SetAnswerMobile()) {
+				bSuppressEmptyMobileAnswer = true;
 				DMAudio.FinishMobileMissionAudio(true);
 				pPed->ClearAnswerMobile();
+			} else {
+				bSuppressEmptyMobileAnswer = false;
 			}
-		} else
+		} else {
 			pPed->ClearAnswerMobile();
+		}
 		return 0;
 	}
 	case COMMAND_SET_PLAYER_DRUNKENNESS:

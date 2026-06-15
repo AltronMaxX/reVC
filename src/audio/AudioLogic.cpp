@@ -9992,6 +9992,20 @@ cAudioManager::ClearMobileMissionAudioSkip(void)
 }
 
 bool
+cAudioManager::HasMobileMissionAudio(void)
+{
+	if (!m_bIsInitialised)
+		return false;
+
+	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
+		if (m_sMissionAudio.m_nPlayStatus[slot] != PLAY_STATUS_FINISHED && IsMobilePhoneMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
+			return true;
+	}
+
+	return false;
+}
+
+bool
 cAudioManager::IsMobileMissionAudioSkipActive(void)
 {
 	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
