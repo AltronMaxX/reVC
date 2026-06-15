@@ -9730,6 +9730,18 @@ cAudioManager::MissionScriptAudioUsesPoliceChannel(int32 soundMission) const
 	return false;
 }
 
+static bool
+IsMobileMissionAudioSample(int32 sample)
+{
+	return sample >= STREAMED_SOUND_MISSION_MOB_01A && sample <= STREAMED_SOUND_MISSION_MOB_99A;
+}
+
+static bool
+IsMobilePhoneMissionAudioSample(int32 sample)
+{
+	return sample == STREAMED_SOUND_MISSION_MOBR1 || IsMobileMissionAudioSample(sample);
+}
+
 void
 cAudioManager::PreloadMissionAudio(uint8 slot, Const char *name)
 {
@@ -9830,6 +9842,27 @@ cAudioManager::ClearMissionAudio(uint8 slot)
 }
 
 void
+cAudioManager::FinishMobileMissionAudio(void)
+{
+	if (!m_bIsInitialised) return;
+
+	for (uint8 slot = 0; slot < MISSION_AUDIO_SLOTS; slot++) {
+		if (!m_sMissionAudio.m_bIsMobile[slot] && !IsMobilePhoneMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
+			continue;
+
+		m_sMissionAudio.m_nSampleIndex[slot] = NO_SAMPLE;
+		m_sMissionAudio.m_nLoadingStatus[slot] = LOADING_STATUS_LOADED;
+		m_sMissionAudio.m_nPlayStatus[slot] = PLAY_STATUS_FINISHED;
+		m_sMissionAudio.m_bIsPlaying[slot] = false;
+		m_sMissionAudio.m_bIsPlayed[slot] = true;
+		m_sMissionAudio.m_bPredefinedProperties[slot] = true;
+		m_sMissionAudio.m_nMissionAudioCounter[slot] = 0;
+		m_sMissionAudio.m_bIsMobile[slot] = false;
+		SampleManager.StopStreamedFile(slot + 1);
+	}
+}
+
+void
 cAudioManager::ProcessMissionAudioSlot(uint8 slot)
 {
 	float dist;
@@ -9904,7 +9937,7 @@ cAudioManager::ProcessMissionAudioSlot(uint8 slot)
 			}
 			m_sMissionAudio.m_nPlayStatus[slot] = PLAY_STATUS_PLAYING;
 			nCheckPlayingDelay[slot] = 30;
-			if (m_sMissionAudio.m_nSampleIndex[slot] >= STREAMED_SOUND_MISSION_MOB_01A && m_sMissionAudio.m_nSampleIndex[slot] <= STREAMED_SOUND_MISSION_MOB_99A)
+			if (IsMobileMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
 				m_sMissionAudio.m_bIsMobile[slot] = true;
 			break;
 		case PLAY_STATUS_PLAYING:
@@ -9952,7 +9985,7 @@ cAudioManager::ProcessMissionAudioSlot(uint8 slot)
 					m_sMissionAudio.m_nPlayStatus[slot] = PLAY_STATUS_STOPPED;
 				} else {
 					m_sMissionAudio.m_nPlayStatus[slot] = PLAY_STATUS_FINISHED;
-					if (m_sMissionAudio.m_nSampleIndex[slot] >= STREAMED_SOUND_MISSION_MOB_01A && m_sMissionAudio.m_nSampleIndex[slot] <= STREAMED_SOUND_MISSION_MOB_99A)
+					if (IsMobileMissionAudioSample(m_sMissionAudio.m_nSampleIndex[slot]))
 						m_sMissionAudio.m_bIsMobile[slot] = false;
 					m_sMissionAudio.m_nSampleIndex[slot] = NO_SAMPLE;
 					SampleManager.StopStreamedFile(slot + 1);

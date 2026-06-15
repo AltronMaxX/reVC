@@ -1653,6 +1653,11 @@ CPlayerPed::ProcessControl(void)
 		return;
 
 	CPad *padUsed = GetPadFromPlayer(this);
+	if (padUsed && padUsed->GetCharJustDown('F')) {
+		DMAudio.FinishMobileMissionAudio();
+		if (m_nPedState == PED_ANSWER_MOBILE)
+			ClearAnswerMobile();
+	}
 	m_pWanted->Update();
 	PruneReferences();
 

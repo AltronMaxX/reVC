@@ -49,6 +49,15 @@ CPhoneInfo::Update(void)
 #endif
 	CPlayerPed *player = FindPlayerPed();
 	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
+	if (bDisplayingPhoneMessage && CPad::GetPad(0)->GetCharJustDown('F')) {
+		if (pPhoneDisplayingMessages) {
+			for (int i = 0; i < ARRAY_SIZE(pPhoneDisplayingMessages->m_apMessages); i++) {
+				if (pPhoneDisplayingMessages->m_apMessages[i])
+					CMessages::ClearThisPrint(pPhoneDisplayingMessages->m_apMessages[i]);
+			}
+		}
+		PhoneEnableControlsTimer = 0;
+	}
 	if (bDisplayingPhoneMessage && CTimer::GetTimeInMilliseconds() > PhoneEnableControlsTimer) {
 		playerInfo->MakePlayerSafe(false);
 		TheCamera.SetWideScreenOff();
