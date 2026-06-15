@@ -863,7 +863,7 @@ public:
 	void BuyIceCream(void);
 	void CheckThreatValidity(void);
 	void ClearAnswerMobile(void);
-	bool SetAnswerMobile(void);
+	void SetAnswerMobile(void);
 	void AttachPedToEntity(CEntity*, CVector, uint16, float, eWeaponType);
 	void DettachPedFromEntity();
 	void PedShuffle();

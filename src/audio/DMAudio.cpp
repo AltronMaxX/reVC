@@ -321,18 +321,6 @@ cDMAudio::ClearMissionAudio(uint8 slot)
 	AudioManager.ClearMissionAudio(slot);
 }
 
-void
-cDMAudio::ClearMobileMissionAudioSkip(void)
-{
-	AudioManager.ClearMobileMissionAudioSkip();
-}
-
-bool
-cDMAudio::FinishMobileMissionAudio(bool finishUpcoming)
-{
-	return AudioManager.FinishMobileMissionAudio(finishUpcoming);
-}
-
 uint8
 cDMAudio::GetRadioInCar(void)
 {

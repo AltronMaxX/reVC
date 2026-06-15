@@ -274,7 +274,6 @@ cAudioManager::ResetTimers(uint32 time)
 			m_nActiveSampleQueue = 0;
 		}
 		ClearActiveSamples();
-		ClearMobileMissionAudioSkip();
 		ClearMissionAudio(0);
 		ClearMissionAudio(1);
 		SampleManager.StopChannel(policeChannel);

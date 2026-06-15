@@ -941,9 +941,7 @@ void CGame::Process(void)
 			int autoSaveSlot = 8;
 
 			if (!TheCamera.m_bFading) {
-				if (PcSaveHelper.SaveSlot(autoSaveSlot)) {
-					// Успех!
-				}
+				if (PcSaveHelper.SaveSlot(autoSaveSlot)) {}
 
 				bRequestAutosave = false;
 			}
