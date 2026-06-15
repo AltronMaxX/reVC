@@ -177,6 +177,8 @@ CPopulation::LoadPedGroups()
 	CFileMgr::ChangeDir("\\DATA\\");
 	fd = CFileMgr::OpenFile("PEDGRP.DAT", "r");
 	CFileMgr::ChangeDir("\\");
+	if(fd <= 0)
+		USERERROR("Cannot open DATA\\PEDGRP.DAT. Make sure the game is started from the GTA Vice City directory.");
 	while (CFileMgr::ReadLine(fd, line, sizeof(line))) {
 		int end;
 		// find end of line

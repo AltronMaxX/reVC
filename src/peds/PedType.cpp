@@ -57,6 +57,8 @@ CPedType::LoadPedData(void)
 	CFileMgr::SetDir("DATA");
 	buflen = CFileMgr::LoadFile("PED.DAT", (uint8*)buf, 16 * 1024, "r");
 	CFileMgr::SetDir("");
+	if(buflen < 0)
+		USERERROR("Cannot open DATA\\PED.DAT. Make sure the game is started from the GTA Vice City directory.");
 
 	for(bp = 0; bp < buflen; ){
 		// read file line by line
@@ -258,6 +260,8 @@ CPedStats::LoadPedStats(void)
 	CFileMgr::SetDir("DATA");
 	buflen = CFileMgr::LoadFile("PEDSTATS.DAT", (uint8*)buf, 16 * 1024, "r");
 	CFileMgr::SetDir("");
+	if(buflen < 0)
+		USERERROR("Cannot open DATA\\PEDSTATS.DAT. Make sure the game is started from the GTA Vice City directory.");
 
 	for(bp = 0; bp < buflen; ){
 		// read file line by line

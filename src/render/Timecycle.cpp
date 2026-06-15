@@ -162,7 +162,8 @@ CTimeCycle::Initialise(void)
 	debug("Intialising CTimeCycle...\n");
 
 	CFileMgr::SetDir("DATA");
-	CFileMgr::LoadFile("TIMECYC.DAT", work_buff, sizeof(work_buff), "rb");
+	if(CFileMgr::LoadFile("TIMECYC.DAT", work_buff, sizeof(work_buff), "rb") < 0)
+		USERERROR("Cannot open DATA\\TIMECYC.DAT. Make sure the game is started from the GTA Vice City directory.");
 	CFileMgr::SetDir("");
 
 	line[0] = '\0';

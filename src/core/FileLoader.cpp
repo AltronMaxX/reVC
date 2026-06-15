@@ -62,7 +62,8 @@ CFileLoader::LoadLevel(const char *filename)
 		RwTexDictionarySetCurrent(savedTxd);
 	}
 	fd = CFileMgr::OpenFile(filename, "r");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the game is started from the GTA Vice City directory.", filename);
 
 	for(line = LoadLine(fd); line; line = LoadLine(fd)){
 		if(*line == '#')
@@ -186,7 +187,8 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 
 	debug("Loading collision file %s\n", filename);
 	fd = CFileMgr::OpenFile(filename, "rb");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the game files are installed correctly.", filename);
 
 	while(CFileMgr::Read(fd, (char*)&header, sizeof(header))){
 		assert(header.ident == 'LLOC');
@@ -617,7 +619,8 @@ CFileLoader::LoadObjectTypes(const char *filename)
 	debug("Loading object types from %s...\n", filename);
 
 	fd = CFileMgr::OpenFile(filename, "rb");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the game files are installed correctly.", filename);
 	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
 			continue;
@@ -1118,7 +1121,8 @@ CFileLoader::LoadScene(const char *filename)
 	debug("Creating objects from %s...\n", filename);
 
 	fd = CFileMgr::OpenFile(filename, "rb");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the map files are installed correctly.", filename);
 	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
 			continue;
@@ -1322,7 +1326,8 @@ CFileLoader::ReloadPaths(const char *filename)
 	debug("Reloading paths from %s...\n", filename);
 
 	int fd = CFileMgr::OpenFile(filename, "r");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the map files are installed correctly.", filename);
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
 			continue;
@@ -1376,7 +1381,8 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 
 	CFileMgr::ChangeDir("\\DATA\\MAPS\\");
 	int fd = CFileMgr::OpenFile(filename, "r");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the map files are installed correctly.", filename);
 	CFileMgr::ChangeDir("\\");
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
@@ -1452,7 +1458,8 @@ CFileLoader::ReLoadScene(const char *filename)
 	char *line;
 	CFileMgr::ChangeDir("\\DATA\\");
 	int fd = CFileMgr::OpenFile(filename, "r");
-	assert(fd > 0);
+	if(fd <= 0)
+		USERERROR("Cannot open %s. Make sure the map files are installed correctly.", filename);
 	CFileMgr::ChangeDir("\\");
 
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
