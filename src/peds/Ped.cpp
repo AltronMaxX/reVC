@@ -7257,20 +7257,28 @@ FinishTalkingOnMobileCB(CAnimBlendAssociation *assoc, void *arg)
 	ped->m_lookTimer = 0;
 }
 
-void
+bool
 CPed::SetAnswerMobile(void)
 {
-	if (m_nPedState != PED_ANSWER_MOBILE && !DyingOrDead()) {
-		SetPedState(PED_ANSWER_MOBILE);
-		RemoveWeaponAnims(GetWeapon()->m_eWeaponType, -4.0f);
-		CAnimBlendAssociation *assoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_IN, 4.0f);
-		assoc->SetFinishCallback(StartTalkingOnMobileCB, this);
-		m_lookTimer = INT32_MAX;
-		if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED)
-			m_storedWeapon = GetWeapon()->m_eWeaponType;
+	if (m_nPedState == PED_ANSWER_MOBILE)
+		return true;
+	if (DyingOrDead() || !CanSetPedState())
+		return false;
 
-		RemoveWeaponModel(-1);
+	SetPedState(PED_ANSWER_MOBILE);
+	RemoveWeaponAnims(GetWeapon()->m_eWeaponType, -4.0f);
+	CAnimBlendAssociation *assoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_IN, 4.0f);
+	if (assoc == nil) {
+		ClearAnswerMobile();
+		return false;
 	}
+	assoc->SetFinishCallback(StartTalkingOnMobileCB, this);
+	m_lookTimer = INT32_MAX;
+	if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED)
+		m_storedWeapon = GetWeapon()->m_eWeaponType;
+
+	RemoveWeaponModel(-1);
+	return true;
 }
 
 void

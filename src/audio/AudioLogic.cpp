@@ -53,6 +53,7 @@ enum LOADING_STATUS { LOADING_STATUS_NOT_LOADED = 0, LOADING_STATUS_LOADED, LOAD
 static const int32 MOBILE_MISSION_AUDIO_GROUP_NONE = -1;
 static const int32 MOBILE_MISSION_AUDIO_GROUP_ANY = -2;
 static const uint32 MOBILE_MISSION_AUDIO_PENDING_SKIP_TIME = 10000;
+static const uint32 MOBILE_MISSION_AUDIO_PHONE_BLOCK_TIME = 3000;
 static bool g_bSkipMobileMissionAudio[MISSION_AUDIO_SLOTS];
 static int32 g_nSkippedMobileMissionAudioGroup[MISSION_AUDIO_SLOTS];
 static int32 g_nMobileMissionAudioGroup[MISSION_AUDIO_SLOTS];
@@ -9779,7 +9780,7 @@ ClearMobileMissionAudioSkipSlot(uint8 slot)
 static void
 BlockSkippedMobileMissionAudioPhone(uint8 slot)
 {
-	g_nSkipMobileMissionAudioPhoneBlockTime[slot] = CTimer::GetTimeInMilliseconds() + MOBILE_MISSION_AUDIO_PENDING_SKIP_TIME;
+	g_nSkipMobileMissionAudioPhoneBlockTime[slot] = CTimer::GetTimeInMilliseconds() + MOBILE_MISSION_AUDIO_PHONE_BLOCK_TIME;
 }
 
 static int32

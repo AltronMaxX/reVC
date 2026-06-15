@@ -885,10 +885,10 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
 		if (ScriptParams[1]) {
-			if (DMAudio.IsMobileMissionAudioSkipActive())
+			if (DMAudio.IsMobileMissionAudioSkipActive() || !pPed->SetAnswerMobile()) {
+				DMAudio.FinishMobileMissionAudio(true);
 				pPed->ClearAnswerMobile();
-			else
-				pPed->SetAnswerMobile();
+			}
 		} else
 			pPed->ClearAnswerMobile();
 		return 0;
