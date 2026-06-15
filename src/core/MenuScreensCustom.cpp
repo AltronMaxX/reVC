@@ -35,7 +35,7 @@
 #ifdef CUSTOM_FRONTEND_OPTIONS
 
 #ifdef IMPROVED_VIDEOMODE
-	#define VIDEOMODE_SELECTOR MENUACTION_CFO_SELECT, "FEM_SCF", { new CCFOSelect((int8*)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, 2, true, ScreenModeAfterChange, true) }, 0, 0, MENUALIGN_LEFT,
+	#define VIDEOMODE_SELECTOR MENUACTION_CFO_SELECT, "FEM_SCF", { new CCFOSelect((int8*)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, ARRAY_SIZE(screenModes), true, ScreenModeAfterChange, true) }, 0, 0, MENUALIGN_LEFT,
 #else
 	#define VIDEOMODE_SELECTOR
 #endif
@@ -252,7 +252,7 @@ wchar* MultiSamplingDraw(bool *disabled, bool userHovering) {
 #endif
 
 #ifdef IMPROVED_VIDEOMODE
-const char* screenModes[] = { "FED_FLS", "FED_WND" };
+const char* screenModes[] = { "FED_FLS", "FED_WND", "FED_BDL" };
 void ScreenModeAfterChange(int8 before, int8 after)
 {
 	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution

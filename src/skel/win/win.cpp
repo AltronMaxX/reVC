@@ -1413,6 +1413,25 @@ UINT GetBestRefreshRate(UINT width, UINT height, UINT depth)
 	return refreshRate;
 }
 
+#ifdef IMPROVED_VIDEOMODE
+static void
+GetBorderlessMonitorRect(RECT *rect)
+{
+	HMONITOR monitor = MonitorFromWindow(PSGLOBAL(window), MONITOR_DEFAULTTONEAREST);
+	MONITORINFO monitorInfo;
+	monitorInfo.cbSize = sizeof(monitorInfo);
+
+	if (monitor != nil && GetMonitorInfo(monitor, &monitorInfo))
+		*rect = monitorInfo.rcMonitor;
+	else {
+		rect->left = 0;
+		rect->top = 0;
+		rect->right = GetSystemMetrics(SM_CXSCREEN);
+		rect->bottom = GetSystemMetrics(SM_CYSCREEN);
+	}
+}
+#endif
+
 /*
  *****************************************************************************
  */
@@ -1515,7 +1534,7 @@ psSelectDevice()
 			FrontEndMenuManager.m_nPrefsWidth = GetSystemMetrics(SM_CXSCREEN);
 			FrontEndMenuManager.m_nPrefsHeight = GetSystemMetrics(SM_CYSCREEN);
 			FrontEndMenuManager.m_nPrefsDepth = 32;
-			FrontEndMenuManager.m_nPrefsWindowed = 0;
+			FrontEndMenuManager.m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
 		}
 
 		// Find the videomode that best fits what we got from the settings file
@@ -1557,10 +1576,10 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed)
+	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN)
 		GcurSelVM = bestWndMode;
 
-	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
+	// Windowed modes use the non-exclusive device mode, but vm keeps the requested resolution.
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
 	FrontEndMenuManager.m_nPrefsHeight = vm.height;
 	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
@@ -1578,7 +1597,7 @@ psSelectDevice()
 	}
 
 #ifdef IMPROVED_VIDEOMODE
-	if (!FrontEndMenuManager.m_nPrefsWindowed)
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN)
 #else
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
 #endif
@@ -1595,7 +1614,7 @@ psSelectDevice()
 	}
 	
 #ifdef IMPROVED_VIDEOMODE
-	if (!FrontEndMenuManager.m_nPrefsWindowed)
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN)
 #else
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
 #endif
@@ -1614,26 +1633,40 @@ psSelectDevice()
 					SWP_FRAMECHANGED);
 	}else{
 		RECT rect;
-		rect.left = rect.top = 0;
-		rect.right = FrontEndMenuManager.m_nPrefsWidth;
-		rect.bottom = FrontEndMenuManager.m_nPrefsHeight;
-		AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
+		if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+			GetBorderlessMonitorRect(&rect);
+			int width = rect.right - rect.left;
+			int height = rect.bottom - rect.top;
 
-		// center it
-		int spaceX = GetSystemMetrics(SM_CXSCREEN) - (rect.right-rect.left);
-		int spaceY = GetSystemMetrics(SM_CYSCREEN) - (rect.bottom-rect.top);
+			SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+			SetWindowPos(PSGLOBAL(window), HWND_TOP, rect.left, rect.top, width, height, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
-		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST, spaceX/2, spaceY/2,
-			(rect.right - rect.left),
-			(rect.bottom - rect.top), 0);
+			RsGlobal.maximumWidth = width;
+			RsGlobal.maximumHeight = height;
+			RsGlobal.width = width;
+			RsGlobal.height = height;
+		} else {
+			rect.left = rect.top = 0;
+			rect.right = FrontEndMenuManager.m_nPrefsWidth;
+			rect.bottom = FrontEndMenuManager.m_nPrefsHeight;
+			AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
-		// Have to get actual size because the window perhaps didn't fit
-		GetClientRect(PSGLOBAL(window), &rect);
-		RsGlobal.maximumWidth = rect.right;
-		RsGlobal.maximumHeight = rect.bottom;
-		RsGlobal.width = rect.right;
-		RsGlobal.height = rect.bottom;
+			// center it
+			int spaceX = GetSystemMetrics(SM_CXSCREEN) - (rect.right-rect.left);
+			int spaceY = GetSystemMetrics(SM_CYSCREEN) - (rect.bottom-rect.top);
+
+			SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
+			SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST, spaceX/2, spaceY/2,
+				(rect.right - rect.left),
+				(rect.bottom - rect.top), 0);
+
+			// Have to get actual size because the window perhaps didn't fit
+			GetClientRect(PSGLOBAL(window), &rect);
+			RsGlobal.maximumWidth = rect.right;
+			RsGlobal.maximumHeight = rect.bottom;
+			RsGlobal.width = rect.right;
+			RsGlobal.height = rect.bottom;
+		}
 		
 		PSGLOBAL(fullScreen) = FALSE;
 #endif
