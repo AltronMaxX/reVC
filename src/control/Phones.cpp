@@ -31,6 +31,23 @@ CPhone *CPhoneInfo::pPhoneDisplayingMessages;
 bool CPhoneInfo::bPickingUpPhone;
 CPed *CPhoneInfo::pCallBackPed; // ped who picking up the phone (reset after pickup cb)
 
+static CPhone*
+GetValidPhoneDisplayingMessages(CPhoneInfo *phoneInfo)
+{
+	if (CPhoneInfo::pPhoneDisplayingMessages == nil)
+		return nil;
+
+	int maxPhones = phoneInfo->m_nMax;
+	if (maxPhones > ARRAY_SIZE(phoneInfo->m_aPhones))
+		maxPhones = ARRAY_SIZE(phoneInfo->m_aPhones);
+	for (int phoneId = 0; phoneId < maxPhones; phoneId++) {
+		if (CPhoneInfo::pPhoneDisplayingMessages == &phoneInfo->m_aPhones[phoneId])
+			return &phoneInfo->m_aPhones[phoneId];
+	}
+
+	return nil;
+}
+
 /*
 	Entering phonebooth cutscene, showing messages and triggering these things
 	by checking coordinates happens in here - blue mission marker is cosmetic.
@@ -50,13 +67,16 @@ CPhoneInfo::Update(void)
 	CPlayerPed *player = FindPlayerPed();
 	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
 	if (bDisplayingPhoneMessage && CPad::GetPad(0)->GetCharJustDown('F')) {
-		if (pPhoneDisplayingMessages) {
-			for (int i = 0; i < ARRAY_SIZE(pPhoneDisplayingMessages->m_apMessages); i++) {
-				if (pPhoneDisplayingMessages->m_apMessages[i])
-					CMessages::ClearThisPrint(pPhoneDisplayingMessages->m_apMessages[i]);
+		CPhone *phoneDisplayingMessages = GetValidPhoneDisplayingMessages(this);
+		if (phoneDisplayingMessages) {
+			for (int i = 0; i < ARRAY_SIZE(phoneDisplayingMessages->m_apMessages); i++) {
+				if (phoneDisplayingMessages->m_apMessages[i])
+					CMessages::ClearThisPrint(phoneDisplayingMessages->m_apMessages[i]);
 			}
-			if (pPhoneDisplayingMessages->m_nState == PHONE_STATE_REPEATED_MESSAGE_STARTED)
-				pPhoneDisplayingMessages->m_nState = PHONE_STATE_ONETIME_MESSAGE_STARTED;
+			if (phoneDisplayingMessages->m_nState == PHONE_STATE_REPEATED_MESSAGE_STARTED)
+				phoneDisplayingMessages->m_nState = PHONE_STATE_ONETIME_MESSAGE_STARTED;
+		} else {
+			pPhoneDisplayingMessages = nil;
 		}
 		PhoneEnableControlsTimer = 0;
 	}
