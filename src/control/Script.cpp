@@ -2486,9 +2486,9 @@ void CRunningScript::Process()
 	if (!CPad::GetPad(0)->GetCrossJustDown())
 		return;
 	m_nWakeTime = 0;
-	for (int i = 0; i < NUMBIGMESSAGES; i++){
-		if (CMessages::BIGMessages[i].m_Stack[0].m_pText != nil)
-			CMessages::BIGMessages[i].m_Stack[0].m_nStartTime = 0;
+	for (auto &[m_Stack] : CMessages::BIGMessages){
+		if (m_Stack[0].m_pText != nil)
+			m_Stack[0].m_nStartTime = 0;
 	}
 	if (CMessages::BriefMessages[0].m_pText != nil)
 		CMessages::BriefMessages[0].m_nStartTime = 0;

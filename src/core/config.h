@@ -152,8 +152,6 @@ enum Config {
 // We don't expect to compile for PS2 or Xbox
 // but it might be interesting for documentation purposes
 #define GTA_PC
-//#define GTA_PS2
-//#define GTA_XBOX
 
 // This enables things from the PS2 version on PC
 #define GTA_PS2_STUFF
@@ -204,12 +202,7 @@ enum Config {
 //#define COMPRESSED_COL_VECTORS	// use compressed vectors for collision vertices
 //#define ANIM_COMPRESSION	// only keep most recently used anims uncompressed
 
-#if defined GTA_PS2
-#	define GTA_PS2_STUFF
-#	define RANDOMSPLASH
-//#	define USE_CUSTOM_ALLOCATOR
-#	define VU_COLLISION
-#elif defined GTA_PC
+#if defined GTA_PC
 #	ifdef GTA_PS2_STUFF
 #		define USE_PS2_RAND
 #		define RANDOMSPLASH	// use random splash as on PS2
@@ -218,7 +211,6 @@ enum Config {
 #	define PC_PLAYER_CONTROLS	// mouse player/cam mode
 #	define GTA_REPLAY
 #	define GTA_SCENE_EDIT
-#elif defined GTA_XBOX
 #endif
 
 #ifdef VU_COLLISION

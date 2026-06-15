@@ -4,17 +4,10 @@
 struct VuTriangle
 {
 	// Compressed int16 but unpacked
-#ifdef GTA_PS2
-	uint128 v0;
-	uint128 v1;
-	uint128 v2;
-	uint128 plane;
-#else
 	int32 v0[4];
 	int32 v1[4];
 	int32 v2[4];
 	int32 plane[4];
-#endif
 };
 
 #ifndef GTA_PS2

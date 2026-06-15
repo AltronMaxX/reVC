@@ -1,6 +1,6 @@
 {
   "C_Cpp.default.cStandard": "gnu11",
-  "C_Cpp.default.cppStandard": "gnu++14",
+  "C_Cpp.default.cppStandard": "gnu++23",
   "C_Cpp.default.includePath": [
     "src/animation",
     "src/audio",

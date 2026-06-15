@@ -30,40 +30,16 @@
 inline int
 GetVUresult(void)
 {
-#ifdef GTA_PS2
-	int ret;
-	__asm__ volatile (
-		"cfc2.i	%0,vi01\n"	// .i important! wait for VU0 to finish
-		: "=r" (ret)
-	);
-	return ret;
-#else
 	return vi01;
-#endif
 }
 
 inline int
 GetVUresult(CVuVector &point, CVuVector &normal, float &dist)
 {
-#ifdef GTA_PS2
-	int ret;
-	__asm__ volatile (
-		"cfc2.i	%0,vi01\n"	// .i important! wait for VU0 to finish
-		"sqc2	vf01,(%1)\n"
-		"sqc2	vf02,(%2)\n"
-		"qmfc2	$12,vf03\n"
-		"sw	$12,(%3)\n"
-		: "=r" (ret)
-		: "r" (&point), "r" (&normal), "r" (&dist)
-		: "$12"
-	);
-	return ret;
-#else
 	point = vf01;
 	normal = vf02;
 	dist = vf03.x;
 	return vi01;
-#endif
 }
 
 #endif
@@ -1642,12 +1618,8 @@ enum {
 };
 
 #ifdef VU_COLLISION
-#ifdef GTA_PS2
-#define SPR(off) ((uint8*)(0x70000000 + (off)))
-#else
 static uint8 fakeSPR[16*1024];
 #define SPR(off) ((uint8*)(fakeSPR + (off)))
-#endif
 #endif
 
 // This checks model A's spheres and lines against model B's spheres, boxes and triangles.

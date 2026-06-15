@@ -8,7 +8,7 @@
       "externalConsole": false,
       "name": "(gdb) Launch (Linux Debug)",
       "preLaunchTask": "Compile (Debug Linux x64)",
-      "program": "${workspaceFolder}/bin/linux-amd64-librw_gl3_glfw-oal/Debug/re3",
+      "program": "${workspaceFolder}/bin/linux-amd64-librw_gl3_glfw-oal/Debug/reVC",
       "request": "launch",
       "setupCommands": [
         {
@@ -29,7 +29,7 @@
       "externalConsole": false,
       "name": "(gdb) Launch (Linux Release)",
       "preLaunchTask": "Compile (Release Linux x64)",
-      "program": "${workspaceFolder}/bin/linux-amd64-librw_gl3_glfw-oal/Release/re3",
+      "program": "${workspaceFolder}/bin/linux-amd64-librw_gl3_glfw-oal/Release/reVC",
       "request": "launch",
       "setupCommands": [
         {
@@ -50,7 +50,7 @@
       "externalConsole": false,
       "name": "(lldb) Launch (macOS Debug)",
       "preLaunchTask": "Compile (Debug macOS x64)",
-      "program": "${workspaceFolder}/bin/macosx-amd64-librw_gl3_glfw-oal/Debug/re3.app",
+      "program": "${workspaceFolder}/bin/macosx-amd64-librw_gl3_glfw-oal/Debug/reVC.app",
       "request": "launch",
       "setupCommands": [
         {
@@ -71,7 +71,7 @@
       "externalConsole": false,
       "name": "(lldb) Launch (macOS Release)",
       "preLaunchTask": "Compile (Release macOS x64)",
-      "program": "${workspaceFolder}/bin/macosx-amd64-librw_gl3_glfw-oal/Release/re3.app",
+      "program": "${workspaceFolder}/bin/macosx-amd64-librw_gl3_glfw-oal/Release/reVC.app",
       "request": "launch",
       "setupCommands": [
         {

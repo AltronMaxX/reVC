@@ -3,21 +3,6 @@
 class CMatrix
 {
 public:
-#ifdef GTA_PS2
-	union
-	{
-		float f[4][4];
-		struct
-		{
-			float rx, ry, rz;
-			RwMatrix *m_attachment;
-			float fx, fy, fz;
-			bool m_hasRwMatrix;	// are we the owner?
-			float ux, uy, uz, uw;
-			float px, py, pz, pw;
-		};
-	};
-#else
 	union
 	{
 		float f[4][4];
@@ -32,7 +17,6 @@ public:
 
 	RwMatrix *m_attachment;
 	bool m_hasRwMatrix;	// are we the owner?
-#endif
 
 	CMatrix(void);
 	CMatrix(CMatrix const &m);

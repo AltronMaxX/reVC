@@ -3,7 +3,7 @@
 #include "Game.h"
 #include "PCSave.h"
 
-#define SLOT_COUNT (8)
+#define SLOT_COUNT (9)
 
 void InitRadioStationPositionList();
 int32 GetSavedRadioStationPosition(int32 station);

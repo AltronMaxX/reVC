@@ -47,6 +47,7 @@ public:
 	static bool noProstitutes;
 	static bool playingIntro;
 	static char aDatFile[32];
+	static bool bRequestAutosave;
 
 #ifndef MASTER
 	static CVector PlayerCoords;

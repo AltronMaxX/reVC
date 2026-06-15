@@ -56,21 +56,6 @@ LineToTriangleCollision(const CVuVector &p0, const CVuVector &p1,
 	const CVuVector &v0, const CVuVector &v1, const CVuVector &v2,
 	const CVuVector &plane)
 {
-#ifdef GTA_PS2
-	__asm__ volatile (
-		".set noreorder\n"
-		"lqc2	vf12, 0x0(%0)\n"
-		"lqc2	vf13, 0x0(%1)\n"
-		"lqc2	vf14, 0x0(%2)\n"
-		"lqc2	vf15, 0x0(%3)\n"
-		"lqc2	vf16, 0x0(%4)\n"
-		"lqc2	vf17, 0x0(%5)\n"
-		"vcallms	Vu0LineToTriangleCollisionStart\n"
-		".set reorder\n"
-		:
-		: "r" (&p0), "r" (&p1), "r" (&v0), "r" (&v1), "r" (&v2), "r" (&plane)
-	);
-#else
 	float dot0 = DotProduct(plane, p0);
 	float dot1 = DotProduct(plane, p1);
 	float dist0 = plane.w - dot0;
@@ -109,27 +94,11 @@ LineToTriangleCollision(const CVuVector &p0, const CVuVector &p1,
 	vi01 = 1;
 	vf02 = plane;
 	return;
-#endif
 }
 
 extern "C" void
 LineToTriangleCollisionCompressed(const CVuVector &p0, const CVuVector &p1, VuTriangle &tri)
 {
-#ifdef GTA_PS2
-	__asm__ volatile (
-		".set noreorder\n"
-		"lqc2	vf12, 0x0(%0)\n"
-		"lqc2	vf13, 0x0(%1)\n"
-		"lqc2	vf14, 0x0(%2)\n"
-		"lqc2	vf15, 0x10(%2)\n"
-		"lqc2	vf16, 0x20(%2)\n"
-		"lqc2	vf17, 0x30(%2)\n"
-		"vcallms	Vu0LineToTriangleCollisionCompressedStart\n"
-		".set reorder\n"
-		:
-		: "r" (&p0), "r" (&p1), "r" (&tri)
-	);
-#else
 	CVuVector v0, v1, v2, plane;
 	v0.x = tri.v0[0]/128.0f;
 	v0.y = tri.v0[1]/128.0f;
@@ -148,7 +117,6 @@ LineToTriangleCollisionCompressed(const CVuVector &p0, const CVuVector &p1, VuTr
 	plane.z = tri.plane[2]/4096.0f;
 	plane.w = tri.plane[3]/128.0f;
 	LineToTriangleCollision(p0, p1, v0, v1, v2, plane);
-#endif
 }
 
 extern "C" void
@@ -156,20 +124,6 @@ SphereToTriangleCollision(const CVuVector &sph,
 	const CVuVector &v0, const CVuVector &v1, const CVuVector &v2,
 	const CVuVector &plane)
 {
-#ifdef GTA_PS2
-	__asm__ volatile (
-		".set noreorder\n"
-		"lqc2	vf12, 0x0(%0)\n"
-		"lqc2	vf14, 0x0(%1)\n"
-		"lqc2	vf15, 0x0(%2)\n"
-		"lqc2	vf16, 0x0(%3)\n"
-		"lqc2	vf17, 0x0(%4)\n"
-		"vcallms	Vu0SphereToTriangleCollisionStart\n"
-		".set reorder\n"
-		:
-		: "r" (&sph), "r" (&v0), "r" (&v1), "r" (&v2), "r" (&plane)
-	);
-#else
 	float planedist = DotProduct(plane, sph) - plane.w;	// VF02
 	if(Abs(planedist) > sph.w){
 		vi01 = 0;
@@ -239,26 +193,11 @@ SphereToTriangleCollision(const CVuVector &sph,
 		vf03.x = Sqrt(closest.w);
 		vf02 *= 1.0f/vf03.x;
 	}
-#endif
 }
 
 extern "C" void
 SphereToTriangleCollisionCompressed(const CVuVector &sph, VuTriangle &tri)
 {
-#ifdef GTA_PS2
-	__asm__ volatile (
-		".set noreorder\n"
-		"lqc2	vf12, 0x0(%0)\n"
-		"lqc2	vf14, 0x0(%1)\n"
-		"lqc2	vf15, 0x10(%1)\n"
-		"lqc2	vf16, 0x20(%1)\n"
-		"lqc2	vf17, 0x30(%1)\n"
-		"vcallms	Vu0SphereToTriangleCollisionCompressedStart\n"
-		".set reorder\n"
-		:
-		: "r" (&sph), "r" (&tri)
-	);
-#else
 	CVuVector v0, v1, v2, plane;
 	v0.x = tri.v0[0]/128.0f;
 	v0.y = tri.v0[1]/128.0f;
@@ -277,6 +216,5 @@ SphereToTriangleCollisionCompressed(const CVuVector &sph, VuTriangle &tri)
 	plane.z = tri.plane[2]/4096.0f;
 	plane.w = tri.plane[3]/128.0f;
 	SphereToTriangleCollision(sph, v0, v1, v2, plane);
-#endif
 }
 #endif

@@ -2,7 +2,7 @@
   "tasks": [
     {
       "args": ["--with-librw", "gmake2"],
-      "command": "./premake5Linux",
+      "command": "./premake5",
       "label": "Premake (Linux)",
       "problemMatcher": "$gcc",
       "type": "shell"

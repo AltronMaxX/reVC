@@ -354,24 +354,6 @@ void CGarage::Update()
 	if (m_bDeactivated && m_eGarageState == GS_FULLYCLOSED)
 		return;
 	if (m_bRotatedDoor) {
-#ifdef GTA_PS2
-		if (m_eGarageState == GS_OPENING) {
-			if (m_pDoor1) {
-				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor1)
-					m_pDoor1->bUsesCollision = false;
-			}
-			if (m_pDoor2) {
-				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor2)
-					m_pDoor2->bUsesCollision = false;
-			}
-		}
-		else if (m_eGarageState == GS_OPENED) {
-			if (m_pDoor1)
-				m_pDoor1->bUsesCollision = true;
-			if (m_pDoor2)
-				m_pDoor2->bUsesCollision = true;
-		}
-#else
 		if (m_eGarageState == GS_OPENING || m_eGarageState == GS_OPENED) {
 			if (m_pDoor1) {
 				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor1 || FindPlayerPed()->GetPedState() == PED_JUMP || FindPlayerPed()->GetPedState() == PED_FALL || !FindPlayerPed()->bIsStanding)
@@ -388,7 +370,6 @@ void CGarage::Update()
 			if (m_pDoor2)
 				m_pDoor2->bUsesCollision = true;
 		}
-#endif
 	}
 	switch (m_eGarageType) {
 	case GARAGE_RESPRAY:

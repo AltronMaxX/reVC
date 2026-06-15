@@ -445,11 +445,7 @@ CEntity::GetIsOnScreen(void)
 bool
 CEntity::GetIsOnScreenComplex(void)
 {
-#ifdef GTA_PS2
-	CVuVector boundBox[8];
-#else
 	CVector boundBox[8];
-#endif
 
 	if(TheCamera.IsPointVisible(GetBoundCentre(), &TheCamera.GetCameraMatrix()))
 		return true;

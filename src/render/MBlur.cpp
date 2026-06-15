@@ -42,35 +42,6 @@ CMBlur::MotionBlurOpen(RwCamera *cam)
 	CPostFX::Open(cam);
 	return TRUE;
 #else
-#ifdef GTA_PS2
-	RwRect rect = {0, 0, 0, 0};
-	
-	if (pFrontBuffer)
-		return TRUE;
-	
-	BlurOn = true;
-	
-	rect.w = RwRasterGetWidth(RwCameraGetRaster(cam));
-	rect.h = RwRasterGetHeight(RwCameraGetRaster(cam));
-	
-	pFrontBuffer = RwRasterCreate(0, 0, 0, rwRASTERDONTALLOCATE|rwRASTERTYPECAMERATEXTURE);
-	if (!pFrontBuffer)
-	{
-		printf("Error creating raster\n");
-		return FALSE;
-	}
-	
-	RwRaster *raster = RwRasterSubRaster(pFrontBuffer, RwCameraGetRaster(cam), &rect);
-	if (!raster)
-	{
-		RwRasterDestroy(pFrontBuffer);
-		pFrontBuffer = NULL;
-		printf("Error subrastering\n");
-		return FALSE;
-	}
-	
-	CreateImmediateModeData(cam, &rect);
-#else
 	RwRect rect = { 0, 0, 0, 0 };
 
 	if(pFrontBuffer)
@@ -141,7 +112,6 @@ CMBlur::MotionBlurOpen(RwCamera *cam)
 	}
 	
 	return TRUE;
-#endif
 #endif
 }
 
@@ -336,10 +306,6 @@ CMBlur::MotionBlurRender(RwCamera *cam, uint32 red, uint32 green, uint32 blue, u
 #else
 	PUSH_RENDERGROUP("CMBlur::MotionBlurRender");
 	RwRGBA color = { (RwUInt8)red, (RwUInt8)green, (RwUInt8)blue, (RwUInt8)blur };
-#ifdef GTA_PS2
-	if( pFrontBuffer )
-		OverlayRender(cam, pFrontBuffer, color, type, bluralpha);
-#else
 	if(ms_bJustInitialised)
 		ms_bJustInitialised = false;
 	else
@@ -349,7 +315,6 @@ CMBlur::MotionBlurRender(RwCamera *cam, uint32 red, uint32 green, uint32 blue, u
 		RwRasterRenderFast(RwCameraGetRaster(cam), 0, 0);
 		RwRasterPopContext();
 	}
-#endif
 	POP_RENDERGROUP();
 #endif
 }

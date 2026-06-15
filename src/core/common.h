@@ -168,18 +168,8 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 
 // game uses maximumWidth/Height, but this probably won't work
 // with RW windowed mode
-#ifdef GTA_PS2
-	#ifdef GTA_PAL
-		#define SCREEN_WIDTH  ((float)640)
-		#define SCREEN_HEIGHT ((float)512)
-	#else
-		#define SCREEN_WIDTH  ((float)640)
-		#define SCREEN_HEIGHT ((float)448)
-	#endif
-#else
 #define SCREEN_WIDTH  ((float)RsGlobal.width)
 #define SCREEN_HEIGHT ((float)RsGlobal.height)
-#endif
 
 #define SCREEN_HEIGHT_PAL ((float)512)
 #define SCREEN_HEIGHT_NTSC ((float)448)

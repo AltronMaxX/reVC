@@ -3,7 +3,7 @@ if(DEFINED PROJECT_NAME)
     set(librw_MAINPROJECT OFF)
 endif()
 
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(librw
     VERSION 0.0.1
     LANGUAGES C CXX

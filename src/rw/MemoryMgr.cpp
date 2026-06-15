@@ -9,12 +9,8 @@ void
 InitMemoryMgr(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
-#ifdef GTA_PS2
-#error "finish this"
-#else
 	// randomly allocate 128mb
 	gMainHeap.Init(128*1024*1024);
-#endif
 #endif
 }
 
