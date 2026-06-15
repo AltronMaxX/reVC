@@ -14423,6 +14423,9 @@ GAMEPAD SETTINGS
 [FEM_AUT] { aspect ratio related }
 AUTO
 
+[FEM_SLA]
+AutoSave Not Present
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

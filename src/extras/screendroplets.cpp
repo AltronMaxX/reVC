@@ -741,7 +741,7 @@ uint32 im2D_UV2_Vao;
 void
 openim2d_uv2(void)
 {
-	u_xform = rw::gl3::registerUniform("u_xform");	// this doesn't add a new one, so it's safe
+	u_xform = rw::gl3::registerUniform("u_xform", rw::gl3::UNIFORM_VEC4);
 
 	glGenBuffers(1, &im2D_UV2_Ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im2D_UV2_Ibo);
