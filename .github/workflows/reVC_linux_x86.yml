@@ -18,14 +18,16 @@ jobs:
         submodules: 'true'
     - name: Install Dependencies
       run: |
+        sudo dpkg --add-architecture i386
         sudo apt-get update
+
         sudo apt-get install -y \
           gcc-multilib g++-multilib \
-          libopenal-dev \
-          libglew-dev \
-          libglfw3-dev \
-          libsndfile1-dev \
-          libmpg123-dev
+          libopenal-dev:i386 \
+          libsndfile1-dev:i386 \
+          libmpg123-dev:i386 \
+          libglew-dev:i386 \
+          libglfw3-dev:i386
     - name: Configure build
       run: |
         ./premake5 --with-librw gmake2
