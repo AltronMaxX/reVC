@@ -34,6 +34,10 @@ jobs:
           libxinerama-dev:i386 \
           libxcursor-dev:i386 \
           libxi-dev:i386 \
+          libwayland-dev:i386 \
+          libxkbcommon-dev:i386 \
+          wayland-protocols \
+          libwayland-bin \
           cmake
 
     - name: Compile GLFW and GLEW from source (i386)
