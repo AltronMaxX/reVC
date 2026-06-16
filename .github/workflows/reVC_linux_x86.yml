@@ -20,6 +20,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          gcc-multilib g++-multilib \
           libopenal-dev \
           libglew-dev \
           libglfw3-dev \
@@ -34,7 +35,10 @@ jobs:
         make config="${{matrix.buildtype}}_${{matrix.platform}}"
     - name: Move binaries to gamefiles
       run: |
-        mv ./bin/${{matrix.platform}}/${{matrix.buildtype}}/reVC ./gamefiles/
+        BUILD_TYPE="${{matrix.buildtype}}"
+        DIR_NAME="${BUILD_TYPE^}"
+
+        mv ./bin/${{matrix.platform}}/${DIR_NAME}/reVC ./gamefiles/
     - name: Upload artifact to actions
       uses: actions/upload-artifact@v4
       with:
