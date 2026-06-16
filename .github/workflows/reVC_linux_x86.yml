@@ -49,18 +49,22 @@ jobs:
         cmake -B build \
           -DCMAKE_C_FLAGS="-m32" \
           -DCMAKE_CXX_FLAGS="-m32" \
+          -DCMAKE_INSTALL_PREFIX=/usr \
+          -DCMAKE_INSTALL_LIBDIR=lib/i386-linux-gnu \
           -DGLFW_BUILD_DOCS=OFF \
           -DGLFW_BUILD_TESTS=OFF \
           -DGLFW_BUILD_EXAMPLES=OFF
         cmake --build build -j$(nproc)
         sudo cmake --install build
+
+        sudo ln -sf /usr/lib/i386-linux-gnu/libglfw3.a /usr/lib/i386-linux-gnu/libglfw.a
         cd ..
 
         wget https://github.com/nigels-com/glew/releases/download/glew-2.3.1/glew-2.3.1.tgz
         tar -xzf glew-2.3.1.tgz
         cd glew-2.3.1
-        make CFLAGS.EXTRA="-m32" LDFLAGS.EXTRA="-m32" LIBDIR=/usr/local/lib -j$(nproc)
-        sudo make install LIBDIR=/usr/local/lib
+        make CFLAGS.EXTRA="-m32" LDFLAGS.EXTRA="-m32" LIBDIR=/usr/lib/i386-linux-gnu -j$(nproc)
+        sudo make install LIBDIR=/usr/lib/i386-linux-gnu
         cd ..
 
     - name: Configure build
