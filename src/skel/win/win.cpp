@@ -99,6 +99,13 @@ static psGlobalType PsGlobal;
 #include "MemoryMgr.h"
 
 static void
+ReleaseWindowMouseFocus(void)
+{
+	if (PSGLOBAL(mouse) != nil)
+		PSGLOBAL(mouse)->Unacquire();
+}
+
+static void
 SetWindowAudioSuspended(RwBool suspend)
 {
 	if (WindowAudioSuspended == suspend)
@@ -107,24 +114,36 @@ SetWindowAudioSuspended(RwBool suspend)
 	WindowAudioSuspended = suspend;
 	if (suspend)
 	{
+		ReleaseWindowMouseFocus();
 		DMAudio.SetMusicMasterVolume(0);
 		DMAudio.SetEffectsMasterVolume(0);
 		DMAudio.Service();
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)FALSE);
 	}
 	else
 	{
-		RsEventHandler(rsACTIVATE, (void *)TRUE);
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)TRUE);
 		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
 		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
-		DMAudio.Service();
 	}
+}
+
+static RwBool
+IsFullscreenLikeWindowMode(void)
+{
+#ifdef IMPROVED_VIDEOMODE
+	return PSGLOBAL(fullScreen) || FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS;
+#else
+	return PSGLOBAL(fullScreen);
+#endif
 }
 
 static void
 UpdateWindowMinimizedPause(void)
 {
-	RwBool pause = WindowMinimized || (PSGLOBAL(fullScreen) && !WindowActive);
+	RwBool pause = WindowMinimized || (IsFullscreenLikeWindowMode() && !WindowActive);
 	CTimer::SetWindowMinimizedPause(pause);
 	if (pause)
 	{
@@ -1275,7 +1294,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 				
 				case GS_START_UP:
 				{
-					if ( !(BOOL)wParam && PSGLOBAL(fullScreen) ) // losing activation
+					if ( !(BOOL)wParam && IsFullscreenLikeWindowMode() ) // losing activation
 						startupDeactivate = TRUE;
 					
 					break;

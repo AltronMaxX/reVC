@@ -13,7 +13,7 @@ jobs:
         platform: [linux-amd64-librw_gl3_glfw-oal]
         buildtype: [debug, release]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: 'true'
     - name: Install Dependencies
@@ -39,7 +39,7 @@ jobs:
 
         mv ./bin/${{matrix.platform}}/${DIR_NAME}/reVC ./gamefiles/
     - name: Upload artifact to actions
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
         path: ./gamefiles/*

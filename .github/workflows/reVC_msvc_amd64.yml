@@ -19,18 +19,17 @@ jobs:
         buildtype: [Debug, Release]
     steps:
     - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v2
+      uses: microsoft/setup-msbuild@v3
       with:
         vs-prerelease: true
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         submodules: 'true'
-    - if: ${{ matrix.platform }} == "win-amd64-librw_gl3_glfw-mss"
+    - if: contains(matrix.platform, 'glfw')
       name: Download glfw
-      uses: carlosperate/download-file-action@v2
-      with:
-        file-url: ${{env.GLFW_URL}}
-    - if: ${{ matrix.platform }} == "win-amd64-librw_gl3_glfw-mss"
+      run: |
+          Invoke-WebRequest -Uri "${{env.GLFW_URL}}" -OutFile "${{env.GLFW_FILE}}"
+    - if: contains(matrix.platform, 'glfw')
       name: Unpack archives
       run: |
           7z x ${{env.GLFW_FILE}}
@@ -49,7 +48,7 @@ jobs:
         mv ./vendor/mpg123/dist/Win64/libmpg123-0.dll ./gamefiles/
         mv ./vendor/openal-soft/dist/Win64/OpenAL32.dll ./gamefiles/
     - name: Upload artifact to actions
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
         path: ./gamefiles/*
