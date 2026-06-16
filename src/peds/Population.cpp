@@ -40,8 +40,8 @@ bool CPopulation::ms_bGivePedsWeapons;
 int32 CPopulation::m_AllRandomPedsThisType = -1;
 float CPopulation::PedDensityMultiplier = 1.0f;
 uint32 CPopulation::ms_nTotalMissionPeds;
-int32 CPopulation::MaxNumberOfPedsInUse = 32;
-int32 CPopulation::MaxNumberOfPedsInUseInterior = 48;
+int32 CPopulation::MaxNumberOfPedsInUse = 64;
+int32 CPopulation::MaxNumberOfPedsInUseInterior = 80;
 uint32 CPopulation::ms_nNumCivMale;
 uint32 CPopulation::ms_nNumCivFemale;
 uint32 CPopulation::ms_nNumCop;
@@ -566,7 +566,9 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 
 	// Yeah, float
 	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * PedDensityMultiplier
-		* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult;
+		* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult * TheCamera.PopulationDistMultiplier;
+	if (zoneInfo.pedDensity + zoneInfo.carDensity > 0)
+		maxPossiblePedsForArea = Max(maxPossiblePedsForArea, 12.0f * TheCamera.PopulationDistMultiplier * missionAndWeatherMult);
 	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
 
 	if (ms_nTotalPeds < maxPossiblePedsForArea || addCop) {
