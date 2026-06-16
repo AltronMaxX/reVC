@@ -57,6 +57,7 @@
 static RwBool		  ForegroundApp = TRUE;
 static RwBool		  WindowMinimized = FALSE;
 static RwBool		  WindowActive = TRUE;
+static RwBool		  WindowAudioSuspended = FALSE;
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -98,12 +99,38 @@ static psGlobalType PsGlobal;
 #include "MemoryMgr.h"
 
 static void
+SetWindowAudioSuspended(RwBool suspend)
+{
+	if (WindowAudioSuspended == suspend)
+		return;
+
+	WindowAudioSuspended = suspend;
+	if (suspend)
+	{
+		DMAudio.SetMusicMasterVolume(0);
+		DMAudio.SetEffectsMasterVolume(0);
+		DMAudio.Service();
+		RsEventHandler(rsACTIVATE, (void *)FALSE);
+	}
+	else
+	{
+		RsEventHandler(rsACTIVATE, (void *)TRUE);
+		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+		DMAudio.Service();
+	}
+}
+
+static void
 UpdateWindowMinimizedPause(void)
 {
 	RwBool pause = WindowMinimized || (PSGLOBAL(fullScreen) && !WindowActive);
 	CTimer::SetWindowMinimizedPause(pause);
 	if (pause)
+	{
 		ForegroundApp = FALSE;
+		SetWindowAudioSuspended(TRUE);
+	}
 }
 
 static void
@@ -244,7 +271,7 @@ psCameraBeginUpdate(RwCamera *camera)
 		ForegroundApp = FALSE;
 		WindowActive = FALSE;
 		UpdateWindowMinimizedPause();
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		SetWindowAudioSuspended(TRUE);
 		return FALSE;
 	}
 	
@@ -649,6 +676,7 @@ psInitialize(void)
 	PsGlobal.fullScreen = FALSE;
 	WindowMinimized = FALSE;
 	WindowActive = TRUE;
+	WindowAudioSuspended = FALSE;
 	
 	PsGlobal.dinterface = nil;
 	PsGlobal.mouse	   = nil;
@@ -2575,7 +2603,7 @@ WinMain(HINSTANCE instance,
 					if (!CTimer::GetIsWindowMinimizedPaused())
 					{
 						ForegroundApp = TRUE;
-						RsEventHandler(rsACTIVATE, (void *)TRUE);
+						SetWindowAudioSuspended(FALSE);
 					}
 				}
 				
