@@ -418,6 +418,7 @@ public:
 	float FOVDuringInter;
 	float LODDistMultiplier;
 	float GenerationDistMultiplier;
+	float PopulationDistMultiplier;
 	float m_fAlphaSpeedAtStartInter;
 	float m_fAlphaWhenInterPol;
 	float m_fAlphaDuringInterPol;

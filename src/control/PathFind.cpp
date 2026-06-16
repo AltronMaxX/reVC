@@ -1767,11 +1767,11 @@ CPathFind::TestCoorsCloseness(CVector target, uint8 type, CVector start)
 	else
 		DoPathSearch(type, start, -1, target, nil, &DummyResult2, 0, nil, &dist, 50.0f, -1);
 #ifdef FIX_BUGS
-	// dist has GenerationDistMultiplier as a factor, so our reference dist should have it too
+	// dist has the population spawn multiplier as a factor, so our reference dist should have it too
 	if(type == PATH_CAR)
-		return dist < 150.0f*TheCamera.GenerationDistMultiplier;
+		return dist < 150.0f*TheCamera.PopulationDistMultiplier;
 	else
-		return dist < 100.0f*TheCamera.GenerationDistMultiplier;
+		return dist < 100.0f*TheCamera.PopulationDistMultiplier;
 #else
 	if(type == PATH_CAR)
 		return dist < 150.0f;

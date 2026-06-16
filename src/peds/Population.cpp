@@ -40,8 +40,8 @@ bool CPopulation::ms_bGivePedsWeapons;
 int32 CPopulation::m_AllRandomPedsThisType = -1;
 float CPopulation::PedDensityMultiplier = 1.0f;
 uint32 CPopulation::ms_nTotalMissionPeds;
-int32 CPopulation::MaxNumberOfPedsInUse = 25;
-int32 CPopulation::MaxNumberOfPedsInUseInterior = 40;
+int32 CPopulation::MaxNumberOfPedsInUse = 32;
+int32 CPopulation::MaxNumberOfPedsInUseInterior = 48;
 uint32 CPopulation::ms_nNumCivMale;
 uint32 CPopulation::ms_nNumCivFemale;
 uint32 CPopulation::ms_nNumCop;
@@ -377,10 +377,11 @@ CPopulation::Update(bool addPeds)
 			ms_nTotalPeds -= ms_nTotalCarPassengerPeds;
 			if (!CCutsceneMgr::IsRunning() && addPeds) {
 				float pcdm = PedCreationDistMultiplier();
-				AddToPopulation(pcdm * (MIN_CREATION_DIST * TheCamera.GenerationDistMultiplier),
-					pcdm * ((MIN_CREATION_DIST + CREATION_RANGE) * TheCamera.GenerationDistMultiplier),
-					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT - CREATION_RANGE,
-					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT);
+				float populationDist = TheCamera.PopulationDistMultiplier;
+				AddToPopulation(pcdm * (MIN_CREATION_DIST * populationDist),
+					pcdm * ((MIN_CREATION_DIST + CREATION_RANGE) * populationDist),
+					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * populationDist * OFFSCREEN_CREATION_MULT - CREATION_RANGE,
+					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * populationDist * OFFSCREEN_CREATION_MULT);
 			}
 		}
 	}
@@ -709,7 +710,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			}
 			bool surfaceAndDistIsOk = true;
 			if (TheCamera.IsSphereVisible(generatedCoors, 2.0f)) {
-				if (PedCreationDistMultiplier() * MIN_CREATION_DIST > (generatedCoors - playerCentreOfWorld).Magnitude2D())
+				if (minDist > (generatedCoors - playerCentreOfWorld).Magnitude2D())
 					surfaceAndDistIsOk = false;
 			}
 
@@ -1100,11 +1101,11 @@ CPopulation::ManagePopulation(void)
 			else if (ped->bDeadPedInFrontOfCar && ped->m_vehicleInAccident)
 				dist = 0.0f;
 
-			if (PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier) < dist ||
-				(!ped->bCullExtraFarAway && PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier < dist)) {
+			if (PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.PopulationDistMultiplier) < dist ||
+				(!ped->bCullExtraFarAway && PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.PopulationDistMultiplier < dist)) {
 				pedIsFarAway = true;
 
-			} else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) {
+			} else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * TheCamera.PopulationDistMultiplier * OFFSCREEN_CREATION_MULT < dist) {
 				if (CTimer::GetTimeInMilliseconds() > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
 					if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
 						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
