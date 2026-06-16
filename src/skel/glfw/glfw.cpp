@@ -98,9 +98,19 @@ static psGlobalType PsGlobal;
 #define PSGLOBAL(var) (((psGlobalType *)(RsGlobal.ps))->var)
 
 static RwBool
+IsFullscreenLikeWindowMode(void)
+{
+#ifdef IMPROVED_VIDEOMODE
+	return PSGLOBAL(fullScreen) || FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS;
+#else
+	return PSGLOBAL(fullScreen);
+#endif
+}
+
+static RwBool
 IsWindowMinimizedPauseActive(void)
 {
-	return WindowIconified || (PSGLOBAL(fullScreen) && !WindowFocused);
+	return WindowIconified || (IsFullscreenLikeWindowMode() && !WindowFocused);
 }
 
 static void
@@ -112,6 +122,7 @@ SetWindowAudioSuspended(RwBool suspend)
 	WindowAudioSuspended = suspend;
 	if (suspend)
 	{
+		_InputShutdownMouse();
 		DMAudio.SetMusicMasterVolume(0);
 		DMAudio.SetEffectsMasterVolume(0);
 		DMAudio.Service();
@@ -120,6 +131,7 @@ SetWindowAudioSuspended(RwBool suspend)
 	else
 	{
 		RsEventHandler(rsACTIVATE, (void *)TRUE);
+		_InputInitialiseMouse(!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
 		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
 		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
 		DMAudio.Service();
@@ -1059,7 +1071,8 @@ long _InputInitialiseMouse(bool exclusive)
 
 void _InputShutdownMouse()
 {
-	// Not needed
+	lastCursorMode = GLFW_CURSOR_HIDDEN;
+	glfwSetInputMode(PSGLOBAL(window), GLFW_CURSOR, lastCursorMode);
 }
 
 // Not "needs exclusive" on GLFW, but more like "needs to change mode"
