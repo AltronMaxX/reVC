@@ -13,3 +13,6 @@
 [submodule "vendor/librw"]
 	path = vendor/librw
 	url = https://github.com/aap/librw.git
+[submodule "gamefiles"]
+	path = gamefiles
+	url = https://github.com/AltronMaxX/reVC-gamefiles.git
