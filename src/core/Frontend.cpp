@@ -3050,13 +3050,13 @@ CMenuManager::LoadSettings()
 			CFileMgr::Read(fileHandle, (char*)&m_nPrefsDepth, sizeof(m_nPrefsDepth));
 			CFileMgr::Read(fileHandle, (char*)&m_nPrefsWindowed, sizeof(m_nPrefsWindowed));
 			CFileMgr::Read(fileHandle, (char*)&m_nPrefsSubsystem, sizeof(m_nPrefsSubsystem));
-			if(m_nPrefsWindowed != 0 && m_nPrefsWindowed != 1){
+			if(m_nPrefsWindowed < 0 || m_nPrefsWindowed >= NUM_WINDOW_MODES){
 				// garbage data from vanilla settings file
 				// let skeleton find something
 				m_nPrefsWidth = 0;
 				m_nPrefsHeight = 0;
 				m_nPrefsDepth = 0;
-				m_nPrefsWindowed = 0;
+				m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
 				m_nPrefsSubsystem = 0;
 			}
 			m_nSelectedScreenMode = m_nPrefsWindowed;

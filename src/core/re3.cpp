@@ -569,6 +569,13 @@ bool LoadINISettings()
 	}
 #endif
 
+
+#ifdef IMPROVED_VIDEOMODE
+	if (FrontEndMenuManager.m_nPrefsWindowed < 0 || FrontEndMenuManager.m_nPrefsWindowed >= NUM_WINDOW_MODES)
+		FrontEndMenuManager.m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
+	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+#endif
+
 	return true;
 }
 

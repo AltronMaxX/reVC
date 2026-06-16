@@ -616,6 +616,39 @@ RwBool IsForegroundApp()
 {
 	return !!ForegroundApp;
 }
+
+
+#ifdef IMPROVED_VIDEOMODE
+static void
+GetBorderlessMonitorInfo(int *x, int *y, int *width, int *height)
+{
+	int numMonitors;
+	GLFWmonitor **monitors = glfwGetMonitors(&numMonitors);
+	GLFWmonitor *monitor = nil;
+
+	if (monitors != nil && GcurSel >= 0 && GcurSel < numMonitors)
+		monitor = monitors[GcurSel];
+	if (monitor == nil)
+		monitor = glfwGetPrimaryMonitor();
+
+	if (monitor != nil) {
+		const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+		glfwGetMonitorPos(monitor, x, y);
+
+		if (mode != nil) {
+			*width = mode->width;
+			*height = mode->height;
+			return;
+		}
+	}
+
+	*x = 0;
+	*y = 0;
+	*width = FrontEndMenuManager.m_nPrefsWidth;
+	*height = FrontEndMenuManager.m_nPrefsHeight;
+}
+#endif
+
 /*
 UINT GetBestRefreshRate(UINT width, UINT height, UINT depth)
 {
@@ -764,7 +797,7 @@ psSelectDevice()
 			FrontEndMenuManager.m_nPrefsWidth = mode->width;
 			FrontEndMenuManager.m_nPrefsHeight = mode->height;
 			FrontEndMenuManager.m_nPrefsDepth = 32;
-			FrontEndMenuManager.m_nPrefsWindowed = 0;
+			FrontEndMenuManager.m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
 		}
 
 		// Find the videomode that best fits what we got from the settings file
@@ -806,10 +839,10 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed)
+	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN)
 		GcurSelVM = bestWndMode;
 
-	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
+	// Windowed modes use the non-exclusive device mode, but vm keeps the requested resolution.
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
 	FrontEndMenuManager.m_nPrefsHeight = vm.height;
 	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
@@ -821,6 +854,9 @@ psSelectDevice()
 
 	/* Set up the video mode and set the apps window
 	* dimensions to match */
+#ifdef IMPROVED_VIDEOMODE
+	glfwWindowHint(GLFW_DECORATED, FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS ? GLFW_FALSE : GLFW_TRUE);
+#endif
 	if (!RwEngineSetVideoMode(GcurSelVM))
 	{
 		return FALSE;
@@ -851,12 +887,22 @@ psSelectDevice()
 		PSGLOBAL(fullScreen) = TRUE;
 	}
 #else
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+		int x, y, width, height;
+		GetBorderlessMonitorInfo(&x, &y, &width, &height);
+
+		RsGlobal.maximumWidth = width;
+		RsGlobal.maximumHeight = height;
+		RsGlobal.width = width;
+		RsGlobal.height = height;
+	} else {
 		RsGlobal.maximumWidth = FrontEndMenuManager.m_nPrefsWidth;
 		RsGlobal.maximumHeight = FrontEndMenuManager.m_nPrefsHeight;
 		RsGlobal.width = FrontEndMenuManager.m_nPrefsWidth;
 		RsGlobal.height = FrontEndMenuManager.m_nPrefsHeight;
+	}
 
-		PSGLOBAL(fullScreen) = !FrontEndMenuManager.m_nPrefsWindowed;
+	PSGLOBAL(fullScreen) = FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN;
 #endif
 
 #ifdef MULTISAMPLING
@@ -996,8 +1042,23 @@ void psPostRWinit(void)
 	_InputInitialiseJoys();
 	_InputInitialiseMouse(false);
 
-	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE))
+	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
+#ifdef IMPROVED_VIDEOMODE
+		if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+			int x, y, width, height;
+			GetBorderlessMonitorInfo(&x, &y, &width, &height);
+
+			glfwSetWindowAttrib(PSGLOBAL(window), GLFW_DECORATED, GLFW_FALSE);
+			glfwSetWindowPos(PSGLOBAL(window), x, y);
+			glfwSetWindowSize(PSGLOBAL(window), width, height);
+		} else {
+			glfwSetWindowAttrib(PSGLOBAL(window), GLFW_DECORATED, GLFW_TRUE);
+			glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
+		}
+#else
 		glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
+#endif
+	}
 
 	// Make sure all keys are released
 	CPad::GetPad(0)->Clear(true);
