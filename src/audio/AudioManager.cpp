@@ -114,7 +114,7 @@ cAudioManager::Service()
 	}
 	if (m_bIsInitialised) {
 		m_nPreviousUserPause = m_nUserPause;
-		m_nUserPause = CTimer::GetIsUserPaused();
+		m_nUserPause = CTimer::GetIsUserPaused() || CTimer::GetIsWindowMinimizedPaused();
 		UpdateReflections();
 		ServiceSoundEffects();
 		MusicManager.Service();

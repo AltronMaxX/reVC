@@ -74,6 +74,7 @@ rw::EngineOpenParams openParams;
 static RwBool		  ForegroundApp = TRUE;
 static RwBool		  WindowIconified = FALSE;
 static RwBool		  WindowFocused = TRUE;
+static RwBool		  WindowAudioSuspended = FALSE;
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -95,6 +96,55 @@ static psGlobalType PsGlobal;
 
 
 #define PSGLOBAL(var) (((psGlobalType *)(RsGlobal.ps))->var)
+
+static RwBool
+IsWindowMinimizedPauseActive(void)
+{
+	return WindowIconified || (PSGLOBAL(fullScreen) && !WindowFocused);
+}
+
+static void
+SetWindowAudioSuspended(RwBool suspend)
+{
+	if (WindowAudioSuspended == suspend)
+		return;
+
+	WindowAudioSuspended = suspend;
+	if (suspend)
+	{
+		DMAudio.SetMusicMasterVolume(0);
+		DMAudio.SetEffectsMasterVolume(0);
+		DMAudio.Service();
+		RsEventHandler(rsACTIVATE, (void *)FALSE);
+	}
+	else
+	{
+		RsEventHandler(rsACTIVATE, (void *)TRUE);
+		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+		DMAudio.Service();
+	}
+}
+
+static void
+UpdateWindowMinimizedPause(void)
+{
+	RwBool pause = IsWindowMinimizedPauseActive();
+	CTimer::SetWindowMinimizedPause(pause);
+	if (pause)
+	{
+		ForegroundApp = FALSE;
+		SetWindowAudioSuspended(TRUE);
+	}
+}
+
+static void
+RefreshWindowActivityState(void)
+{
+	WindowIconified = glfwGetWindowAttrib(PSGLOBAL(window), GLFW_ICONIFIED);
+	WindowFocused = glfwGetWindowAttrib(PSGLOBAL(window), GLFW_FOCUSED);
+	UpdateWindowMinimizedPause();
+}
 
 size_t _dwMemAvailPhys;
 RwUInt32 gGameState;
@@ -186,7 +236,8 @@ psCameraBeginUpdate(RwCamera *camera)
 	if ( !RwCameraBeginUpdate(Scene.camera) )
 	{
 		ForegroundApp = FALSE;
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		RefreshWindowActivityState();
+		SetWindowAudioSuspended(TRUE);
 		return FALSE;
 	}
 
@@ -342,6 +393,7 @@ psInitialize(void)
 	PsGlobal.cursorIsInWindow = FALSE;
 	WindowFocused = TRUE;
 	WindowIconified = FALSE;
+	WindowAudioSuspended = FALSE;
 
 	PsGlobal.joy1id	= -1;
 	PsGlobal.joy2id	= -1;
@@ -1841,11 +1893,13 @@ cursorEnterCB(GLFWwindow* window, int entered) {
 void
 windowFocusCB(GLFWwindow* window, int focused) {
 	WindowFocused = !!focused;
+	UpdateWindowMinimizedPause();
 }
 
 void
 windowIconifyCB(GLFWwindow* window, int iconified) {
 	WindowIconified = !!iconified;
+	UpdateWindowMinimizedPause();
 }
 
 /*
@@ -2320,8 +2374,12 @@ main(int argc, char *argv[])
 				if ( RwCameraBeginUpdate(Scene.camera) )
 				{
 					RwCameraEndUpdate(Scene.camera);
-					ForegroundApp = TRUE;
-					RsEventHandler(rsACTIVATE, (void *)TRUE);
+					RefreshWindowActivityState();
+					if (!CTimer::GetIsWindowMinimizedPaused())
+					{
+						ForegroundApp = TRUE;
+						SetWindowAudioSuspended(FALSE);
+					}
 				}
 
 			}

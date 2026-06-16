@@ -217,9 +217,9 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 {
 	CVector2D direction = FindPlayerCentreOfWorld(CWorld::PlayerInFocus) - m_vecPos;
 	float distance = direction.Magnitude();
-	float farclip = 110.0f * TheCamera.GenerationDistMultiplier;
+	float farclip = 110.0f * TheCamera.PopulationDistMultiplier;
 	float nearclip = farclip - 20.0f;
-	bool canBeRemoved = (m_nModelIndex > 0 && CModelInfo::IsBoatModel(m_nModelIndex) && 165.0f * TheCamera.GenerationDistMultiplier > distance &&
+	bool canBeRemoved = (m_nModelIndex > 0 && CModelInfo::IsBoatModel(m_nModelIndex) && 165.0f * TheCamera.PopulationDistMultiplier > distance &&
 		TheCamera.IsSphereVisible(m_vecPos, 0.0f) && !COcclusion::IsPositionOccluded(m_vecPos, 0.0f)); 
 	if (distance >= farclip && !canBeRemoved){
 		if (m_bIsBlocking)
