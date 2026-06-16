@@ -617,6 +617,7 @@ RwBool IsForegroundApp()
 	return !!ForegroundApp;
 }
 
+
 #ifdef IMPROVED_VIDEOMODE
 static void
 GetBorderlessMonitorInfo(int *x, int *y, int *width, int *height)
@@ -886,22 +887,22 @@ psSelectDevice()
 		PSGLOBAL(fullScreen) = TRUE;
 	}
 #else
-		if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
-			int x, y, width, height;
-			GetBorderlessMonitorInfo(&x, &y, &width, &height);
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+		int x, y, width, height;
+		GetBorderlessMonitorInfo(&x, &y, &width, &height);
 
-			RsGlobal.maximumWidth = width;
-			RsGlobal.maximumHeight = height;
-			RsGlobal.width = width;
-			RsGlobal.height = height;
-		} else {
-			RsGlobal.maximumWidth = FrontEndMenuManager.m_nPrefsWidth;
-			RsGlobal.maximumHeight = FrontEndMenuManager.m_nPrefsHeight;
-			RsGlobal.width = FrontEndMenuManager.m_nPrefsWidth;
-			RsGlobal.height = FrontEndMenuManager.m_nPrefsHeight;
-		}
+		RsGlobal.maximumWidth = width;
+		RsGlobal.maximumHeight = height;
+		RsGlobal.width = width;
+		RsGlobal.height = height;
+	} else {
+		RsGlobal.maximumWidth = FrontEndMenuManager.m_nPrefsWidth;
+		RsGlobal.maximumHeight = FrontEndMenuManager.m_nPrefsHeight;
+		RsGlobal.width = FrontEndMenuManager.m_nPrefsWidth;
+		RsGlobal.height = FrontEndMenuManager.m_nPrefsHeight;
+	}
 
-		PSGLOBAL(fullScreen) = FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN;
+	PSGLOBAL(fullScreen) = FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN;
 #endif
 
 #ifdef MULTISAMPLING

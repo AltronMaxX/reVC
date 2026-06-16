@@ -27,11 +27,6 @@ struct myFILE
 #define NUMFILES 20
 static myFILE myfiles[NUMFILES];
 
-static bool
-myvalidfd(int fd)
-{
-	return fd > 0 && fd < NUMFILES && myfiles[fd].file != nil;
-}
 
 #if !defined(_WIN32)
 #include <dirent.h>
@@ -86,9 +81,7 @@ static int
 myfclose(int fd)
 {
 	int ret;
-	assert(fd > 0 && fd < NUMFILES);
-	if(!myvalidfd(fd))
-		return EOF;
+	assert(fd < NUMFILES);
 	if(myfiles[fd].file){
 		ret = fclose(myfiles[fd].file);
 		myfiles[fd].file = nil;
@@ -101,8 +94,6 @@ static int
 myfgetc(int fd)
 {
 	int c;
-	if(!myvalidfd(fd))
-		return EOF;
 	c = fgetc(myfiles[fd].file);
 	if(myfiles[fd].isText && c == 015){
 		/* translate CRLF to LF */
@@ -118,8 +109,6 @@ myfgetc(int fd)
 static int
 myfputc(int c, int fd)
 {
-	if(!myvalidfd(fd))
-		return EOF;
 	/* translate LF to CRLF */
 	if(myfiles[fd].isText && c == 012)
 		fputc(015, myfiles[fd].file);
@@ -152,8 +141,6 @@ myfgets(char *buf, int len, int fd)
 static size_t
 myfread(void *buf, size_t elt, size_t n, int fd)
 {
-	if(!myvalidfd(fd))
-		return 0;
 	if(myfiles[fd].isText){
 		unsigned char *p;
 		size_t i;
@@ -175,8 +162,6 @@ myfread(void *buf, size_t elt, size_t n, int fd)
 static size_t
 myfwrite(void *buf, size_t elt, size_t n, int fd)
 {
-	if(!myvalidfd(fd))
-		return 0;
 	if(myfiles[fd].isText){
 		unsigned char *p;
 		size_t i;
@@ -198,16 +183,12 @@ myfwrite(void *buf, size_t elt, size_t n, int fd)
 static int
 myfseek(int fd, long offset, int whence)
 {
-	if(!myvalidfd(fd))
-		return -1;
 	return fseek(myfiles[fd].file, offset, whence);
 }
 
 static int
 myfeof(int fd)
 {
-	if(!myvalidfd(fd))
-		return 1;
 	return feof(myfiles[fd].file);
 //	return ferror(myfiles[fd].file);
 }

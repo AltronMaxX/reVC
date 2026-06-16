@@ -17,8 +17,7 @@ CSurfaceTable::Initialise(Const char *filename)
 	float adhesiveLimit;
 
 	CFileMgr::SetDir("");
-	if(CFileMgr::LoadFile(filename, work_buff, sizeof(work_buff), "r") < 0)
-		USERERROR("Cannot open %s. Make sure the game is started from the GTA Vice City directory.", filename);
+	CFileMgr::LoadFile(filename, work_buff, sizeof(work_buff), "r");
 
 	line = (char*)work_buff;
 	for(lineno = 0; lineno < NUMADHESIVEGROUPS; lineno++){

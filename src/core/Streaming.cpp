@@ -410,8 +410,7 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 
 	lastID = -1;
 	fd = CFileMgr::OpenFile(dirname, "rb");
-	if(fd <= 0)
-		USERERROR("Cannot open %s. Make sure the IMG/DIR game files are installed correctly.", dirname);
+	assert(fd > 0);
 
 	imgSelector = n<<24;
 	assert(sizeof(direntry) == 32);

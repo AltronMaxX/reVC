@@ -1,0 +1,45 @@
+name: reVC linux premake amd64
+
+on:
+  pull_request:
+  push:
+  release:
+    types: published
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux-amd64-librw_gl3_glfw-oal]
+        buildtype: [debug, release]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libopenal-dev \
+          libglew-dev \
+          libglfw3-dev \
+          libsndfile1-dev \
+          libmpg123-dev
+    - name: Configure build
+      run: |
+        ./premake5 --with-librw gmake2
+    - name: Build
+      run: |
+        cd build
+        make config="${{matrix.buildtype}}_${{matrix.platform}}"
+    - name: Move binaries to gamefiles
+      run: |
+        BUILD_TYPE="${{matrix.buildtype}}"
+        DIR_NAME="${BUILD_TYPE^}"
+
+        mv ./bin/${{matrix.platform}}/${DIR_NAME}/reVC ./gamefiles/
+    - name: Upload artifact to actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
+        path: ./gamefiles/*

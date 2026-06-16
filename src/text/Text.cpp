@@ -67,8 +67,6 @@ CText::Load(void)
 	}
 
 	file = CFileMgr::OpenFile(filename, "rb");
-	if(file <= 0)
-		USERERROR("Cannot open TEXT\\%s. Make sure the game is started from the GTA Vice City directory.", filename);
 
 	offset = 0;
 	while (!tkey_loaded || !tdat_loaded) {
@@ -273,8 +271,6 @@ CText::LoadMissionText(char *MissionTableName)
 	}
 	CTimer::Suspend();
 	int file = CFileMgr::OpenFile(filename, "rb");
-	if(file <= 0)
-		USERERROR("Cannot open TEXT\\%s. Make sure the game is started from the GTA Vice City directory.", filename);
 	CFileMgr::Seek(file, MissionTextOffsets.data[missionTableId].offset, SEEK_SET);
 
 	char TableCheck[8];

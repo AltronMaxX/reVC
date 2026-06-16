@@ -1778,36 +1778,29 @@ CPlayerPed::ProcessControl(void)
 			}
 			if (IsPedInControl() && m_nPedState != PED_ANSWER_MOBILE && padUsed)
 				ProcessPlayerWeapon(padUsed);
-			if (CPad::GetPad(0)->GetCharJustDown('F') && m_nPedState == PED_ANSWER_MOBILE && !bFastForwardPhoneCall)
+			if (CPad::GetPad(0)->GetExitVehicle() && m_nPedState == PED_ANSWER_MOBILE && !bFastForwardPhoneCall)
 			{
 				bFastForwardPhoneCall = true;
 			}
 			if (bFastForwardPhoneCall)
 			{
+
 				if (m_nPedState != PED_ANSWER_MOBILE)
 				{
 					bFastForwardPhoneCall = false;
-
-					CMessages::AddMessageJumpQ((wchar*)"Call Skipped", 2000, 0);
 				}
 				else
 				{
 					for (uint8 slot = 0; slot < 2; slot++)
 					{
 						if (AudioManager.m_bIsInitialised && slot < MISSION_AUDIO_SLOTS) {
-							AudioManager.m_sMissionAudio.m_nSampleIndex[slot] = NO_SAMPLE;
 							AudioManager.m_sMissionAudio.m_nLoadingStatus[slot] = 1;
 							AudioManager.m_sMissionAudio.m_nPlayStatus[slot] = 2;
 							AudioManager.m_sMissionAudio.m_bIsPlaying[slot] = false;
 							AudioManager.m_sMissionAudio.m_bIsPlayed[slot] = true;
-							AudioManager.m_sMissionAudio.m_bPredefinedProperties[slot] = true;
-							AudioManager.m_sMissionAudio.m_nMissionAudioCounter[slot] = 0;
-							AudioManager.m_sMissionAudio.m_bIsMobile[slot] = false;
 							SampleManager.StopStreamedFile(slot + 1);
 						}
 					}
-
-					// Принудительно чистим субтитры, чтобы на экране не было мерцания текста
 					CMessages::ClearMessages();
 				}
 			}

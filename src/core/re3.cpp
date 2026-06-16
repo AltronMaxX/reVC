@@ -569,6 +569,7 @@ bool LoadINISettings()
 	}
 #endif
 
+
 #ifdef IMPROVED_VIDEOMODE
 	if (FrontEndMenuManager.m_nPrefsWindowed < 0 || FrontEndMenuManager.m_nPrefsWindowed >= NUM_WINDOW_MODES)
 		FrontEndMenuManager.m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
@@ -1244,8 +1245,10 @@ extern bool gbRenderWorld2;
 #endif
 
 #ifndef __MWERKS__
+#ifndef MASTER
 const int   re3_buffsize = 1024;
 static char re3_buff[re3_buffsize];
+#endif
 
 #ifndef MASTER
 void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func)
@@ -1341,7 +1344,6 @@ void re3_trace(const char *filename, unsigned int lineno, const char *func, cons
 
 	OutputDebugString(buff);
 }
-#endif
 
 void re3_usererror(const char *format, ...)
 {
@@ -1358,12 +1360,11 @@ void re3_usererror(const char *format, ...)
 	_exit(3);
 #else
 	vsprintf(re3_buff, format, va);
-	va_end(va);
 	printf("\nREVC Error!\n\t%s\n",re3_buff);
-	raise(SIGABRT);
-	abort();
+	assert(false);
 #endif
 }
+#endif
 #endif
 
 #ifdef VALIDATE_SAVE_SIZE

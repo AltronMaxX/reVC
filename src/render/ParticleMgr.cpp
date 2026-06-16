@@ -24,8 +24,7 @@ void cParticleSystemMgr::Initialise()
 void cParticleSystemMgr::LoadParticleData()
 {
 	CFileMgr::SetDir("DATA");
-	if(CFileMgr::LoadFile(ParticleFilename, work_buff, ARRAY_SIZE(work_buff), "r") < 0)
-		USERERROR("Cannot open DATA\\%s. Make sure the game is started from the GTA Vice City directory.", ParticleFilename);
+	CFileMgr::LoadFile(ParticleFilename, work_buff, ARRAY_SIZE(work_buff), "r");
 	CFileMgr::SetDir("");
 	
 	tParticleSystemData *entry = nil;

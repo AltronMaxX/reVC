@@ -330,15 +330,16 @@ void re3_usererror(const char *format, ...);
 void debug(char *f, ...);
 void Error(char *f, ...);
 __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function needs to be inline - this way no call actually gets placed
-#define USERERROR Error
+// USERERROR only gets used in oal builds ... once
 #else
 #define debug(f, ...) re3_debug("[DBG]: " f, ## __VA_ARGS__)
 #define Error(f, ...) re3_debug("[ERROR]: " f, ## __VA_ARGS__)
-#define USERERROR(f, ...) re3_usererror(f, ## __VA_ARGS__)
 #ifndef MASTER
 #define TRACE(f, ...) re3_trace(__FILE__, __LINE__, __FUNCTION__, f, ## __VA_ARGS__)
+#define USERERROR(f, ...) re3_usererror(f, ## __VA_ARGS__)
 #else
 #define TRACE(f, ...)
+#define USERERROR(f, ...)
 #endif
 #endif
 
