@@ -5,6 +5,7 @@ on:
   push:
   release:
     types: published
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,7 +17,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
-    - name: Install Dependencies
+
+    - name: Install System Dependencies
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
@@ -26,21 +28,51 @@ jobs:
           libopenal-dev:i386 \
           libsndfile1-dev:i386 \
           libmpg123-dev:i386 \
-          libglew-dev:i386 \
-          libglfw3-dev:i386
+          libgl1-mesa-dev:i386 \
+          libx11-dev:i386 \
+          libxrandr-dev:i386 \
+          libxinerama-dev:i386 \
+          libxcursor-dev:i386 \
+          libxi-dev:i386 \
+          cmake
+
+    - name: Compile GLFW and GLEW from source (i386)
+      run: |
+        git clone --depth 1 -b 3.4 https://github.com/glfw/glfw.git
+        cd glfw
+        cmake -B build \
+          -DCMAKE_C_FLAGS="-m32" \
+          -DCMAKE_CXX_FLAGS="-m32" \
+          -DGLFW_BUILD_DOCS=OFF \
+          -DGLFW_BUILD_TESTS=OFF \
+          -DGLFW_BUILD_EXAMPLES=OFF
+        cmake --build build -j$(nproc)
+        sudo cmake --install build
+        cd ..
+
+        wget https://github.com/nigels-com/glew/releases/download/glew-2.3.1/glew-2.3.1.tgz
+        tar -xzf glew-2.3.1.tgz
+        cd glew-2.3.1
+        make CFLAGS.EXTRA="-m32" LDFLAGS.EXTRA="-m32" LIBDIR=/usr/local/lib -j$(nproc)
+        sudo make install LIBDIR=/usr/local/lib
+        cd ..
+
     - name: Configure build
       run: |
         ./premake5 --with-librw gmake2
+
     - name: Build
       run: |
         cd build
         make config="${{matrix.buildtype}}_${{matrix.platform}}"
+
     - name: Move binaries to gamefiles
       run: |
         BUILD_TYPE="${{matrix.buildtype}}"
         DIR_NAME="${BUILD_TYPE^}"
 
         mv ./bin/${{matrix.platform}}/${DIR_NAME}/reVC ./gamefiles/
+
     - name: Upload artifact to actions
       uses: actions/upload-artifact@v4
       with:
