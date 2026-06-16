@@ -126,15 +126,16 @@ SetWindowAudioSuspended(RwBool suspend)
 		DMAudio.SetMusicMasterVolume(0);
 		DMAudio.SetEffectsMasterVolume(0);
 		DMAudio.Service();
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)FALSE);
 	}
 	else
 	{
-		RsEventHandler(rsACTIVATE, (void *)TRUE);
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)TRUE);
 		_InputInitialiseMouse(!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
 		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
 		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
-		DMAudio.Service();
 	}
 }
 

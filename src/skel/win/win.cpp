@@ -99,6 +99,13 @@ static psGlobalType PsGlobal;
 #include "MemoryMgr.h"
 
 static void
+ReleaseWindowMouseFocus(void)
+{
+	if (PSGLOBAL(mouse) != nil)
+		PSGLOBAL(mouse)->Unacquire();
+}
+
+static void
 SetWindowAudioSuspended(RwBool suspend)
 {
 	if (WindowAudioSuspended == suspend)
@@ -107,20 +114,19 @@ SetWindowAudioSuspended(RwBool suspend)
 	WindowAudioSuspended = suspend;
 	if (suspend)
 	{
-		_InputShutdownMouse();
+		ReleaseWindowMouseFocus();
 		DMAudio.SetMusicMasterVolume(0);
 		DMAudio.SetEffectsMasterVolume(0);
 		DMAudio.Service();
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)FALSE);
 	}
 	else
 	{
-		RsEventHandler(rsACTIVATE, (void *)TRUE);
-		if (PSGLOBAL(dinterface) != nil && PSGLOBAL(mouse) == nil)
-			_InputInitialiseMouse(!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
+		if (PSGLOBAL(fullScreen))
+			RsEventHandler(rsACTIVATE, (void *)TRUE);
 		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
 		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
-		DMAudio.Service();
 	}
 }
 
