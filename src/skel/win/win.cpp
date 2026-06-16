@@ -55,6 +55,8 @@
 #define MAX_SUBSYSTEMS		(16)
 
 static RwBool		  ForegroundApp = TRUE;
+static RwBool		  WindowMinimized = FALSE;
+static RwBool		  WindowActive = TRUE;
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -94,6 +96,24 @@ static psGlobalType PsGlobal;
 #include "PCSave.h"
 #include "AnimViewer.h"
 #include "MemoryMgr.h"
+
+static void
+UpdateWindowMinimizedPause(void)
+{
+	RwBool pause = WindowMinimized || (PSGLOBAL(fullScreen) && !WindowActive);
+	CTimer::SetWindowMinimizedPause(pause);
+	if (pause)
+		ForegroundApp = FALSE;
+}
+
+static void
+RefreshWindowActivityState(void)
+{
+	HWND currentWindow = PSGLOBAL(window);
+	WindowMinimized = IsIconic(currentWindow);
+	WindowActive = GetForegroundWindow() == currentWindow || GetActiveWindow() == currentWindow;
+	UpdateWindowMinimizedPause();
+}
 
 #ifdef PS2_MENU
 #include "MemoryCard.h"
@@ -222,6 +242,8 @@ psCameraBeginUpdate(RwCamera *camera)
 	if ( !RwCameraBeginUpdate(Scene.camera) )
 	{
 		ForegroundApp = FALSE;
+		WindowActive = FALSE;
+		UpdateWindowMinimizedPause();
 		RsEventHandler(rsACTIVATE, (void *)FALSE);
 		return FALSE;
 	}
@@ -625,6 +647,8 @@ psInitialize(void)
 	RsGlobal.ps = &PsGlobal;
 	
 	PsGlobal.fullScreen = FALSE;
+	WindowMinimized = FALSE;
+	WindowActive = TRUE;
 	
 	PsGlobal.dinterface = nil;
 	PsGlobal.mouse	   = nil;
@@ -980,7 +1004,8 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 		{
 			RwRect r;
-			CTimer::SetWindowMinimizedPause(wParam == SIZE_MINIMIZED);
+			WindowMinimized = wParam == SIZE_MINIMIZED || IsIconic(window);
+			UpdateWindowMinimizedPause();
 
 			r.x = 0;
 			r.y = 0;
@@ -1173,6 +1198,10 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case WM_ACTIVATEAPP:
 		{
+			WindowActive = (BOOL)wParam;
+			WindowMinimized = IsIconic(window);
+			UpdateWindowMinimizedPause();
+
 			switch ( gGameState )
 			{
 				case GS_LOGO_MPEG:
@@ -1227,6 +1256,15 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			
 			CPad::GetPad(0)->Clear(false);
 			CPad::GetPad(1)->Clear(false);
+			
+			return 0L;
+		}
+
+		case WM_ACTIVATE:
+		{
+			WindowActive = LOWORD(wParam) != WA_INACTIVE;
+			WindowMinimized = HIWORD(wParam) || IsIconic(window);
+			UpdateWindowMinimizedPause();
 			
 			return 0L;
 		}
@@ -2533,8 +2571,12 @@ WinMain(HINSTANCE instance,
 				if ( RwCameraBeginUpdate(Scene.camera) )
 				{
 					RwCameraEndUpdate(Scene.camera);
-					ForegroundApp = TRUE;
-					RsEventHandler(rsACTIVATE, (void *)TRUE);
+					RefreshWindowActivityState();
+					if (!CTimer::GetIsWindowMinimizedPaused())
+					{
+						ForegroundApp = TRUE;
+						RsEventHandler(rsACTIVATE, (void *)TRUE);
+					}
 				}
 				
 				WaitMessage();

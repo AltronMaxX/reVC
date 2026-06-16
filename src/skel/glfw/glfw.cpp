@@ -96,6 +96,29 @@ static psGlobalType PsGlobal;
 
 #define PSGLOBAL(var) (((psGlobalType *)(RsGlobal.ps))->var)
 
+static RwBool
+IsWindowMinimizedPauseActive(void)
+{
+	return WindowIconified || (PSGLOBAL(fullScreen) && !WindowFocused);
+}
+
+static void
+UpdateWindowMinimizedPause(void)
+{
+	RwBool pause = IsWindowMinimizedPauseActive();
+	CTimer::SetWindowMinimizedPause(pause);
+	if (pause)
+		ForegroundApp = FALSE;
+}
+
+static void
+RefreshWindowActivityState(void)
+{
+	WindowIconified = glfwGetWindowAttrib(PSGLOBAL(window), GLFW_ICONIFIED);
+	WindowFocused = glfwGetWindowAttrib(PSGLOBAL(window), GLFW_FOCUSED);
+	UpdateWindowMinimizedPause();
+}
+
 size_t _dwMemAvailPhys;
 RwUInt32 gGameState;
 
@@ -186,6 +209,7 @@ psCameraBeginUpdate(RwCamera *camera)
 	if ( !RwCameraBeginUpdate(Scene.camera) )
 	{
 		ForegroundApp = FALSE;
+		RefreshWindowActivityState();
 		RsEventHandler(rsACTIVATE, (void *)FALSE);
 		return FALSE;
 	}
@@ -1841,12 +1865,13 @@ cursorEnterCB(GLFWwindow* window, int entered) {
 void
 windowFocusCB(GLFWwindow* window, int focused) {
 	WindowFocused = !!focused;
+	UpdateWindowMinimizedPause();
 }
 
 void
 windowIconifyCB(GLFWwindow* window, int iconified) {
 	WindowIconified = !!iconified;
-	CTimer::SetWindowMinimizedPause(!!iconified);
+	UpdateWindowMinimizedPause();
 }
 
 /*
@@ -2321,8 +2346,12 @@ main(int argc, char *argv[])
 				if ( RwCameraBeginUpdate(Scene.camera) )
 				{
 					RwCameraEndUpdate(Scene.camera);
-					ForegroundApp = TRUE;
-					RsEventHandler(rsACTIVATE, (void *)TRUE);
+					RefreshWindowActivityState();
+					if (!CTimer::GetIsWindowMinimizedPaused())
+					{
+						ForegroundApp = TRUE;
+						RsEventHandler(rsACTIVATE, (void *)TRUE);
+					}
 				}
 
 			}
