@@ -1846,6 +1846,7 @@ windowFocusCB(GLFWwindow* window, int focused) {
 void
 windowIconifyCB(GLFWwindow* window, int iconified) {
 	WindowIconified = !!iconified;
+	CTimer::SetWindowMinimizedPause(!!iconified);
 }
 
 /*

@@ -980,6 +980,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_SIZE:
 		{
 			RwRect r;
+			CTimer::SetWindowMinimizedPause(wParam == SIZE_MINIMIZED);
 
 			r.x = 0;
 			r.y = 0;
