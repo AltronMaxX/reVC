@@ -42,6 +42,8 @@ jobs:
 
     - name: Compile GLFW and GLEW from source (i386)
       run: |
+        export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig
+
         git clone --depth 1 -b 3.4 https://github.com/glfw/glfw.git
         cd glfw
         cmake -B build \
