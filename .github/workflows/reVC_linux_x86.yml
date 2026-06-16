@@ -1,0 +1,33 @@
+name: reVC premake x86
+
+on:
+  pull_request:
+  push:
+  release:
+    types: published
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux-x86-librw_gl3_glfw-oal]
+        buildtype: [debug, release]
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+    - name: Configure build
+      run: |
+        ./premake5 --with-librw gmake2
+    - name: Build
+      run: |
+        cd build
+        make config="${{matrix.buildtype}}_${{matrix.platform}}"
+    - name: Move binaries to gamefiles
+      run: |
+        mv ./bin/${{matrix.platform}}/${{matrix.buildtype}}/reVC ./gamefiles/
+    - name: Upload artifact to actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
+        path: ./gamefiles/*
