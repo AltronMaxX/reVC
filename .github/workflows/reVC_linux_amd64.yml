@@ -1,4 +1,4 @@
-name: reVC premake amd64
+name: reVC linux premake amd64
 
 on:
   pull_request:
@@ -16,6 +16,15 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'true'
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libopenal-dev \
+          libglew-dev \
+          libglfw3-dev \
+          libsndfile1-dev \
+          libmpg123-dev
     - name: Configure build
       run: |
         ./premake5 --with-librw gmake2

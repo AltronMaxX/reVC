@@ -1,4 +1,4 @@
-name: reVC premake x86
+name: reVC windows premake x86
 
 on:
   pull_request:

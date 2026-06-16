@@ -1,4 +1,4 @@
-name: reVC premake amd64
+name: reVC windows premake amd64
 
 on:
   pull_request:
