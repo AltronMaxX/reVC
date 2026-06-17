@@ -9,7 +9,7 @@ public:
 	CPed *m_pVictim;
 	uint32 m_nMedicsAttending;
 	uint32 m_nMedicsPerformingCPR;
-	CAccident() : m_pVictim(nil), m_nMedicsAttending(0), m_nMedicsPerformingCPR(0) {}
+	CAccident() : m_pVictim(nullptr), m_nMedicsAttending(0), m_nMedicsPerformingCPR(0) {}
 };
 
 class CAccidentManager
@@ -22,10 +22,10 @@ public:
 	CAccident *GetNextFreeAccident();
 	void ReportAccident(CPed *ped);
 	void Update();
-	CAccident *FindNearestAccident(CVector vecPos, float *pDistance);
-	uint16 CountActiveAccidents();
-	bool UnattendedAccidents();
-	bool WorkToDoForMedics();
+	CAccident *FindNearestAccident(const CVector &vecPos, float *pDistance);
+	[[nodiscard]] uint16 CountActiveAccidents() const;
+	[[nodiscard]] bool UnattendedAccidents() const;
+	[[nodiscard]] bool WorkToDoForMedics() const;
 };
 
 extern CAccidentManager gAccidentManager;

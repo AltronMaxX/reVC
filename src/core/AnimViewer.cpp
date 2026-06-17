@@ -42,15 +42,15 @@
 #include "debugmenu.h"
 
 int CAnimViewer::animTxdSlot = 0;
-CEntity *CAnimViewer::pTarget = nil;
+CEntity *CAnimViewer::pTarget = nullptr;
 
 void
-CAnimViewer::Render(void) {
+CAnimViewer::Render() {
 	if (pTarget) {
 		if (pTarget) {
 #ifdef FIX_BUGS
 			if(pTarget->IsPed())
-				((CPed*)pTarget)->UpdateRpHAnim();
+				pTarget->UpdateRpHAnim();
 #endif
 			pTarget->Render();
 			CRenderer::RenderOneNonRoad(pTarget);
@@ -59,16 +59,16 @@ CAnimViewer::Render(void) {
 }
 
 void
-CAnimViewer::Initialise(void) {
+CAnimViewer::Initialise() {
 
 	// we need messages, messages needs hud, hud needs those
-	int hudSlot = CTxdStore::AddTxdSlot("hud");
+	const int hudSlot = CTxdStore::AddTxdSlot("hud");
 	CTxdStore::LoadTxd(hudSlot, "MODELS/HUD.TXD");
 	CHud::m_Wants_To_Draw_Hud = false;
 
 	animTxdSlot = CTxdStore::AddTxdSlot("generic");
 	CTxdStore::Create(animTxdSlot);
-	int particleSlot = CTxdStore::AddTxdSlot("particle");
+	const int particleSlot = CTxdStore::AddTxdSlot("particle");
 	CTxdStore::LoadTxd(particleSlot, "MODELS/PARTICLE.TXD");
 	CTxdStore::SetCurrentTxd(animTxdSlot);
 	CPools::Initialise();
@@ -111,13 +111,13 @@ CAnimViewer::Initialise(void) {
 	CClock::Initialise(60000);
 	CTimeCycle::Initialise();
 	CCarCtrl::Init();
-	CPlayerPed *player = new CPlayerPed();
+	auto *player = new CPlayerPed();
 	player->SetPosition(1000.0f, 1000.0f, 1000.0f);
 	CWorld::Players[0].m_pPed = player;
 	CDraw::SetFOV(120.0f);
 	CDraw::ms_fLODDistance = 500.0f;
 
-	int fd = CFileMgr::OpenFile("DATA\\SPECIAL.TXT", "r");
+	const int fd = CFileMgr::OpenFile("DATA\\SPECIAL.TXT", "r");
 	char animGroup[32], modelName[32];
 	if (fd) {
 		for (int lineId = 0; lineId < NUM_OF_SPECIAL_CHARS; lineId++) {
@@ -127,12 +127,12 @@ CAnimViewer::Initialise(void) {
 			sscanf(gString, "%s %s", modelName, animGroup);
 			int groupId;
 			for (groupId = 0; groupId < NUM_ANIM_ASSOC_GROUPS; groupId++) {
-				if (!strcmp(animGroup, CAnimManager::GetAnimGroupName((AssocGroupId)groupId)))
+				if (!strcmp(animGroup, CAnimManager::GetAnimGroupName(static_cast<AssocGroupId>(groupId))))
 					break;
 			}
 
 			if (groupId != NUM_ANIM_ASSOC_GROUPS)
-				((CPedModelInfo*)CModelInfo::GetModelInfo(MI_SPECIAL01 + lineId))->m_animGroup = groupId;
+				dynamic_cast<CPedModelInfo *>(CModelInfo::GetModelInfo(MI_SPECIAL01 + lineId))->m_animGroup = groupId;
 
 			CStreaming::RequestSpecialChar(lineId, modelName, STREAMFLAGS_DONT_REMOVE);
 		}
@@ -142,11 +142,11 @@ CAnimViewer::Initialise(void) {
 	}
 
 	// From LCS. idk if needed
-	int vanBlock = CAnimManager::GetAnimationBlockIndex("van");
-	int bikesBlock = CAnimManager::GetAnimationBlockIndex("bikes");
-	int bikevBlock = CAnimManager::GetAnimationBlockIndex("bikev");
-	int bikehBlock = CAnimManager::GetAnimationBlockIndex("bikeh");
-	int bikedBlock = CAnimManager::GetAnimationBlockIndex("biked");
+	const int vanBlock = CAnimManager::GetAnimationBlockIndex("van");
+	const int bikesBlock = CAnimManager::GetAnimationBlockIndex("bikes");
+	const int bikevBlock = CAnimManager::GetAnimationBlockIndex("bikev");
+	const int bikehBlock = CAnimManager::GetAnimationBlockIndex("bikeh");
+	const int bikedBlock = CAnimManager::GetAnimationBlockIndex("biked");
 	CStreaming::FlushRequestList();
 	CStreaming::RequestAnim(vanBlock, STREAMFLAGS_DEPENDENCY);
 	CStreaming::RequestAnim(bikesBlock, STREAMFLAGS_DEPENDENCY);
@@ -164,11 +164,9 @@ CAnimViewer::Initialise(void) {
 int
 LastPedModelId(int modelId)
 {
-	CBaseModelInfo *model;
 	for(;;){
 		assert(modelId < MODELINFOSIZE);
-		model = CModelInfo::GetModelInfo(modelId);
-		if (model && model->GetModelType() == MITYPE_PED)
+		if (const CBaseModelInfo *model = CModelInfo::GetModelInfo(modelId); model && model->GetModelType() == MITYPE_PED)
 			break;
 		modelId--;
 	}
@@ -178,11 +176,9 @@ LastPedModelId(int modelId)
 int
 FirstCarModelId(int modelId)
 {
-	CBaseModelInfo *model;
 	for(;;){
 		assert(modelId < MODELINFOSIZE);
-		model = CModelInfo::GetModelInfo(modelId);
-		if (model && model->GetModelType() == MITYPE_VEHICLE)
+		if (const CBaseModelInfo *model = CModelInfo::GetModelInfo(modelId); model && model->GetModelType() == MITYPE_VEHICLE)
 			break;
 		modelId++;
 	}
@@ -196,7 +192,7 @@ NextModelId(int modelId, int wantedChange)
 	// Max. 2 trials wasn't here, it's me that added it.
 
 	int tryCount = 2;
-	int ogModelId = modelId;
+	const int ogModelId = modelId;
 
 	while(tryCount != 0) {
 		modelId += wantedChange;
@@ -204,8 +200,7 @@ NextModelId(int modelId, int wantedChange)
 			tryCount--;
 			wantedChange = -wantedChange;
 		} else if (modelId != 5 && modelId != 6 && modelId != 405) {
-			CBaseModelInfo *model = CModelInfo::GetModelInfo(modelId);
-			if (model)
+			if (const CBaseModelInfo *model = CModelInfo::GetModelInfo(modelId))
 			{
 				//int type = model->m_type;
 				return modelId;
@@ -216,11 +211,9 @@ NextModelId(int modelId, int wantedChange)
 }
 
 void
-PlayAnimation(RpClump *clump, AssocGroupId animGroup, AnimationId anim)
+PlayAnimation(RpClump *clump, const AssocGroupId animGroup, const AnimationId anim)
 {
-	CAnimBlendAssociation *currentAssoc = RpAnimBlendClumpGetAssociation(clump, anim);
-
-	if (currentAssoc && currentAssoc->IsPartial())
+	if (const CAnimBlendAssociation *currentAssoc = RpAnimBlendClumpGetAssociation(clump, anim); currentAssoc && currentAssoc->IsPartial())
 		delete currentAssoc;
 
 	RpAnimBlendClumpSetBlendDeltas(clump, ASSOC_PARTIAL, -8.0f);
@@ -232,7 +225,7 @@ PlayAnimation(RpClump *clump, AssocGroupId animGroup, AnimationId anim)
 }
 
 void
-CAnimViewer::Update(void)
+CAnimViewer::Update()
 {
 	static int modelId = 0;
 	static int animId = 0;
@@ -243,7 +236,7 @@ CAnimViewer::Update(void)
 	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(modelId);
 
 	if (modelInfo->GetModelType() == MITYPE_PED) {
-		int animGroup = ((CPedModelInfo*)modelInfo)->m_animGroup;
+		int animGroup = dynamic_cast<CPedModelInfo *>(modelInfo)->m_animGroup;
 
 		if (animId > ANIM_STD_IDLE)
 			animGroup = ASSOCGRP_STD;
@@ -251,10 +244,9 @@ CAnimViewer::Update(void)
 		if (reloadIFP) {
 			if (pTarget) {
 				CWorld::Remove(pTarget);
-				if (pTarget)
-					delete pTarget;
+				delete pTarget;
 			}
-			pTarget = nil;
+			pTarget = nullptr;
 			
 			// These calls were inside of LoadIFP function.
 			CAnimManager::Shutdown();
@@ -279,9 +271,7 @@ CAnimViewer::Update(void)
 		if (!pTarget) {
 
 			if (modelInfo->GetModelType() == MITYPE_VEHICLE) {
-
-				CVehicleModelInfo* veh = (CVehicleModelInfo*)modelInfo;
-				if (veh->m_vehicleType == VEHICLE_TYPE_CAR) {
+				if (const auto* veh = dynamic_cast<CVehicleModelInfo *>(modelInfo); veh->m_vehicleType == VEHICLE_TYPE_CAR) {
 					pTarget = new CAutomobile(modelId, RANDOM_VEHICLE);
 				} else if (veh->m_vehicleType == VEHICLE_TYPE_BOAT) {
 					pTarget = new CBoat(modelId, RANDOM_VEHICLE);
@@ -310,7 +300,7 @@ CAnimViewer::Update(void)
 			TheCamera.TakeControl(pTarget, CCam::MODE_MODELVIEW, JUMP_CUT, CAMCONTROL_SCRIPT);
 		}
 		if (pTarget->IsVehicle() || pTarget->IsPed() || pTarget->IsObject()) {
-			((CPhysical*)pTarget)->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
+			dynamic_cast<CPhysical *>(pTarget)->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 		}
 #ifdef FIX_BUGS
 		// so we don't end up in the water
@@ -320,7 +310,7 @@ CAnimViewer::Update(void)
 #endif
 
 		if (modelInfo->GetModelType() == MITYPE_PED) {
-			((CPed*)pTarget)->bKindaStayInSamePlace = true;
+			dynamic_cast<CPed *>(pTarget)->bKindaStayInSamePlace = true;
 
 			// Triangle in mobile
 			if (pad->GetSquareJustDown()) {
@@ -329,7 +319,7 @@ CAnimViewer::Update(void)
 				CMessages::AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetCrossJustDown()) {
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(pTarget->GetClump(), animGroup, static_cast<AnimationId>(animId));
 				AsciiToUnicode("Animation restarted", gUString);
 				CMessages::AddMessage(gUString, 1000, 0);
 
@@ -343,7 +333,7 @@ CAnimViewer::Update(void)
 				if (animId < 0) {
 					animId = ANIM_STD_NUM - 1;
 				}
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(pTarget->GetClump(), animGroup, static_cast<AnimationId>(animId));
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
@@ -351,7 +341,7 @@ CAnimViewer::Update(void)
 
 			} else if (pad->GetDPadDownJustDown()) {
 				animId = (animId == (ANIM_STD_NUM - 1) ? 0 : animId + 1);
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
+				PlayAnimation(pTarget->GetClump(), animGroup, static_cast<AnimationId>(animId));
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
@@ -365,7 +355,7 @@ CAnimViewer::Update(void)
 				CMessages::AddMessage(gUString, 1000, 0);
 				// Originally it was GetPad(1)->LeftShoulder2
 			} else if (pad->NewState.Triangle) {
-				((CPedModelInfo *)CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(pTarget->GetClump());
+				static_cast<CPedModelInfo *>(CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(pTarget->GetClump());
 				AsciiToUnicode("Ped Col model will be animated as long as you hold the button", gUString);
 				CMessages::AddMessage(gUString, 100, 0);
 			}
@@ -409,10 +399,9 @@ CAnimViewer::Update(void)
 		modelId = nextModelId;
 		if (pTarget) {
 			CWorld::Remove(pTarget);
-			if (pTarget)
-				delete pTarget;
+			delete pTarget;
 		}
-		pTarget = nil;
+		pTarget = nullptr;
 		return;
 	}
 
@@ -423,10 +412,9 @@ CAnimViewer::Update(void)
 }
 
 void
-CAnimViewer::Shutdown(void)
+CAnimViewer::Shutdown()
 {
-	if (CWorld::Players[0].m_pPed)
-		delete CWorld::Players[0].m_pPed;
+	delete CWorld::Players[0].m_pPed;
 
 	CWorld::ShutDown();
 	CModelInfo::ShutDown();

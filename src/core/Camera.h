@@ -186,27 +186,27 @@ public:
 	CPed         *m_pLastPedLookedAt;// So interpolation works 
 	bool        m_bFirstPersonRunAboutActive;
 
-	CCam(void) { Init(); }
-	void Init(void);
-	void Process(void);
-	void ProcessSpecialHeightRoutines(void);
-	void GetVectorsReadyForRW(void);
+	CCam() { Init(); }
+	void Init();
+	void Process();
+	void ProcessSpecialHeightRoutines();
+	void GetVectorsReadyForRW();
 	CVector DoAverageOnVector(const CVector &vec);
 	void WorkOutCamHeight(const CVector &TargetCoors, float TargetOrientation, float TargetHeight);
-	bool RotCamIfInFrontCar(CVector &TargetCoors, float TargetOrientation);
+	bool RotCamIfInFrontCar(const CVector &TargetCoors, float TargetOrientation);
 	void Cam_On_A_String_Unobscured(const CVector &TargetCoors, float BaseDist);
 	void FixCamWhenObscuredByVehicle(const CVector &TargetCoors);
-	bool GetBoatLook_L_R_HeightOffset(float &Offset);
-	void LookBehind(void);
-	void LookLeft(void);
-	void LookRight(void);
-	void ClipIfPedInFrontOfPlayer(void);
+	bool GetBoatLook_L_R_HeightOffset(float &Offset) const;
+	void LookBehind();
+	void LookLeft();
+	void LookRight();
+	void ClipIfPedInFrontOfPlayer();
 	void KeepTrackOfTheSpeed(const CVector &source, const CVector &target, const CVector &up, const float &alpha, const float &beta, const float &fov);
-	bool Using3rdPersonMouseCam(void);
-	bool GetWeaponFirstPersonOn(void);
+	[[nodiscard]] bool Using3rdPersonMouseCam() const;
+	[[nodiscard]] bool GetWeaponFirstPersonOn() const;
 	bool IsTargetInWater(const CVector &CamCoors);
 	void AvoidWallsTopDownPed(const CVector &TargetCoors, const CVector &Offset, float *Adjuster, float *AdjusterSpeed, float yDistLimit);
-	void PrintMode(void);
+	void PrintMode() const;
 
 	void Process_Debug(const CVector&, float, float, float);
 #ifdef GTA_SCENE_EDIT
@@ -234,12 +234,12 @@ public:
 	void Process_Player_Fallen_Water(const CVector &CameraTarget, float TargetOrientation, float, float);
 	void Process_SpecialFixedForSyphon(const CVector &CameraTarget, float, float, float);
 	void Process_LightHouse(const CVector &CameraTarget, float, float, float);
-	void ProcessPedsDeadBaby(void);
-	bool ProcessArrestCamOne(void);
-	bool ProcessArrestCamTwo(void);
-	bool GetLookAlongGroundPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, CVector &SourceOut);
-	bool GetLookFromLampPostPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, CVector &SourceOut);
-	bool GetLookOverShoulderPos(CEntity *Target, CPed *Cop, CVector &TargetCoors, CVector &SourceOut);
+	void ProcessPedsDeadBaby();
+	bool ProcessArrestCamOne();
+	bool ProcessArrestCamTwo();
+	bool GetLookAlongGroundPos(const CEntity *Target, CPed *Cop, const CVector &TargetCoors, CVector &SourceOut);
+	bool GetLookFromLampPostPos(CEntity *Target, CPed *Cop, const CVector &TargetCoors, CVector &SourceOut);
+	bool GetLookOverShoulderPos(const CEntity *Target, CPed *Cop, const CVector &TargetCoors, CVector &SourceOut);
 
 	// custom stuff
 	void Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrientation, float, float);
@@ -252,7 +252,7 @@ public:
 	enum {MAXPATHLENGTH=800};
 //	float m_arr_PathData[MAXPATHLENGTH];
 	float *m_arr_PathData;
-	CCamPathSplines(void);
+	CCamPathSplines();
 };
 
 struct CTrainCamNode
@@ -540,56 +540,56 @@ public:
 #endif
 
 	// High level and misc
-	CCamera(void);
-	void Init(void);
-	void Process(void);
-	void CamControl(void);
-	void UpdateTargetEntity(void);
-	void UpdateSoundDistances(void);
-	void InitialiseCameraForDebugMode(void);
+	CCamera();
+	void Init();
+	void Process();
+	void CamControl();
+	void UpdateTargetEntity();
+	void UpdateSoundDistances();
+	void InitialiseCameraForDebugMode();
 	void CamShake(float strength, float x, float y, float z);
-	bool Get_Just_Switched_Status() { return m_bJust_Switched; }
+	[[nodiscard]] bool Get_Just_Switched_Status() const { return m_bJust_Switched; }
 	void AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVector &NewSource, float FOV);
 	void GetArrPosForVehicleType(int apperance, int &index);
-	void GetScreenRect(CRect &rect);
+	void GetScreenRect(CRect &rect) const;
 
 	// Who's in control
 	void TakeControl(CEntity *target, int16 mode, int16 typeOfSwitch, int32 controller);
 	void TakeControlNoEntity(const CVector &position, int16 typeOfSwitch, int32 controller);
 	void TakeControlWithSpline(int16 typeOfSwitch);
-	void Restore(void);
-	void RestoreWithJumpCut(void);
+	void Restore();
+	void RestoreWithJumpCut();
 	void SetCamPositionForFixedMode(const CVector &Source, const CVector &UppOffSet);
 
 	// Transition
 	void StartTransition(int16 mode);
 	void StartTransitionWhenNotFinishedInter(int16 mode);
-	void StoreValuesDuringInterPol(CVector &source, CVector &target, CVector &up, float &FOV);
+	void StoreValuesDuringInterPol(const CVector &source, const CVector &target, const CVector &up, const float &FOV);
 
 	// Widescreen borders
-	void SetWideScreenOn(void);
-	void SetWideScreenOff(void);
-	void ProcessWideScreenOn(void);
-	void DrawBordersForWideScreen(void);
+	void SetWideScreenOn();
+	void SetWideScreenOff();
+	void ProcessWideScreenOn();
+	void DrawBordersForWideScreen();
 
 	// Obbe's cam
 	bool IsItTimeForNewcam(int32 obbeMode, int32 time);
 	bool TryToStartNewCamMode(int32 obbeMode);
-	void DontProcessObbeCinemaCamera(void);
-	void ProcessObbeCinemaCameraCar(void);
-	void ProcessObbeCinemaCameraHeli(void);
-	void ProcessObbeCinemaCameraPed(void);
+	void DontProcessObbeCinemaCamera();
+	void ProcessObbeCinemaCameraCar();
+	void ProcessObbeCinemaCameraHeli();
+	void ProcessObbeCinemaCameraPed();
 
 	// Train
 	void LoadTrainCamNodes(char const *name);
-	void Process_Train_Camera_Control(void);
+	void Process_Train_Camera_Control();
 
 	// Script
 	void LoadPathSplines(int file);
-	void DeleteCutSceneCamDataMemory(void);
-	void FinishCutscene(void);
-	float GetPositionAlongSpline(void) { return m_fPositionAlongSpline; }
-	uint32 GetCutSceneFinishTime(void);
+	void DeleteCutSceneCamDataMemory();
+	void FinishCutscene();
+	[[nodiscard]] float GetPositionAlongSpline() const { return m_fPositionAlongSpline; }
+	[[nodiscard]] uint32 GetCutSceneFinishTime() const;
 	void SetCamCutSceneOffSet(const CVector &pos);
 	void SetPercentAlongCutScene(float percent);
 	void SetParametersForScriptInterpolation(float stopMoving, float catchUp, int32 time);
@@ -598,41 +598,42 @@ public:
 	void SetNearClipScript(float);
 
 	// Fading
-	void ProcessFade(void);
-	void ProcessMusicFade(void);
+	void ProcessFade();
+	void ProcessMusicFade();
 	void Fade(float timeout, int16 direction);
 	void SetFadeColour(uint8 r, uint8 g, uint8 b);
-	bool GetFading(void);
-	int GetFadingDirection(void);
-	int GetScreenFadeStatus(void);
+	[[nodiscard]] bool GetFading() const;
+	[[nodiscard]] int GetFadingDirection() const;
+	[[nodiscard]] int GetScreenFadeStatus() const;
 
 	// Motion blur
-	void RenderMotionBlur(void);
+	void RenderMotionBlur() const;
 	void SetMotionBlur(int r, int g, int b, int a, int type);
 	void SetMotionBlurAlpha(int a);
 
 	// Player looking and aiming
-	int GetLookDirection(void);
-	bool GetLookingForwardFirstPerson(void);
-	bool GetLookingLRBFirstPerson(void);
-	void SetCameraDirectlyInFrontForFollowPed_CamOnAString(void);
-	void SetCameraDirectlyBehindForFollowPed_CamOnAString(void);
+	[[nodiscard]] int GetLookDirection() const;
+	[[nodiscard]] bool GetLookingForwardFirstPerson() const;
+	[[nodiscard]] bool GetLookingLRBFirstPerson() const;
+	void SetCameraDirectlyInFrontForFollowPed_CamOnAString();
+	void SetCameraDirectlyBehindForFollowPed_CamOnAString();
 	void SetNewPlayerWeaponMode(int16 mode, int16 minZoom, int16 maxZoom);
-	void ClearPlayerWeaponMode(void);
+	void ClearPlayerWeaponMode();
 	void UpdateAimingCoors(CVector const &coors);
-	bool Find3rdPersonCamTargetVector(float dist, CVector pos, CVector &source, CVector &target);
-	float Find3rdPersonQuickAimPitch(void);
-	bool Using1stPersonWeaponMode(void);
+	bool Find3rdPersonCamTargetVector(float dist, CVector pos, CVector &source, CVector &target) const;
+	[[nodiscard]] float Find3rdPersonQuickAimPitch() const;
+
+	[[nodiscard]] bool Using1stPersonWeaponMode() const;
 
 	// Physical camera
 	void SetRwCamera(RwCamera *cam);
-	const CMatrix& GetCameraMatrix(void) { return m_cameraMatrix; }
-	CVector &GetGameCamPosition(void) { return m_vecGameCamPos; }
-	void CalculateDerivedValues(void);
-	bool IsPointVisible(const CVector &center, const CMatrix *mat);
-	bool IsSphereVisible(const CVector &center, float radius, const CMatrix *mat);
-	bool IsSphereVisible(const CVector &center, float radius);
-	bool IsBoxVisible(CVector *box, const CMatrix *mat);
+	[[nodiscard]] const CMatrix& GetCameraMatrix() const { return m_cameraMatrix; }
+	CVector &GetGameCamPosition() { return m_vecGameCamPos; }
+	void CalculateDerivedValues();
+	bool IsPointVisible(const CVector &center, const CMatrix *mat) const;
+	bool IsSphereVisible(const CVector &center, float radius, const CMatrix *mat) const;
+	[[nodiscard]] bool IsSphereVisible(const CVector &center, float radius) const;
+	bool IsBoxVisible(CVector *box, const CMatrix *mat) const;
 };
 
 VALIDATE_SIZE(CCamera, 0xE9D8);
