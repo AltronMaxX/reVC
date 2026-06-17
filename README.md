@@ -1,5 +1,3 @@
-# Take Two, all of their employees, and anyone who supports them can go fuck themselves :). Sincerely, Starman. 
-
 <img src="https://github.com/AltronMaxX/re3/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FGTAmodding%2Fre3%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/GTAmodding/re3/goto?ref=miami)
@@ -7,9 +5,9 @@
 
 ## Intro
 
-In this repository you'll find the fully reversed source code for GTA III ([master](https://github.com/GTAmodding/re3/tree/master/) branch) and GTA VC ([miami](https://github.com/GTAmodding/re3/tree/miami/) branch).
+In this repository you'll find the fully reversed source code for GTA VC ([miami](https://github.com/AltronMaxX/reVC/tree/miami/) branch).
 
-It has been tested and works on Windows, Linux and FreeBSD, on x86, amd64, arm and arm64.\
+It has been tested and works on Windows, Linux, on x86, amd64, arm and arm64.\
 Rendering is handled either by original RenderWare (D3D8)
 or the reimplementation [librw](https://github.com/aap/librw) (D3D9, OpenGL 2.1 or above, OpenGL ES 2.0 or above).\
 Audio is done with MSS (using dlls from original GTA) or OpenAL.
@@ -65,8 +63,6 @@ The following things would be nice to have/do:
 
 * Fix physics for high FPS
 * Improve performance on lower end devices, especially the OpenGL layer on the Raspberry Pi (if you have experience with this, please get in touch)
-* [PS2 port](https://github.com/GTAmodding/re3/wiki/PS2-port)
-* Xbox port (not quite as important)
 * reverse remaining unused/debug functions
 * compare CodeWarrior build with original binary for more accurate code (very tedious)
 
@@ -88,7 +84,7 @@ Clone the repository with `git clone --recursive -b miami https://github.com/GTA
 
 <details><summary>Linux Premake</summary>
 
-For Linux using premake, proceed: [Building on Linux](https://github.com/GTAmodding/re3/wiki/Building-on-Linux)
+For Linux using premake, proceed: [Building on Linux](https://github.com/AltronMaxX/reVC/wiki/Building-on-Linux)
 
 </details>
 
@@ -104,12 +100,6 @@ conan build .. -if build -bf build -pf package
 ```
 </details>
 
-<details><summary>FreeBSD</summary>
-
-For FreeBSD using premake, proceed: [Building on FreeBSD](https://github.com/GTAmodding/re3/wiki/Building-on-FreeBSD)
-
-</details>
-
 <details><summary>Windows</summary>
 
 Assuming you have Visual Studio 2026:
@@ -118,12 +108,12 @@ Assuming you have Visual Studio 2026:
     
 Microsoft recently discontinued its downloads of the DX9 SDK. You can download an archived version here: https://archive.org/details/dxsdk_jun10
 
-**If you choose OpenAL on Windows** You must read [Running OpenAL build on Windows](https://github.com/GTAmodding/re3/wiki/Running-OpenAL-build-on-Windows).
+**If you choose OpenAL on Windows** You must read [Running OpenAL build on Windows](https://github.com/AlteonMaxX/reVC/wiki/Running-OpenAL-build-on-Windows).
 </details>
 
 > :information_source: premake has an `--lto` option if you want the project to be compiled with Link Time Optimization.
 
-> :information_source: There are various settings in [config.h](https://github.com/GTAmodding/re3/tree/miami/src/core/config.h), you may want to take a look there.
+> :information_source: There are various settings in [config.h](https://github.com/AltronMaxX/reVC/tree/miami/src/core/config.h), you may want to take a look there.
 
 > :information_source: reVC uses completely homebrew RenderWare-replacement rendering engine; [librw](https://github.com/aap/librw/). librw comes as submodule of re3, but you also can use LIBRW enviorenment variable to specify path to your own librw.
 
@@ -144,7 +134,7 @@ We accept only these kinds of PRs;
 - Translation fixes, for languages original game supported
 - Code that increase maintainability  
 
-We have a [Coding Style](https://github.com/GTAmodding/re3/blob/master/CODING_STYLE.md) document that isn't followed or enforced very well.
+We have a [Coding Style](https://github.com/AltronMaxX/reVC/blob/master/CODING_STYLE.md) document that isn't followed or enforced very well.
 
 Do not use features from C++11 or later.
 
