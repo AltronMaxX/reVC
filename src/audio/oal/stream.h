@@ -8,7 +8,7 @@
 class IDecoder
 {
 public:
-	virtual ~IDecoder() { }
+	virtual ~IDecoder() = default;
 	
 	virtual bool   IsOpened() = 0;
 	
@@ -22,14 +22,14 @@ public:
 		return GetChannels() * GetSampleRate();
 	}
 	
-	uint32 ms2samples(uint32 ms)
+	uint32 ms2samples(const uint32 ms)
 	{
-		return float(ms) / 1000.0f * float(GetSampleRate());
+		return static_cast<float>(ms) / 1000.0f * static_cast<float>(GetSampleRate());
 	}
 	
-	uint32 samples2ms(uint32 sm)
+	uint32 samples2ms(const uint32 sm)
 	{
-		return float(sm) * 1000.0f / float(GetSampleRate());
+		return static_cast<float>(sm) * 1000.0f / static_cast<float>(GetSampleRate());
 	}
 	
 	uint32 GetBufferSamples()
@@ -48,7 +48,7 @@ public:
 	
 	uint32 GetLength()
 	{
-		return float(GetSampleCount()) * 1000.0f / float(GetSampleRate());
+		return static_cast<float>(GetSampleCount()) * 1000.0f / static_cast<float>(GetSampleRate());
 	}
 	
 	virtual uint32 Decode(void *buffer) = 0;
@@ -73,37 +73,37 @@ class CStream
 	
 	IDecoder *m_pSoundFile;
 	
-	bool HasSource();
-	void SetPosition(int i, float x, float y, float z);
-	void SetPitch(float pitch);
-	void SetGain(float gain);
-	void   Pause();
+	[[nodiscard]] bool HasSource() const;
+	void SetPosition(int i, float x, float y, float z) const;
+	void SetPitch(float pitch) const;
+	void SetGain(float gain) const;
+	void   Pause() const;
 	void   SetPlay(bool state);
 	
-	bool   FillBuffer(ALuint *alBuffer);
-	int32  FillBuffers();
-	void   ClearBuffers();
+	bool   FillBuffer(const ALuint *alBuffer) const;
+	[[nodiscard]] int32  FillBuffers() const;
+	void   ClearBuffers() const;
 public:
 	static void Initialise();
 	static void Terminate();
 	
-	CStream(char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS], uint32 overrideSampleRate = 32000);
+	CStream(const char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS], uint32 overrideSampleRate = 32000);
 	~CStream();
 	void   Delete();
 	
-	bool   IsOpened();
-	bool   IsPlaying();
+	[[nodiscard]] bool   IsOpened() const;
+	[[nodiscard]] bool   IsPlaying() const;
 	void   SetPause (bool bPause);
 	void   SetVolume(uint32 nVol);
 	void   SetPan   (uint8 nPan);
 	void   SetPosMS (uint32 nPos); 
-	uint32 GetPosMS();
-	uint32 GetLengthMS();
+	[[nodiscard]] uint32 GetPosMS() const;
+	[[nodiscard]] uint32 GetLengthMS() const;
 	
 	bool Setup(bool imSureQueueIsEmpty = false);
 	void Start();
 	void Stop();
-	void Update(void);
+	void Update();
 	void SetLoopCount(int32);
 
 	

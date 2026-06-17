@@ -8,10 +8,13 @@
 ************************************************************************************************/
 
 #include "eax-util.h"
-#include <math.h>
+
+#include <cmath>
+#include <cstring>
 
 // Function prototypes used by EAX3ListenerInterpolate
 void CLAMP(EAXVECTOR *eaxVector);
+
 bool CheckEAX3LP(LPEAXLISTENERPROPERTIES lpEAX3LP);
 
 
@@ -29,217 +32,231 @@ bool CheckEAX3LP(LPEAXLISTENERPROPERTIES lpEAX3LP);
 	lpResult		- Interpolated EAX 3 Listener parameters
 	bCheckValues	- Check EAX 3.0 parameters are in range, default = false (no checking)
 */
-bool EAX3ListenerInterpolate(LPEAXLISTENERPROPERTIES lpStart, LPEAXLISTENERPROPERTIES lpFinish,
-						float flRatio, LPEAXLISTENERPROPERTIES lpResult, bool bCheckValues)
-{
-	EAXVECTOR StartVector, FinalVector;
+bool EAX3ListenerInterpolate(const LPEAXLISTENERPROPERTIES lpStart, const LPEAXLISTENERPROPERTIES lpFinish,
+                             const float flRatio, const LPEAXLISTENERPROPERTIES lpResult, const bool bCheckValues) {
+    EAXVECTOR StartVector, FinalVector;
 
-	float flInvRatio;
+    if (bCheckValues) {
+        if (!CheckEAX3LP(lpStart))
+            return false;
 
-	if (bCheckValues)
-	{
-		if (!CheckEAX3LP(lpStart))
-			return false;
+        if (!CheckEAX3LP(lpFinish))
+            return false;
+    }
 
-		if (!CheckEAX3LP(lpFinish))
-			return false;
-	}
+    if (flRatio >= 1.0f) {
+        memcpy(lpResult, lpFinish, sizeof(EAXLISTENERPROPERTIES));
+        return true;
+    }
+    if (flRatio <= 0.0f) {
+        memcpy(lpResult, lpStart, sizeof(EAXLISTENERPROPERTIES));
+        return true;
+    }
 
-	if (flRatio >= 1.0f)
-	{
-		memcpy(lpResult, lpFinish, sizeof(EAXLISTENERPROPERTIES));
-		return true;
-	}
-	else if (flRatio <= 0.0f)
-	{
-		memcpy(lpResult, lpStart, sizeof(EAXLISTENERPROPERTIES));
-		return true;
-	}
+    const float flInvRatio = 1.0f - flRatio;
 
-	flInvRatio = (1.0f - flRatio);
+    // Environment
+    lpResult->ulEnvironment = 26; // (UNDEFINED environment)
 
-	// Environment
-	lpResult->ulEnvironment = 26;	// (UNDEFINED environment)
+    // Environment Size
+    if (lpStart->flEnvironmentSize == lpFinish->flEnvironmentSize)
+        lpResult->flEnvironmentSize = lpStart->flEnvironmentSize;
+    else
+        lpResult->flEnvironmentSize = std::exp(
+            std::log(lpStart->flEnvironmentSize) * flInvRatio + std::log(lpFinish->flEnvironmentSize) * flRatio);
 
-	// Environment Size
-	if (lpStart->flEnvironmentSize == lpFinish->flEnvironmentSize)
-		lpResult->flEnvironmentSize = lpStart->flEnvironmentSize;
-	else
-		lpResult->flEnvironmentSize = (float)exp( (log(lpStart->flEnvironmentSize) * flInvRatio) + (log(lpFinish->flEnvironmentSize) * flRatio) );
-	
-	// Environment Diffusion
-	if (lpStart->flEnvironmentDiffusion == lpFinish->flEnvironmentDiffusion)
-		lpResult->flEnvironmentDiffusion = lpStart->flEnvironmentDiffusion;
-	else
-		lpResult->flEnvironmentDiffusion = (lpStart->flEnvironmentDiffusion * flInvRatio) + (lpFinish->flEnvironmentDiffusion * flRatio);
-	
-	// Room
-	if (lpStart->lRoom == lpFinish->lRoom)
-		lpResult->lRoom = lpStart->lRoom;
-	else
-		lpResult->lRoom = (int)( ((float)lpStart->lRoom * flInvRatio) + ((float)lpFinish->lRoom * flRatio) );
-	
-	// Room HF
-	if (lpStart->lRoomHF == lpFinish->lRoomHF)
-		lpResult->lRoomHF = lpStart->lRoomHF;
-	else
-		lpResult->lRoomHF = (int)( ((float)lpStart->lRoomHF * flInvRatio) + ((float)lpFinish->lRoomHF * flRatio) );
-	
-	// Room LF
-	if (lpStart->lRoomLF == lpFinish->lRoomLF)
-		lpResult->lRoomLF = lpStart->lRoomLF;
-	else
-		lpResult->lRoomLF = (int)( ((float)lpStart->lRoomLF * flInvRatio) + ((float)lpFinish->lRoomLF * flRatio) );
-	
-	// Decay Time
-	if (lpStart->flDecayTime == lpFinish->flDecayTime)
-		lpResult->flDecayTime = lpStart->flDecayTime;
-	else
-		lpResult->flDecayTime = (float)exp( (log(lpStart->flDecayTime) * flInvRatio) + (log(lpFinish->flDecayTime) * flRatio) );
-	
-	// Decay HF Ratio
-	if (lpStart->flDecayHFRatio == lpFinish->flDecayHFRatio)
-		lpResult->flDecayHFRatio = lpStart->flDecayHFRatio;
-	else
-		lpResult->flDecayHFRatio = (float)exp( (log(lpStart->flDecayHFRatio) * flInvRatio) + (log(lpFinish->flDecayHFRatio) * flRatio) );
-	
-	// Decay LF Ratio
-	if (lpStart->flDecayLFRatio == lpFinish->flDecayLFRatio)
-		lpResult->flDecayLFRatio = lpStart->flDecayLFRatio;
-	else
-		lpResult->flDecayLFRatio = (float)exp( (log(lpStart->flDecayLFRatio) * flInvRatio) + (log(lpFinish->flDecayLFRatio) * flRatio) );
-	
-	// Reflections
-	if (lpStart->lReflections == lpFinish->lReflections)
-		lpResult->lReflections = lpStart->lReflections;
-	else
-		lpResult->lReflections = (int)( ((float)lpStart->lReflections * flInvRatio) + ((float)lpFinish->lReflections * flRatio) );
-	
-	// Reflections Delay
-	if (lpStart->flReflectionsDelay == lpFinish->flReflectionsDelay)
-		lpResult->flReflectionsDelay = lpStart->flReflectionsDelay;
-	else
-		lpResult->flReflectionsDelay = (float)exp( (log(lpStart->flReflectionsDelay+0.0001f) * flInvRatio) + (log(lpFinish->flReflectionsDelay+0.0001f) * flRatio) );
+    // Environment Diffusion
+    if (lpStart->flEnvironmentDiffusion == lpFinish->flEnvironmentDiffusion)
+        lpResult->flEnvironmentDiffusion = lpStart->flEnvironmentDiffusion;
+    else
+        lpResult->flEnvironmentDiffusion = lpStart->flEnvironmentDiffusion * flInvRatio + lpFinish->
+                                           flEnvironmentDiffusion * flRatio;
 
-	// Reflections Pan
+    // Room
+    if (lpStart->lRoom == lpFinish->lRoom)
+        lpResult->lRoom = lpStart->lRoom;
+    else
+        lpResult->lRoom = static_cast<int>(static_cast<float>(lpStart->lRoom) * flInvRatio + static_cast<float>(lpFinish
+                                               ->lRoom) * flRatio);
 
-	// To interpolate the vector correctly we need to ensure that both the initial and final vectors vectors are CLAMPed to a length of 1.0f
-	StartVector = lpStart->vReflectionsPan;
-	FinalVector = lpFinish->vReflectionsPan;
+    // Room HF
+    if (lpStart->lRoomHF == lpFinish->lRoomHF)
+        lpResult->lRoomHF = lpStart->lRoomHF;
+    else
+        lpResult->lRoomHF = static_cast<int>(static_cast<float>(lpStart->lRoomHF) * flInvRatio + static_cast<float>(
+                                                 lpFinish->lRoomHF) * flRatio);
 
-	CLAMP(&StartVector);
-	CLAMP(&FinalVector);
+    // Room LF
+    if (lpStart->lRoomLF == lpFinish->lRoomLF)
+        lpResult->lRoomLF = lpStart->lRoomLF;
+    else
+        lpResult->lRoomLF = static_cast<int>(static_cast<float>(lpStart->lRoomLF) * flInvRatio + static_cast<float>(
+                                                 lpFinish->lRoomLF) * flRatio);
 
-	if (lpStart->vReflectionsPan.x == lpFinish->vReflectionsPan.x)
-		lpResult->vReflectionsPan.x = lpStart->vReflectionsPan.x;
-	else
-		lpResult->vReflectionsPan.x = FinalVector.x + (flInvRatio * (StartVector.x - FinalVector.x));
-	
-	if (lpStart->vReflectionsPan.y == lpFinish->vReflectionsPan.y)
-		lpResult->vReflectionsPan.y = lpStart->vReflectionsPan.y;
-	else
-		lpResult->vReflectionsPan.y = FinalVector.y + (flInvRatio * (StartVector.y - FinalVector.y));
-	
-	if (lpStart->vReflectionsPan.z == lpFinish->vReflectionsPan.z)
-		lpResult->vReflectionsPan.z = lpStart->vReflectionsPan.z;
-	else
-		lpResult->vReflectionsPan.z = FinalVector.z + (flInvRatio * (StartVector.z - FinalVector.z));
-	
-	// Reverb
-	if (lpStart->lReverb == lpFinish->lReverb)
-		lpResult->lReverb = lpStart->lReverb;
-	else
-		lpResult->lReverb = (int)( ((float)lpStart->lReverb * flInvRatio) + ((float)lpFinish->lReverb * flRatio) );
-	
-	// Reverb Delay
-	if (lpStart->flReverbDelay == lpFinish->flReverbDelay)
-		lpResult->flReverbDelay = lpStart->flReverbDelay;
-	else
-		lpResult->flReverbDelay = (float)exp( (log(lpStart->flReverbDelay+0.0001f) * flInvRatio) + (log(lpFinish->flReverbDelay+0.0001f) * flRatio) );
-	
-	// Reverb Pan
+    // Decay Time
+    if (lpStart->flDecayTime == lpFinish->flDecayTime)
+        lpResult->flDecayTime = lpStart->flDecayTime;
+    else
+        lpResult->flDecayTime = std::exp(
+            std::log(lpStart->flDecayTime) * flInvRatio + std::log(lpFinish->flDecayTime) * flRatio);
 
-	// To interpolate the vector correctly we need to ensure that both the initial and final vectors are CLAMPed to a length of 1.0f	
-	StartVector = lpStart->vReverbPan;
-	FinalVector = lpFinish->vReverbPan;
+    // Decay HF Ratio
+    if (lpStart->flDecayHFRatio == lpFinish->flDecayHFRatio)
+        lpResult->flDecayHFRatio = lpStart->flDecayHFRatio;
+    else
+        lpResult->flDecayHFRatio = std::exp(
+            std::log(lpStart->flDecayHFRatio) * flInvRatio + std::log(lpFinish->flDecayHFRatio) * flRatio);
 
-	CLAMP(&StartVector);
-	CLAMP(&FinalVector);
+    // Decay LF Ratio
+    if (lpStart->flDecayLFRatio == lpFinish->flDecayLFRatio)
+        lpResult->flDecayLFRatio = lpStart->flDecayLFRatio;
+    else
+        lpResult->flDecayLFRatio = std::exp(
+            std::log(lpStart->flDecayLFRatio) * flInvRatio + std::log(lpFinish->flDecayLFRatio) * flRatio);
 
-	if (lpStart->vReverbPan.x == lpFinish->vReverbPan.x)
-		lpResult->vReverbPan.x = lpStart->vReverbPan.x;
-	else
-		lpResult->vReverbPan.x = FinalVector.x + (flInvRatio * (StartVector.x - FinalVector.x));
-	
-	if (lpStart->vReverbPan.y == lpFinish->vReverbPan.y)
-		lpResult->vReverbPan.y = lpStart->vReverbPan.y;
-	else
-		lpResult->vReverbPan.y = FinalVector.y + (flInvRatio * (StartVector.y - FinalVector.y));
-	
-	if (lpStart->vReverbPan.z == lpFinish->vReverbPan.z)
-		lpResult->vReverbPan.z = lpStart->vReverbPan.z;
-	else
-		lpResult->vReverbPan.z = FinalVector.z + (flInvRatio * (StartVector.z - FinalVector.z));
-	
-	// Echo Time
-	if (lpStart->flEchoTime == lpFinish->flEchoTime)
-		lpResult->flEchoTime = lpStart->flEchoTime;
-	else
-		lpResult->flEchoTime = (float)exp( (log(lpStart->flEchoTime) * flInvRatio) + (log(lpFinish->flEchoTime) * flRatio) );
-	
-	// Echo Depth
-	if (lpStart->flEchoDepth == lpFinish->flEchoDepth)
-		lpResult->flEchoDepth = lpStart->flEchoDepth;
-	else
-		lpResult->flEchoDepth = (lpStart->flEchoDepth * flInvRatio) + (lpFinish->flEchoDepth * flRatio);
+    // Reflections
+    if (lpStart->lReflections == lpFinish->lReflections)
+        lpResult->lReflections = lpStart->lReflections;
+    else
+        lpResult->lReflections = static_cast<int>(
+            static_cast<float>(lpStart->lReflections) * flInvRatio + static_cast<float>(lpFinish->lReflections) *
+            flRatio);
 
-	// Modulation Time
-	if (lpStart->flModulationTime == lpFinish->flModulationTime)
-		lpResult->flModulationTime = lpStart->flModulationTime;
-	else
-		lpResult->flModulationTime = (float)exp( (log(lpStart->flModulationTime) * flInvRatio) + (log(lpFinish->flModulationTime) * flRatio) );
-	
-	// Modulation Depth
-	if (lpStart->flModulationDepth == lpFinish->flModulationDepth)
-		lpResult->flModulationDepth = lpStart->flModulationDepth;
-	else
-		lpResult->flModulationDepth = (lpStart->flModulationDepth * flInvRatio) + (lpFinish->flModulationDepth * flRatio);
-	
-	// Air Absorption HF
-	if (lpStart->flAirAbsorptionHF == lpFinish->flAirAbsorptionHF)
-		lpResult->flAirAbsorptionHF = lpStart->flAirAbsorptionHF;
-	else
-		lpResult->flAirAbsorptionHF = (lpStart->flAirAbsorptionHF * flInvRatio) + (lpFinish->flAirAbsorptionHF * flRatio);
-	
-	// HF Reference
-	if (lpStart->flHFReference == lpFinish->flHFReference)
-		lpResult->flHFReference = lpStart->flHFReference;
-	else
-		lpResult->flHFReference = (float)exp( (log(lpStart->flHFReference) * flInvRatio) + (log(lpFinish->flHFReference) * flRatio) );
-	
-	// LF Reference
-	if (lpStart->flLFReference == lpFinish->flLFReference)
-		lpResult->flLFReference = lpStart->flLFReference;
-	else
-		lpResult->flLFReference = (float)exp( (log(lpStart->flLFReference) * flInvRatio) + (log(lpFinish->flLFReference) * flRatio) );
-	
-	// Room Rolloff Factor
-	if (lpStart->flRoomRolloffFactor == lpFinish->flRoomRolloffFactor)
-		lpResult->flRoomRolloffFactor = lpStart->flRoomRolloffFactor;
-	else
-		lpResult->flRoomRolloffFactor = (lpStart->flRoomRolloffFactor * flInvRatio) + (lpFinish->flRoomRolloffFactor * flRatio);
-	
-	// Flags
-	lpResult->ulFlags = (lpStart->ulFlags & lpFinish->ulFlags);
+    // Reflections Delay
+    if (lpStart->flReflectionsDelay == lpFinish->flReflectionsDelay)
+        lpResult->flReflectionsDelay = lpStart->flReflectionsDelay;
+    else
+        lpResult->flReflectionsDelay = std::exp(
+            std::log(lpStart->flReflectionsDelay + 0.0001f) * flInvRatio +
+            std::log(lpFinish->flReflectionsDelay + 0.0001f) * flRatio);
 
-	// CLAMP Delays
-	if (lpResult->flReflectionsDelay > EAXLISTENER_MAXREFLECTIONSDELAY)
-		lpResult->flReflectionsDelay = EAXLISTENER_MAXREFLECTIONSDELAY;
+    // Reflections Pan
 
-	if (lpResult->flReverbDelay > EAXLISTENER_MAXREVERBDELAY)
-		lpResult->flReverbDelay = EAXLISTENER_MAXREVERBDELAY;
+    // To interpolate the vector correctly we need to ensure that both the initial and final vectors are CLAMPed to a length of 1.0f
+    StartVector = lpStart->vReflectionsPan;
+    FinalVector = lpFinish->vReflectionsPan;
 
-	return true;
+    CLAMP(&StartVector);
+    CLAMP(&FinalVector);
+
+    if (lpStart->vReflectionsPan.x == lpFinish->vReflectionsPan.x)
+        lpResult->vReflectionsPan.x = lpStart->vReflectionsPan.x;
+    else
+        lpResult->vReflectionsPan.x = FinalVector.x + flInvRatio * (StartVector.x - FinalVector.x);
+
+    if (lpStart->vReflectionsPan.y == lpFinish->vReflectionsPan.y)
+        lpResult->vReflectionsPan.y = lpStart->vReflectionsPan.y;
+    else
+        lpResult->vReflectionsPan.y = FinalVector.y + flInvRatio * (StartVector.y - FinalVector.y);
+
+    if (lpStart->vReflectionsPan.z == lpFinish->vReflectionsPan.z)
+        lpResult->vReflectionsPan.z = lpStart->vReflectionsPan.z;
+    else
+        lpResult->vReflectionsPan.z = FinalVector.z + flInvRatio * (StartVector.z - FinalVector.z);
+
+    // Reverb
+    if (lpStart->lReverb == lpFinish->lReverb)
+        lpResult->lReverb = lpStart->lReverb;
+    else
+        lpResult->lReverb = static_cast<int>(static_cast<float>(lpStart->lReverb) * flInvRatio + static_cast<float>(
+                                                 lpFinish->lReverb) * flRatio);
+
+    // Reverb Delay
+    if (lpStart->flReverbDelay == lpFinish->flReverbDelay)
+        lpResult->flReverbDelay = lpStart->flReverbDelay;
+    else
+        lpResult->flReverbDelay = std::exp(
+            std::log(lpStart->flReverbDelay + 0.0001f) * flInvRatio + std::log(lpFinish->flReverbDelay + 0.0001f) *
+            flRatio);
+
+    // Reverb Pan
+
+    // To interpolate the vector correctly we need to ensure that both the initial and final vectors are CLAMPed to a length of 1.0f
+    StartVector = lpStart->vReverbPan;
+    FinalVector = lpFinish->vReverbPan;
+
+    CLAMP(&StartVector);
+    CLAMP(&FinalVector);
+
+    if (lpStart->vReverbPan.x == lpFinish->vReverbPan.x)
+        lpResult->vReverbPan.x = lpStart->vReverbPan.x;
+    else
+        lpResult->vReverbPan.x = FinalVector.x + flInvRatio * (StartVector.x - FinalVector.x);
+
+    if (lpStart->vReverbPan.y == lpFinish->vReverbPan.y)
+        lpResult->vReverbPan.y = lpStart->vReverbPan.y;
+    else
+        lpResult->vReverbPan.y = FinalVector.y + flInvRatio * (StartVector.y - FinalVector.y);
+
+    if (lpStart->vReverbPan.z == lpFinish->vReverbPan.z)
+        lpResult->vReverbPan.z = lpStart->vReverbPan.z;
+    else
+        lpResult->vReverbPan.z = FinalVector.z + flInvRatio * (StartVector.z - FinalVector.z);
+
+    // Echo Time
+    if (lpStart->flEchoTime == lpFinish->flEchoTime)
+        lpResult->flEchoTime = lpStart->flEchoTime;
+    else
+        lpResult->flEchoTime = std::exp(
+            std::log(lpStart->flEchoTime) * flInvRatio + std::log(lpFinish->flEchoTime) * flRatio);
+
+    // Echo Depth
+    if (lpStart->flEchoDepth == lpFinish->flEchoDepth)
+        lpResult->flEchoDepth = lpStart->flEchoDepth;
+    else
+        lpResult->flEchoDepth = lpStart->flEchoDepth * flInvRatio + (lpFinish->flEchoDepth * flRatio);
+
+    // Modulation Time
+    if (lpStart->flModulationTime == lpFinish->flModulationTime)
+        lpResult->flModulationTime = lpStart->flModulationTime;
+    else
+        lpResult->flModulationTime = std::exp(
+            std::log(lpStart->flModulationTime) * flInvRatio + std::log(lpFinish->flModulationTime) * flRatio);
+
+    // Modulation Depth
+    if (lpStart->flModulationDepth == lpFinish->flModulationDepth)
+        lpResult->flModulationDepth = lpStart->flModulationDepth;
+    else
+        lpResult->flModulationDepth = lpStart->flModulationDepth * flInvRatio + lpFinish->flModulationDepth * flRatio;
+
+    // Air Absorption HF
+    if (lpStart->flAirAbsorptionHF == lpFinish->flAirAbsorptionHF)
+        lpResult->flAirAbsorptionHF = lpStart->flAirAbsorptionHF;
+    else
+        lpResult->flAirAbsorptionHF = lpStart->flAirAbsorptionHF * flInvRatio + lpFinish->flAirAbsorptionHF * flRatio;
+
+    // HF Reference
+    if (lpStart->flHFReference == lpFinish->flHFReference)
+        lpResult->flHFReference = lpStart->flHFReference;
+    else
+        lpResult->flHFReference = std::exp(
+            std::log(lpStart->flHFReference) * flInvRatio + std::log(lpFinish->flHFReference) * flRatio);
+
+    // LF Reference
+    if (lpStart->flLFReference == lpFinish->flLFReference)
+        lpResult->flLFReference = lpStart->flLFReference;
+    else
+        lpResult->flLFReference = std::exp(
+            std::log(lpStart->flLFReference) * flInvRatio + std::log(lpFinish->flLFReference) * flRatio);
+
+    // Room Rolloff Factor
+    if (lpStart->flRoomRolloffFactor == lpFinish->flRoomRolloffFactor)
+        lpResult->flRoomRolloffFactor = lpStart->flRoomRolloffFactor;
+    else
+        lpResult->flRoomRolloffFactor = lpStart->flRoomRolloffFactor * flInvRatio + lpFinish->flRoomRolloffFactor *
+                                        flRatio;
+
+    // Flags
+    lpResult->ulFlags = lpStart->ulFlags & lpFinish->ulFlags;
+
+    // CLAMP Delays
+    if (lpResult->flReflectionsDelay > EAXLISTENER_MAXREFLECTIONSDELAY)
+        lpResult->flReflectionsDelay = EAXLISTENER_MAXREFLECTIONSDELAY;
+
+    if (lpResult->flReverbDelay > EAXLISTENER_MAXREVERBDELAY)
+        lpResult->flReverbDelay = EAXLISTENER_MAXREVERBDELAY;
+
+    return true;
 }
 
 
@@ -247,102 +264,102 @@ bool EAX3ListenerInterpolate(LPEAXLISTENERPROPERTIES lpStart, LPEAXLISTENERPROPE
 	CheckEAX3LP
 	Checks that the parameters in the EAX 3 Listener Properties structure are in-range
 */
-bool CheckEAX3LP(LPEAXLISTENERPROPERTIES lpEAX3LP)
-{
-	if ( (lpEAX3LP->lRoom < EAXLISTENER_MINROOM) || (lpEAX3LP->lRoom > EAXLISTENER_MAXROOM) )
-		return false;
+bool CheckEAX3LP(const LPEAXLISTENERPROPERTIES lpEAX3LP) {
+    if (lpEAX3LP->lRoom < EAXLISTENER_MINROOM || lpEAX3LP->lRoom > EAXLISTENER_MAXROOM)
+        return false;
 
-	if ( (lpEAX3LP->lRoomHF < EAXLISTENER_MINROOMHF) || (lpEAX3LP->lRoomHF > EAXLISTENER_MAXROOMHF) )
-		return false;
+    if (lpEAX3LP->lRoomHF < EAXLISTENER_MINROOMHF || lpEAX3LP->lRoomHF > EAXLISTENER_MAXROOMHF)
+        return false;
 
-	if ( (lpEAX3LP->lRoomLF < EAXLISTENER_MINROOMLF) || (lpEAX3LP->lRoomLF > EAXLISTENER_MAXROOMLF) )
-		return false;
+    if (lpEAX3LP->lRoomLF < EAXLISTENER_MINROOMLF || lpEAX3LP->lRoomLF > EAXLISTENER_MAXROOMLF)
+        return false;
 
-	if ( (lpEAX3LP->ulEnvironment < EAXLISTENER_MINENVIRONMENT) || (lpEAX3LP->ulEnvironment > EAXLISTENER_MAXENVIRONMENT) )
-		return false;
+    if (lpEAX3LP->ulEnvironment < EAXLISTENER_MINENVIRONMENT || lpEAX3LP->ulEnvironment > EAXLISTENER_MAXENVIRONMENT)
+        return false;
 
-	if ( (lpEAX3LP->flEnvironmentSize < EAXLISTENER_MINENVIRONMENTSIZE) || (lpEAX3LP->flEnvironmentSize > EAXLISTENER_MAXENVIRONMENTSIZE) )
-		return false;
+    if (lpEAX3LP->flEnvironmentSize < EAXLISTENER_MINENVIRONMENTSIZE || lpEAX3LP->flEnvironmentSize >
+        EAXLISTENER_MAXENVIRONMENTSIZE)
+        return false;
 
-	if ( (lpEAX3LP->flEnvironmentDiffusion < EAXLISTENER_MINENVIRONMENTDIFFUSION) || (lpEAX3LP->flEnvironmentDiffusion > EAXLISTENER_MAXENVIRONMENTDIFFUSION) )
-		return false;
+    if (lpEAX3LP->flEnvironmentDiffusion < EAXLISTENER_MINENVIRONMENTDIFFUSION || lpEAX3LP->flEnvironmentDiffusion >
+        EAXLISTENER_MAXENVIRONMENTDIFFUSION)
+        return false;
 
-	if ( (lpEAX3LP->flDecayTime < EAXLISTENER_MINDECAYTIME) || (lpEAX3LP->flDecayTime > EAXLISTENER_MAXDECAYTIME) )
-		return false;
+    if (lpEAX3LP->flDecayTime < EAXLISTENER_MINDECAYTIME || lpEAX3LP->flDecayTime > EAXLISTENER_MAXDECAYTIME)
+        return false;
 
-	if ( (lpEAX3LP->flDecayHFRatio < EAXLISTENER_MINDECAYHFRATIO) || (lpEAX3LP->flDecayHFRatio > EAXLISTENER_MAXDECAYHFRATIO) )
-		return false;
+    if (lpEAX3LP->flDecayHFRatio < EAXLISTENER_MINDECAYHFRATIO || lpEAX3LP->flDecayHFRatio >
+        EAXLISTENER_MAXDECAYHFRATIO)
+        return false;
 
-	if ( (lpEAX3LP->flDecayLFRatio < EAXLISTENER_MINDECAYLFRATIO) || (lpEAX3LP->flDecayLFRatio > EAXLISTENER_MAXDECAYLFRATIO) )
-		return false;
+    if (lpEAX3LP->flDecayLFRatio < EAXLISTENER_MINDECAYLFRATIO || lpEAX3LP->flDecayLFRatio >
+        EAXLISTENER_MAXDECAYLFRATIO)
+        return false;
 
-	if ( (lpEAX3LP->lReflections < EAXLISTENER_MINREFLECTIONS) || (lpEAX3LP->lReflections > EAXLISTENER_MAXREFLECTIONS) )
-		return false;
+    if (lpEAX3LP->lReflections < EAXLISTENER_MINREFLECTIONS || lpEAX3LP->lReflections > EAXLISTENER_MAXREFLECTIONS)
+        return false;
 
-	if ( (lpEAX3LP->flReflectionsDelay < EAXLISTENER_MINREFLECTIONSDELAY) || (lpEAX3LP->flReflectionsDelay > EAXLISTENER_MAXREFLECTIONSDELAY) )
-		return false;
+    if (lpEAX3LP->flReflectionsDelay < EAXLISTENER_MINREFLECTIONSDELAY || lpEAX3LP->flReflectionsDelay > EAXLISTENER_MAXREFLECTIONSDELAY)
+        return false;
 
-	if ( (lpEAX3LP->lReverb < EAXLISTENER_MINREVERB) || (lpEAX3LP->lReverb > EAXLISTENER_MAXREVERB) )
-		return false;
+    if (lpEAX3LP->lReverb < EAXLISTENER_MINREVERB || lpEAX3LP->lReverb > EAXLISTENER_MAXREVERB)
+        return false;
 
-	if ( (lpEAX3LP->flReverbDelay < EAXLISTENER_MINREVERBDELAY) || (lpEAX3LP->flReverbDelay > EAXLISTENER_MAXREVERBDELAY) )
-		return false;
+    if (lpEAX3LP->flReverbDelay < EAXLISTENER_MINREVERBDELAY || lpEAX3LP->flReverbDelay > EAXLISTENER_MAXREVERBDELAY)
+        return false;
 
-	if ( (lpEAX3LP->flEchoTime < EAXLISTENER_MINECHOTIME) || (lpEAX3LP->flEchoTime > EAXLISTENER_MAXECHOTIME) )
-		return false;
+    if (lpEAX3LP->flEchoTime < EAXLISTENER_MINECHOTIME || lpEAX3LP->flEchoTime > EAXLISTENER_MAXECHOTIME)
+        return false;
 
-	if ( (lpEAX3LP->flEchoDepth < EAXLISTENER_MINECHODEPTH) || (lpEAX3LP->flEchoDepth > EAXLISTENER_MAXECHODEPTH) )
-		return false;
+    if (lpEAX3LP->flEchoDepth < EAXLISTENER_MINECHODEPTH || lpEAX3LP->flEchoDepth > EAXLISTENER_MAXECHODEPTH)
+        return false;
 
-	if ( (lpEAX3LP->flModulationTime < EAXLISTENER_MINMODULATIONTIME) || (lpEAX3LP->flModulationTime > EAXLISTENER_MAXMODULATIONTIME) )
-		return false;
+    if (lpEAX3LP->flModulationTime < EAXLISTENER_MINMODULATIONTIME || lpEAX3LP->flModulationTime > EAXLISTENER_MAXMODULATIONTIME)
+        return false;
 
-	if ( (lpEAX3LP->flModulationDepth < EAXLISTENER_MINMODULATIONDEPTH) || (lpEAX3LP->flModulationDepth > EAXLISTENER_MAXMODULATIONDEPTH) )
-		return false;
+    if (lpEAX3LP->flModulationDepth < EAXLISTENER_MINMODULATIONDEPTH || lpEAX3LP->flModulationDepth > EAXLISTENER_MAXMODULATIONDEPTH)
+        return false;
 
-	if ( (lpEAX3LP->flAirAbsorptionHF < EAXLISTENER_MINAIRABSORPTIONHF) || (lpEAX3LP->flAirAbsorptionHF > EAXLISTENER_MAXAIRABSORPTIONHF) )
-		return false;
+    if (lpEAX3LP->flAirAbsorptionHF < EAXLISTENER_MINAIRABSORPTIONHF || lpEAX3LP->flAirAbsorptionHF > EAXLISTENER_MAXAIRABSORPTIONHF)
+        return false;
 
-	if ( (lpEAX3LP->flHFReference < EAXLISTENER_MINHFREFERENCE) || (lpEAX3LP->flHFReference > EAXLISTENER_MAXHFREFERENCE) )
-		return false;
+    if (lpEAX3LP->flHFReference < EAXLISTENER_MINHFREFERENCE || lpEAX3LP->flHFReference > EAXLISTENER_MAXHFREFERENCE)
+        return false;
 
-	if ( (lpEAX3LP->flLFReference < EAXLISTENER_MINLFREFERENCE) || (lpEAX3LP->flLFReference > EAXLISTENER_MAXLFREFERENCE) )
-		return false;
+    if (lpEAX3LP->flLFReference < EAXLISTENER_MINLFREFERENCE || lpEAX3LP->flLFReference > EAXLISTENER_MAXLFREFERENCE)
+        return false;
 
-	if ( (lpEAX3LP->flRoomRolloffFactor < EAXLISTENER_MINROOMROLLOFFFACTOR) || (lpEAX3LP->flRoomRolloffFactor > EAXLISTENER_MAXROOMROLLOFFFACTOR) )
-		return false;
+    if (lpEAX3LP->flRoomRolloffFactor < EAXLISTENER_MINROOMROLLOFFFACTOR || lpEAX3LP->flRoomRolloffFactor > EAXLISTENER_MAXROOMROLLOFFFACTOR)
+        return false;
 
-	if (lpEAX3LP->ulFlags & EAXLISTENERFLAGS_RESERVED)
-		return false;
+    if (lpEAX3LP->ulFlags & EAXLISTENERFLAGS_RESERVED)
+        return false;
 
-	return true;
+    return true;
 }
 
 /*
 	CLAMP
 	CLAMPs the length of the vector to 1.0f
 */
-void CLAMP(EAXVECTOR *eaxVector)
-{
-	float flMagnitude;
-	float flInvMagnitude;
+void CLAMP(EAXVECTOR *eaxVector) {
+    const auto flMagnitude = std::sqrt(
+        eaxVector->x * eaxVector->x + eaxVector->y * eaxVector->y + eaxVector->z * eaxVector->z);
 
-	flMagnitude = (float)sqrt((eaxVector->x*eaxVector->x) + (eaxVector->y*eaxVector->y) + (eaxVector->z*eaxVector->z));
+    if (flMagnitude <= 1.0f)
+        return;
 
-	if (flMagnitude <= 1.0f)
-		return;
+    const float flInvMagnitude = 1.0f / flMagnitude;
 
-	flInvMagnitude = 1.0f / flMagnitude;
-
-	eaxVector->x *= flInvMagnitude;
-	eaxVector->y *= flInvMagnitude;
-	eaxVector->z *= flInvMagnitude;
+    eaxVector->x *= flInvMagnitude;
+    eaxVector->y *= flInvMagnitude;
+    eaxVector->z *= flInvMagnitude;
 }
 
 
 /***********************************************************************************************\
 *
-* To assist those developers wishing to add EAX effects to their level editors, each of the 
+* To assist those developers wishing to add EAX effects to their level editors, each of the
 
 * List of string names of the various EAX 3.0 presets defined in eax-util.h
 * Arrays to group together presets of the same scenario
@@ -354,39 +371,39 @@ void CLAMP(EAXVECTOR *eaxVector)
 // Array of scenario names							//
 //////////////////////////////////////////////////////
 
-const char* EAX30_SCENARIO_NAMES[] =				
-{	
-	"Castle", 
-	"Factory", 
-	"IcePalace", 
-	"SpaceStation", 
-	"WoodenShip",
-	"Sports",
-	"Prefab",
-	"Domes and Pipes",
-	"Outdoors",
-	"Mood",
-	"Driving",
-	"City",
-	"Miscellaneous",
-	"Original"
+const char *EAX30_SCENARIO_NAMES[] =
+{
+    "Castle",
+    "Factory",
+    "IcePalace",
+    "SpaceStation",
+    "WoodenShip",
+    "Sports",
+    "Prefab",
+    "Domes and Pipes",
+    "Outdoors",
+    "Mood",
+    "Driving",
+    "City",
+    "Miscellaneous",
+    "Original"
 };
 
 //////////////////////////////////////////////////////
 // Array of standardised location names				//
 //////////////////////////////////////////////////////
 
-const char* EAX30_LOCATION_NAMES[] =				
-{	
-	"Hall", 
-	"Large Room", 
-	"Medium Room", 
-	"Small Room", 
-	"Cupboard", 
-	"Alcove", 
-	"Long Passage", 
-	"Short Passage", 
-	"Courtyard"
+const char *EAX30_LOCATION_NAMES[] =
+{
+    "Hall",
+    "Large Room",
+    "Medium Room",
+    "Small Room",
+    "Cupboard",
+    "Alcove",
+    "Long Passage",
+    "Short Passage",
+    "Courtyard"
 };
 
 //////////////////////////////////////////////////////
@@ -394,13 +411,33 @@ const char* EAX30_LOCATION_NAMES[] =
 // from a matrix									//
 //////////////////////////////////////////////////////
 
-EAXLISTENERPROPERTIES EAX30_STANDARD_PRESETS[EAX30_NUM_STANDARD_SCENARIOS][EAX30_NUM_LOCATIONS]=
+EAXLISTENERPROPERTIES EAX30_STANDARD_PRESETS[EAX30_NUM_STANDARD_SCENARIOS][EAX30_NUM_LOCATIONS] =
 {
-	{EAX30_PRESET_CASTLE_HALL,		EAX30_PRESET_CASTLE_LARGEROOM,		EAX30_PRESET_CASTLE_MEDIUMROOM,			EAX30_PRESET_CASTLE_SMALLROOM,		EAX30_PRESET_CASTLE_CUPBOARD,		EAX30_PRESET_CASTLE_ALCOVE,			EAX30_PRESET_CASTLE_LONGPASSAGE,		EAX30_PRESET_CASTLE_SHORTPASSAGE,		EAX30_PRESET_CASTLE_COURTYARD},
-	{EAX30_PRESET_FACTORY_HALL,		EAX30_PRESET_FACTORY_LARGEROOM,		EAX30_PRESET_FACTORY_MEDIUMROOM,		EAX30_PRESET_FACTORY_SMALLROOM,		EAX30_PRESET_FACTORY_CUPBOARD,		EAX30_PRESET_FACTORY_ALCOVE,		EAX30_PRESET_FACTORY_LONGPASSAGE,		EAX30_PRESET_FACTORY_SHORTPASSAGE,		EAX30_PRESET_FACTORY_COURTYARD},
-	{EAX30_PRESET_ICEPALACE_HALL,	EAX30_PRESET_ICEPALACE_LARGEROOM,	EAX30_PRESET_ICEPALACE_MEDIUMROOM,		EAX30_PRESET_ICEPALACE_SMALLROOM,	EAX30_PRESET_ICEPALACE_CUPBOARD,	EAX30_PRESET_ICEPALACE_ALCOVE,		EAX30_PRESET_ICEPALACE_LONGPASSAGE,		EAX30_PRESET_ICEPALACE_SHORTPASSAGE,	EAX30_PRESET_ICEPALACE_COURTYARD},
-	{EAX30_PRESET_SPACESTATION_HALL,EAX30_PRESET_SPACESTATION_LARGEROOM,EAX30_PRESET_SPACESTATION_MEDIUMROOM,	EAX30_PRESET_SPACESTATION_SMALLROOM,EAX30_PRESET_SPACESTATION_CUPBOARD,	EAX30_PRESET_SPACESTATION_ALCOVE,	EAX30_PRESET_SPACESTATION_LONGPASSAGE,	EAX30_PRESET_SPACESTATION_SHORTPASSAGE, EAX30_PRESET_SPACESTATION_HALL},
-	{EAX30_PRESET_WOODEN_HALL,		EAX30_PRESET_WOODEN_LARGEROOM,		EAX30_PRESET_WOODEN_MEDIUMROOM,			EAX30_PRESET_WOODEN_SMALLROOM,		EAX30_PRESET_WOODEN_CUPBOARD,		EAX30_PRESET_WOODEN_ALCOVE,			EAX30_PRESET_WOODEN_LONGPASSAGE,		EAX30_PRESET_WOODEN_SHORTPASSAGE,		EAX30_PRESET_WOODEN_COURTYARD},
+    {
+        EAX30_PRESET_CASTLE_HALL, EAX30_PRESET_CASTLE_LARGEROOM, EAX30_PRESET_CASTLE_MEDIUMROOM,
+        EAX30_PRESET_CASTLE_SMALLROOM, EAX30_PRESET_CASTLE_CUPBOARD, EAX30_PRESET_CASTLE_ALCOVE,
+        EAX30_PRESET_CASTLE_LONGPASSAGE, EAX30_PRESET_CASTLE_SHORTPASSAGE, EAX30_PRESET_CASTLE_COURTYARD
+    },
+    {
+        EAX30_PRESET_FACTORY_HALL, EAX30_PRESET_FACTORY_LARGEROOM, EAX30_PRESET_FACTORY_MEDIUMROOM,
+        EAX30_PRESET_FACTORY_SMALLROOM, EAX30_PRESET_FACTORY_CUPBOARD, EAX30_PRESET_FACTORY_ALCOVE,
+        EAX30_PRESET_FACTORY_LONGPASSAGE, EAX30_PRESET_FACTORY_SHORTPASSAGE, EAX30_PRESET_FACTORY_COURTYARD
+    },
+    {
+        EAX30_PRESET_ICEPALACE_HALL, EAX30_PRESET_ICEPALACE_LARGEROOM, EAX30_PRESET_ICEPALACE_MEDIUMROOM,
+        EAX30_PRESET_ICEPALACE_SMALLROOM, EAX30_PRESET_ICEPALACE_CUPBOARD, EAX30_PRESET_ICEPALACE_ALCOVE,
+        EAX30_PRESET_ICEPALACE_LONGPASSAGE, EAX30_PRESET_ICEPALACE_SHORTPASSAGE, EAX30_PRESET_ICEPALACE_COURTYARD
+    },
+    {
+        EAX30_PRESET_SPACESTATION_HALL,EAX30_PRESET_SPACESTATION_LARGEROOM,EAX30_PRESET_SPACESTATION_MEDIUMROOM,
+        EAX30_PRESET_SPACESTATION_SMALLROOM,EAX30_PRESET_SPACESTATION_CUPBOARD, EAX30_PRESET_SPACESTATION_ALCOVE,
+        EAX30_PRESET_SPACESTATION_LONGPASSAGE, EAX30_PRESET_SPACESTATION_SHORTPASSAGE, EAX30_PRESET_SPACESTATION_HALL
+    },
+    {
+        EAX30_PRESET_WOODEN_HALL, EAX30_PRESET_WOODEN_LARGEROOM, EAX30_PRESET_WOODEN_MEDIUMROOM,
+        EAX30_PRESET_WOODEN_SMALLROOM, EAX30_PRESET_WOODEN_CUPBOARD, EAX30_PRESET_WOODEN_ALCOVE,
+        EAX30_PRESET_WOODEN_LONGPASSAGE, EAX30_PRESET_WOODEN_SHORTPASSAGE, EAX30_PRESET_WOODEN_COURTYARD
+    },
 };
 
 
@@ -410,68 +447,68 @@ EAXLISTENERPROPERTIES EAX30_STANDARD_PRESETS[EAX30_NUM_STANDARD_SCENARIOS][EAX30
 // Array of original environment names				//
 //////////////////////////////////////////////////////
 
-const char* EAX30_ORIGINAL_PRESET_NAMES[] =
+const char *EAX30_ORIGINAL_PRESET_NAMES[] =
 {
-	"Generic",
-	"Padded Cell",
-	"Room",
-	"Bathroom",
-	"Living Room",
-	"Stone Room",
-	"Auditorium",
-	"Concert Hall",
-	"Cave",
-	"Arena",
-	"Hangar",
-	"Carpetted Hallway",
-	"Hallway",
-	"Stone Corridor",
-	"Alley",
-	"Forest",
-	"City",
-	"Mountains",
-	"Quarry",
-	"Plain",
-	"Parking Lot",
-	"Sewer Pipe",
-	"Underwater",
-	"Drugged",
-	"Dizzy",
-	"Psychotic"
+    "Generic",
+    "Padded Cell",
+    "Room",
+    "Bathroom",
+    "Living Room",
+    "Stone Room",
+    "Auditorium",
+    "Concert Hall",
+    "Cave",
+    "Arena",
+    "Hangar",
+    "Carpetted Hallway",
+    "Hallway",
+    "Stone Corridor",
+    "Alley",
+    "Forest",
+    "City",
+    "Mountains",
+    "Quarry",
+    "Plain",
+    "Parking Lot",
+    "Sewer Pipe",
+    "Underwater",
+    "Drugged",
+    "Dizzy",
+    "Psychotic"
 };
 
 //////////////////////////////////////////////////////
 // Sports effects matrix							//
 //////////////////////////////////////////////////////
 
-EAXLISTENERPROPERTIES		EAX30_ORIGINAL_PRESETS[] =
+EAXLISTENERPROPERTIES EAX30_ORIGINAL_PRESETS[] =
 {
-	EAX30_PRESET_GENERIC,
-	EAX30_PRESET_PADDEDCELL,
-	EAX30_PRESET_ROOM,
-	EAX30_PRESET_BATHROOM,
-	EAX30_PRESET_LIVINGROOM,
-	EAX30_PRESET_STONEROOM,
-	EAX30_PRESET_AUDITORIUM,
-	EAX30_PRESET_CONCERTHALL,
-	EAX30_PRESET_CAVE,
-	EAX30_PRESET_ARENA,
-	EAX30_PRESET_HANGAR,
-	EAX30_PRESET_CARPETTEDHALLWAY,
-	EAX30_PRESET_HALLWAY,
-	EAX30_PRESET_STONECORRIDOR,
-	EAX30_PRESET_ALLEY,
-	EAX30_PRESET_FOREST,
-	EAX30_PRESET_CITY,
-	EAX30_PRESET_MOUNTAINS,
-	EAX30_PRESET_QUARRY,
-	EAX30_PRESET_PLAIN,
-	EAX30_PRESET_PARKINGLOT,
-	EAX30_PRESET_SEWERPIPE,
-	EAX30_PRESET_UNDERWATER,
-	EAX30_PRESET_DRUGGED,
-	EAX30_PRESET_DIZZY,
-	EAX30_PRESET_PSYCHOTIC
+    EAX30_PRESET_GENERIC,
+    EAX30_PRESET_PADDEDCELL,
+    EAX30_PRESET_ROOM,
+    EAX30_PRESET_BATHROOM,
+    EAX30_PRESET_LIVINGROOM,
+    EAX30_PRESET_STONEROOM,
+    EAX30_PRESET_AUDITORIUM,
+    EAX30_PRESET_CONCERTHALL,
+    EAX30_PRESET_CAVE,
+    EAX30_PRESET_ARENA,
+    EAX30_PRESET_HANGAR,
+    EAX30_PRESET_CARPETTEDHALLWAY,
+    EAX30_PRESET_HALLWAY,
+    EAX30_PRESET_STONECORRIDOR,
+    EAX30_PRESET_ALLEY,
+    EAX30_PRESET_FOREST,
+    EAX30_PRESET_CITY,
+    EAX30_PRESET_MOUNTAINS,
+    EAX30_PRESET_QUARRY,
+    EAX30_PRESET_PLAIN,
+    EAX30_PRESET_PARKINGLOT,
+    EAX30_PRESET_SEWERPIPE,
+    EAX30_PRESET_UNDERWATER,
+    EAX30_PRESET_DRUGGED,
+    EAX30_PRESET_DIZZY,
+    EAX30_PRESET_PSYCHOTIC
 };
 
 /********************************************************************************************************/
@@ -480,30 +517,30 @@ EAXLISTENERPROPERTIES		EAX30_ORIGINAL_PRESETS[] =
 // Array of sport environment names					//
 //////////////////////////////////////////////////////
 
-const char* EAX30_SPORTS_PRESET_NAMES[] =
+const char *EAX30_SPORTS_PRESET_NAMES[] =
 {
-	"Empty Stadium",
-	"Full Stadium", 
-	"Stadium Tannoy",
-	"Squash Court",
-	"Small Swimming Pool", 
-	"Large Swimming Pool",
-	"Gymnasium"
+    "Empty Stadium",
+    "Full Stadium",
+    "Stadium Tannoy",
+    "Squash Court",
+    "Small Swimming Pool",
+    "Large Swimming Pool",
+    "Gymnasium"
 };
 
 //////////////////////////////////////////////////////
 // Sports effects matrix							//
 //////////////////////////////////////////////////////
 
-EAXLISTENERPROPERTIES		EAX30_SPORTS_PRESETS[] =
+EAXLISTENERPROPERTIES EAX30_SPORTS_PRESETS[] =
 {
-	EAX30_PRESET_SPORT_EMPTYSTADIUM,
-	EAX30_PRESET_SPORT_FULLSTADIUM,
-	EAX30_PRESET_SPORT_STADIUMTANNOY,
-	EAX30_PRESET_SPORT_SQUASHCOURT,
-	EAX30_PRESET_SPORT_SMALLSWIMMINGPOOL,
-	EAX30_PRESET_SPORT_LARGESWIMMINGPOOL,
-	EAX30_PRESET_SPORT_GYMNASIUM
+    EAX30_PRESET_SPORT_EMPTYSTADIUM,
+    EAX30_PRESET_SPORT_FULLSTADIUM,
+    EAX30_PRESET_SPORT_STADIUMTANNOY,
+    EAX30_PRESET_SPORT_SQUASHCOURT,
+    EAX30_PRESET_SPORT_SMALLSWIMMINGPOOL,
+    EAX30_PRESET_SPORT_LARGESWIMMINGPOOL,
+    EAX30_PRESET_SPORT_GYMNASIUM
 };
 
 /********************************************************************************************************/
@@ -512,13 +549,13 @@ EAXLISTENERPROPERTIES		EAX30_SPORTS_PRESETS[] =
 // Array of prefab environment names				//
 //////////////////////////////////////////////////////
 
-const char* EAX30_PREFAB_PRESET_NAMES[] =
+const char *EAX30_PREFAB_PRESET_NAMES[] =
 {
-	"Workshop",
-	"School Room",
-	"Practise Room",
-	"Outhouse",
-	"Caravan"
+    "Workshop",
+    "School Room",
+    "Practise Room",
+    "Outhouse",
+    "Caravan"
 };
 
 //////////////////////////////////////////////////////
@@ -527,11 +564,11 @@ const char* EAX30_PREFAB_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_PREFAB_PRESETS[] =
 {
-	EAX30_PRESET_PREFAB_WORKSHOP,
-	EAX30_PRESET_PREFAB_SCHOOLROOM,
-	EAX30_PRESET_PREFAB_PRACTISEROOM,
-	EAX30_PRESET_PREFAB_OUTHOUSE,
-	EAX30_PRESET_PREFAB_CARAVAN
+    EAX30_PRESET_PREFAB_WORKSHOP,
+    EAX30_PRESET_PREFAB_SCHOOLROOM,
+    EAX30_PRESET_PREFAB_PRACTISEROOM,
+    EAX30_PRESET_PREFAB_OUTHOUSE,
+    EAX30_PRESET_PREFAB_CARAVAN
 };
 
 /********************************************************************************************************/
@@ -540,14 +577,14 @@ EAXLISTENERPROPERTIES EAX30_PREFAB_PRESETS[] =
 // Array of Domes & Pipes environment names			//
 //////////////////////////////////////////////////////
 
-const char* EAX30_DOMESNPIPES_PRESET_NAMES[] =
+const char *EAX30_DOMESNPIPES_PRESET_NAMES[] =
 {
-	"Domed Tomb",
-	"Saint Paul's Dome",
-	"Small Pipe",
-	"Long Thin Pipe", 
-	"Large Pipe",
-	"Resonant Pipe"
+    "Domed Tomb",
+    "Saint Paul's Dome",
+    "Small Pipe",
+    "Long Thin Pipe",
+    "Large Pipe",
+    "Resonant Pipe"
 };
 
 //////////////////////////////////////////////////////
@@ -556,12 +593,12 @@ const char* EAX30_DOMESNPIPES_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_DOMESNPIPES_PRESETS[] =
 {
-	EAX30_PRESET_DOME_TOMB,
-	EAX30_PRESET_DOME_SAINTPAULS,
-	EAX30_PRESET_PIPE_SMALL,
-	EAX30_PRESET_PIPE_LONGTHIN,
-	EAX30_PRESET_PIPE_LARGE,
-	EAX30_PRESET_PIPE_RESONANT
+    EAX30_PRESET_DOME_TOMB,
+    EAX30_PRESET_DOME_SAINTPAULS,
+    EAX30_PRESET_PIPE_SMALL,
+    EAX30_PRESET_PIPE_LONGTHIN,
+    EAX30_PRESET_PIPE_LARGE,
+    EAX30_PRESET_PIPE_RESONANT
 };
 
 /********************************************************************************************************/
@@ -570,13 +607,13 @@ EAXLISTENERPROPERTIES EAX30_DOMESNPIPES_PRESETS[] =
 // Array of Outdoors environment names				//
 //////////////////////////////////////////////////////
 
-const char* EAX30_OUTDOORS_PRESET_NAMES[] =
+const char *EAX30_OUTDOORS_PRESET_NAMES[] =
 {
-	"Backyard", 
-	"Rolling Plains",
-	"Deep Canyon",
-	"Creek",
-	"Valley"
+    "Backyard",
+    "Rolling Plains",
+    "Deep Canyon",
+    "Creek",
+    "Valley"
 };
 
 //////////////////////////////////////////////////////
@@ -585,11 +622,11 @@ const char* EAX30_OUTDOORS_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_OUTDOORS_PRESETS[] =
 {
-	EAX30_PRESET_OUTDOORS_BACKYARD,
-	EAX30_PRESET_OUTDOORS_ROLLINGPLAINS,
-	EAX30_PRESET_OUTDOORS_DEEPCANYON,
-	EAX30_PRESET_OUTDOORS_CREEK,
-	EAX30_PRESET_OUTDOORS_VALLEY
+    EAX30_PRESET_OUTDOORS_BACKYARD,
+    EAX30_PRESET_OUTDOORS_ROLLINGPLAINS,
+    EAX30_PRESET_OUTDOORS_DEEPCANYON,
+    EAX30_PRESET_OUTDOORS_CREEK,
+    EAX30_PRESET_OUTDOORS_VALLEY
 };
 
 /********************************************************************************************************/
@@ -598,11 +635,11 @@ EAXLISTENERPROPERTIES EAX30_OUTDOORS_PRESETS[] =
 // Array of Mood environment names					//
 //////////////////////////////////////////////////////
 
-const char* EAX30_MOOD_PRESET_NAMES[] =
+const char *EAX30_MOOD_PRESET_NAMES[] =
 {
-	"Heaven",
-	"Hell",
-	"Memory"
+    "Heaven",
+    "Hell",
+    "Memory"
 };
 
 //////////////////////////////////////////////////////
@@ -611,9 +648,9 @@ const char* EAX30_MOOD_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_MOOD_PRESETS[] =
 {
-	EAX30_PRESET_MOOD_HEAVEN,
-	EAX30_PRESET_MOOD_HELL,
-	EAX30_PRESET_MOOD_MEMORY
+    EAX30_PRESET_MOOD_HEAVEN,
+    EAX30_PRESET_MOOD_HELL,
+    EAX30_PRESET_MOOD_MEMORY
 };
 
 /********************************************************************************************************/
@@ -622,16 +659,16 @@ EAXLISTENERPROPERTIES EAX30_MOOD_PRESETS[] =
 // Array of driving environment names				//
 //////////////////////////////////////////////////////
 
-const char* EAX30_DRIVING_PRESET_NAMES[] =
+const char *EAX30_DRIVING_PRESET_NAMES[] =
 {
-	"Race Commentator",
-	"Pit Garage",
-	"In-car (Stripped out racer)",
-	"In-car (Sportscar)",
-	"In-car (Luxury)",
-	"Full Grandstand",
-	"Empty Grandstand",
-	"Tunnel"
+    "Race Commentator",
+    "Pit Garage",
+    "In-car (Stripped out racer)",
+    "In-car (Sportscar)",
+    "In-car (Luxury)",
+    "Full Grandstand",
+    "Empty Grandstand",
+    "Tunnel"
 };
 
 //////////////////////////////////////////////////////
@@ -640,14 +677,14 @@ const char* EAX30_DRIVING_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_DRIVING_PRESETS[] =
 {
-	EAX30_PRESET_DRIVING_COMMENTATOR,
-	EAX30_PRESET_DRIVING_PITGARAGE,
-	EAX30_PRESET_DRIVING_INCAR_RACER,
-	EAX30_PRESET_DRIVING_INCAR_SPORTS,
-	EAX30_PRESET_DRIVING_INCAR_LUXURY,
-	EAX30_PRESET_DRIVING_FULLGRANDSTAND,
-	EAX30_PRESET_DRIVING_EMPTYGRANDSTAND,
-	EAX30_PRESET_DRIVING_TUNNEL
+    EAX30_PRESET_DRIVING_COMMENTATOR,
+    EAX30_PRESET_DRIVING_PITGARAGE,
+    EAX30_PRESET_DRIVING_INCAR_RACER,
+    EAX30_PRESET_DRIVING_INCAR_SPORTS,
+    EAX30_PRESET_DRIVING_INCAR_LUXURY,
+    EAX30_PRESET_DRIVING_FULLGRANDSTAND,
+    EAX30_PRESET_DRIVING_EMPTYGRANDSTAND,
+    EAX30_PRESET_DRIVING_TUNNEL
 };
 
 /********************************************************************************************************/
@@ -656,14 +693,14 @@ EAXLISTENERPROPERTIES EAX30_DRIVING_PRESETS[] =
 // Array of City environment names					//
 //////////////////////////////////////////////////////
 
-const char* EAX30_CITY_PRESET_NAMES[] =
+const char *EAX30_CITY_PRESET_NAMES[] =
 {
-	"City Streets",
-	"Subway",
-	"Museum",
-	"Library",
-	"Underpass",
-	"Abandoned City"
+    "City Streets",
+    "Subway",
+    "Museum",
+    "Library",
+    "Underpass",
+    "Abandoned City"
 };
 
 //////////////////////////////////////////////////////
@@ -672,12 +709,12 @@ const char* EAX30_CITY_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_CITY_PRESETS[] =
 {
-	EAX30_PRESET_CITY_STREETS,
-	EAX30_PRESET_CITY_SUBWAY,
-	EAX30_PRESET_CITY_MUSEUM,
-	EAX30_PRESET_CITY_LIBRARY,
-	EAX30_PRESET_CITY_UNDERPASS,
-	EAX30_PRESET_CITY_ABANDONED
+    EAX30_PRESET_CITY_STREETS,
+    EAX30_PRESET_CITY_SUBWAY,
+    EAX30_PRESET_CITY_MUSEUM,
+    EAX30_PRESET_CITY_LIBRARY,
+    EAX30_PRESET_CITY_UNDERPASS,
+    EAX30_PRESET_CITY_ABANDONED
 };
 
 /********************************************************************************************************/
@@ -686,11 +723,11 @@ EAXLISTENERPROPERTIES EAX30_CITY_PRESETS[] =
 // Array of Misc environment names					//
 //////////////////////////////////////////////////////
 
-const char* EAX30_MISC_PRESET_NAMES[] =
+const char *EAX30_MISC_PRESET_NAMES[] =
 {
-	"Dusty Box Room",
-	"Chapel",
-	"Small Water Room"
+    "Dusty Box Room",
+    "Chapel",
+    "Small Water Room"
 };
 
 //////////////////////////////////////////////////////
@@ -699,8 +736,7 @@ const char* EAX30_MISC_PRESET_NAMES[] =
 
 EAXLISTENERPROPERTIES EAX30_MISC_PRESETS[] =
 {
-	EAX30_PRESET_DUSTYROOM,
-	EAX30_PRESET_CHAPEL,
-	EAX30_PRESET_SMALLWATERROOM
+    EAX30_PRESET_DUSTYROOM,
+    EAX30_PRESET_CHAPEL,
+    EAX30_PRESET_SMALLWATERROOM
 };
-

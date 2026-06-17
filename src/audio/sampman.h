@@ -136,35 +136,35 @@ public:
 	
 	
 
-	cSampleManager(void);
-	~cSampleManager(void);
+	cSampleManager();
+	~cSampleManager();
 	
-	void SetSpeakerConfig(int32 nConfig);
-	uint32 GetMaximumSupportedChannels(void);
+	void SetSpeakerConfig();
+	uint32 GetMaximumSupportedChannels();
 	
-	uint32 GetNum3DProvidersAvailable(void);
+	[[nodiscard]] uint32 GetNum3DProvidersAvailable() const;
 	void SetNum3DProvidersAvailable(uint32 num);
 	
-	char *Get3DProviderName(uint8 id);
+	[[nodiscard]] char *Get3DProviderName(uint8 id) const;
 	void Set3DProviderName(uint8 id, char *name);
 	
-	int8 GetCurrent3DProviderIndex(void);
-	int8 SetCurrent3DProvider(uint8 which);
+	int8 GetCurrent3DProviderIndex();
+	[[nodiscard]] int8 SetCurrent3DProvider(uint8 which) const;
 
 	int8 AutoDetect3DProviders();
 	
-	bool IsMP3RadioChannelAvailable(void);
+	bool IsMP3RadioChannelAvailable();
 	
-	void ReleaseDigitalHandle  (void);
-	void ReacquireDigitalHandle(void);
+	void ReleaseDigitalHandle  ();
+	void ReacquireDigitalHandle();
 	
-	bool Initialise(void);
-	void Terminate (void);
+	bool Initialise();
+	void Terminate ();
 		
-	bool CheckForAnAudioFileOnCD(void);
-	char GetCDAudioDriveLetter  (void);
+	bool CheckForAnAudioFileOnCD();
+	char GetCDAudioDriveLetter  ();
 	
-	void UpdateEffectsVolume(void);
+	void UpdateEffectsVolume();
 
 	void SetEffectsMasterVolume(uint8 nVolume);
 	void SetMusicMasterVolume  (uint8 nVolume);
@@ -183,19 +183,19 @@ public:
 
 	int32 _GetPedCommentSlot(uint32 nComment);
 	
-	int32  GetSampleBaseFrequency  (uint32 nSample);
-	int32  GetSampleLoopStartOffset(uint32 nSample);
-	int32  GetSampleLoopEndOffset  (uint32 nSample);
-	uint32 GetSampleLength         (uint32 nSample);
+	[[nodiscard]] int32  GetSampleBaseFrequency  (uint32 nSample) const;
+	[[nodiscard]] int32  GetSampleLoopStartOffset(uint32 nSample) const;
+	[[nodiscard]] int32  GetSampleLoopEndOffset  (uint32 nSample) const;
+	[[nodiscard]] uint32 GetSampleLength         (uint32 nSample) const;
 	
-	bool  UpdateReverb(void);
+	bool  UpdateReverb();
 	
 	void  SetChannelReverbFlag    (uint32 nChannel, uint8 nReverbFlag);
 	bool  InitialiseChannel       (uint32 nChannel, uint32 nSfx, uint8 nBank);
-	void  SetChannelEmittingVolume(uint32 nChannel, uint32 nVolume);
+	void  SetChannelEmittingVolume(uint32 nChannel, uint32 nVolume) const;
 	void  SetChannel3DPosition    (uint32 nChannel, float fX, float fY, float fZ);
 	void  SetChannel3DDistances   (uint32 nChannel, float fMax, float fMin);
-	void  SetChannelVolume        (uint32 nChannel, uint32 nVolume);
+	void  SetChannelVolume        (uint32 nChannel, uint32 nVolume) const;
 	void  SetChannelPan           (uint32 nChannel, uint32 nPan);
 	void  SetChannelFrequency     (uint32 nChannel, uint32 nFreq);
 	void  SetChannelLoopPoints    (uint32 nChannel, uint32 nLoopStart, int32 nLoopEnd);
@@ -210,15 +210,15 @@ public:
 	bool  StartStreamedFile                         (uint32 nFile, uint32 nPos, uint8 nStream);
 	void  StopStreamedFile                                                     (uint8 nStream);
 	int32 GetStreamedFilePosition                                              (uint8 nStream);
-	void  SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, uint8 nEffectFlag, uint8 nStream);
+	void  SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, uint8 nEffectFlag, uint8 nStream) const;
 	int32 GetStreamedFileLength                                                (uint8 nStream);
 	bool  IsStreamPlaying                                                      (uint8 nStream);
 #ifdef AUDIO_OAL
-	void  Service(void);
+	void  Service();
 #endif
-	bool  InitialiseSampleBanks(void);
+	bool  InitialiseSampleBanks();
 
-	uint8 GetMusicVolume() const { return m_nMusicVolume;  }
+	[[nodiscard]] uint8 GetMusicVolume() const { return m_nMusicVolume;  }
 	void SetStreamedFileLoopFlag(uint8 nLoopFlag, uint8 nStream);
 };
 

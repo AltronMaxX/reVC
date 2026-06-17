@@ -33,7 +33,7 @@ public:
 		policeChannelTimer = 0;
 	}
 
-	void Add(uint32 sample)
+	void Add(const uint32 sample)
 	{
 		if (policeChannelTimer != 60) {
 			crimesSamples[policeChannelTimerSeconds] = sample;

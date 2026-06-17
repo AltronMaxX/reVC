@@ -2,10 +2,12 @@
 
 #ifdef AUDIO_OAL
 #include "channel.h"
+
+#include "oal_utils.h"
 #include "sampman.h"
 
 #ifndef _WIN32
-#include <float.h>
+#include <cfloat>
 #endif
 
 extern bool IsFXSupported();
@@ -48,7 +50,7 @@ CChannel::DestroyChannels()
 
 CChannel::CChannel()
 {
-	Data = nil;
+	Data = nullptr;
 	DataSize = 0;
 	SetDefault();
 }
@@ -79,7 +81,7 @@ void CChannel::Reset()
 	SetDefault();
 }
 
-void CChannel::Init(uint32 _id, bool Is2D)
+void CChannel::Init(const uint32 _id, const bool Is2D)
 {
 	id = _id;
 	if ( HasSource() )
@@ -108,8 +110,7 @@ void CChannel::Term()
 	}
 }
 
-void CChannel::Start()
-{
+void CChannel::Start() const {
 	if ( !HasSource() ) return;
 	if ( !Data ) return;
 
@@ -128,12 +129,12 @@ void CChannel::Stop()
 	Reset();
 }
 
-bool CChannel::HasSource()
+bool CChannel::HasSource() const
 {
 	return alSources[id] != AL_NONE;
 }
 	
-bool CChannel::IsUsed()
+bool CChannel::IsUsed() const
 {
 	if ( HasSource() )
 	{
@@ -144,36 +145,34 @@ bool CChannel::IsUsed()
 	return false;
 }
 
-void CChannel::SetPitch(float pitch)
-{
+void CChannel::SetPitch(const float pitch) const {
 	if ( !HasSource() ) return;
 	alSourcef(alSources[id], AL_PITCH, pitch);
 }
 
-void CChannel::SetGain(float gain)
-{
+void CChannel::SetGain(const float gain) const {
 	if ( !HasSource() ) return;
 	alSourcef(alSources[id], AL_GAIN, gain);
 }
 	
-void CChannel::SetVolume(int32 vol)
+void CChannel::SetVolume(const int32 vol) const
 {
-	SetGain(ALfloat(vol) / MAX_VOLUME);
+	SetGain(static_cast<ALfloat>(vol) / MAX_VOLUME);
 }
 
-void CChannel::SetSampleData(void *_data, size_t _DataSize, int32 freq)
+void CChannel::SetSampleData(void *_data, size_t _DataSize, const int32 freq)
 {
 	Data = _data;
 	DataSize = _DataSize;
 	Frequency = freq;
 }
 	
-void CChannel::SetCurrentFreq(uint32 freq)
+void CChannel::SetCurrentFreq(const uint32 freq) const
 {
-	SetPitch(ALfloat(freq) / Frequency);
+	SetPitch(static_cast<ALfloat>(freq) / Frequency);
 }
 
-void CChannel::SetLoopCount(int32 count)
+void CChannel::SetLoopCount(const int32 count)
 {
 	if ( !HasSource() ) return;
 
@@ -220,19 +219,19 @@ bool CChannel::Update()
 	return true;
 }
 
-void CChannel::SetLoopPoints(ALint start, ALint end)
+void CChannel::SetLoopPoints(const ALint start, const ALint end)
 {
 	LoopPoints[0] = start;
 	LoopPoints[1] = end;
 }
 	
-void CChannel::SetPosition(float x, float y, float z)
+void CChannel::SetPosition(const float x, const float y, const float z) const
 {
 	if ( !HasSource() ) return;
 	alSource3f(alSources[id], AL_POSITION, x, y, z);
 }
 	
-void CChannel::SetDistances(float max, float min)
+void CChannel::SetDistances(const float max, const float min) const
 {
 	if ( !HasSource() ) return;
 	alSourcef   (alSources[id], AL_MAX_DISTANCE,       max);
@@ -241,7 +240,7 @@ void CChannel::SetDistances(float max, float min)
 	alSourcef   (alSources[id], AL_ROLLOFF_FACTOR, 1.0f);
 }
 	
-void CChannel::SetPan(int32 pan)
+void CChannel::SetPan(const int32 pan) const
 {
 	SetPosition((pan-63)/64.0f, 0.0f, Sqrt(1.0f-SQR((pan-63)/64.0f)));
 }
@@ -251,11 +250,11 @@ void CChannel::ClearBuffer()
 	if ( !HasSource() ) return;
 	alSourcei(alSources[id], AL_LOOPING, AL_FALSE);
 	alSourcei(alSources[id], AL_BUFFER, AL_NONE);
-	Data = nil;
+	Data = nullptr;
 	DataSize = 0;
 }
 
-void CChannel::SetReverbMix(ALuint slot, float mix)
+void CChannel::SetReverbMix(const ALuint slot, const float mix)
 {
 	if ( !IsFXSupported() ) return;
 	if ( !HasSource() ) return;
@@ -266,7 +265,7 @@ void CChannel::SetReverbMix(ALuint slot, float mix)
 	alSource3i(alSources[id], AL_AUXILIARY_SEND_FILTER, slot, 0, alFilters[id]);
 }
 
-void CChannel::UpdateReverb(ALuint slot)
+void CChannel::UpdateReverb(const ALuint slot) const
 {
 	if ( !IsFXSupported() ) return;
 	if ( !HasSource() ) return;

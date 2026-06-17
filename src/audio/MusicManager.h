@@ -52,9 +52,9 @@ public:
 
 public:
 	cMusicManager();
-	bool IsInitialised() { return m_bIsInitialised; }
-	uint8 GetMusicMode() { return m_nMusicMode; }
-	uint32 GetCurrentTrack() { return m_nPlayingTrack; }
+	[[nodiscard]] bool IsInitialised() const { return m_bIsInitialised; }
+	[[nodiscard]] uint8 GetMusicMode() const { return m_nMusicMode; }
+	[[nodiscard]] uint32 GetCurrentTrack() const { return m_nPlayingTrack; }
 
 	void ResetMusicAfterReload();
 	void SetStartingTrackPositions(uint8 isNewGameTimer);
@@ -70,9 +70,9 @@ public:
 	void PlayAnnouncement(uint32);
 	void PlayFrontEndTrack(uint32, uint8);
 	void PreloadCutSceneMusic(uint32);
-	void PlayPreloadedCutSceneMusic(void);
-	void StopCutSceneMusic(void);
-	uint32 GetRadioInCar(void);
+	void PlayPreloadedCutSceneMusic();
+	void StopCutSceneMusic();
+	uint32 GetRadioInCar();
 	void SetRadioInCar(uint32);
 	void SetRadioChannelByScript(uint32, int32);
 
@@ -81,10 +81,10 @@ public:
 	void ServiceFrontEndMode();
 	void ServiceGameMode();
 	void ServiceAmbience();
-	void ServiceTrack(CVehicle *veh, CPed *ped);
+	void ServiceTrack(CVehicle *veh);
 
 	bool UsesPoliceRadio(CVehicle *veh);
-	bool UsesTaxiRadio(CVehicle *veh);
+	bool UsesTaxiRadio(const CVehicle *veh);
 	uint32 GetTrackStartPos(uint32 track);
 
 	void ComputeAmbienceVol(uint8 reset, uint8& outVolume);
@@ -97,10 +97,10 @@ public:
 	void SetUpCorrectAmbienceTrack();
 	float *GetListenTimeArray();
 	uint32 GetRadioPosition(uint32 station);
-	uint32 GetFavouriteRadioStation();
+	[[nodiscard]] uint32 GetFavouriteRadioStation() const;
 	void SetMalibuClubTrackPos(uint8 pos);
 	void SetStripClubTrackPos(uint8 pos);
-	bool CheckForMusicInterruptions();
+	[[nodiscard]] bool CheckForMusicInterruptions() const;
 
 	void Enable();
 	void Disable();

@@ -15,8 +15,8 @@
 #include "sampman.h"
 #include "Wanted.h"
 
-const int channels = ARRAY_SIZE(AudioManager.m_asActiveSamples);
-const int policeChannel = channels + 1;
+constexpr int channels = ARRAY_SIZE(AudioManager.m_asActiveSamples);
+constexpr int policeChannel = channels + 1;
 
 struct tPoliceRadioZone {
 	char m_aName[8];
@@ -34,8 +34,8 @@ uint32 gMinTimeToNextReport[NUM_CRIME_TYPES];
 void
 cAudioManager::InitialisePoliceRadioZones()
 {
-	for (int32 i = 0; i < NUMAUDIOZONES; i++)
-		memset(ZoneSfx[i].m_aName, 0, 8);
+	for (auto & i : ZoneSfx)
+		memset(i.m_aName, 0, 8);
 
 #define SETZONESFX(i, name, sample) \
 	strcpy(ZoneSfx[i].m_aName, name); \
@@ -65,13 +65,13 @@ cAudioManager::InitialisePoliceRadio()
 	m_sPoliceRadioQueue.policeChannelTimer = 0;
 	m_sPoliceRadioQueue.policeChannelTimerSeconds = 0;
 	m_sPoliceRadioQueue.policeChannelCounterSeconds = 0;
-	for (int32 i = 0; i < ARRAY_SIZE(m_sPoliceRadioQueue.crimes); i++)
-		m_sPoliceRadioQueue.crimes[i].type = CRIME_NONE;
+	for (auto & crime : m_sPoliceRadioQueue.crimes)
+		crime.type = CRIME_NONE;
 
 	SampleManager.SetChannelReverbFlag(policeChannel, false);
 	gSpecialSuspectLastSeenReport = false;
-	for (int32 i = 0; i < ARRAY_SIZE(gMinTimeToNextReport); i++)
-		gMinTimeToNextReport[i] = m_FrameCounter;
+	for (unsigned int & i : gMinTimeToNextReport)
+		i = m_FrameCounter;
 }
 
 void
@@ -83,7 +83,7 @@ cAudioManager::ResetPoliceRadio()
 }
 
 void
-cAudioManager::SetMissionScriptPoliceAudio(int32 sfx) const
+cAudioManager::SetMissionScriptPoliceAudio(const int32 sfx) const
 {
 	if (!m_bIsInitialised) return;
 	if (g_nMissionAudioPlayingStatus != 1) {
@@ -130,13 +130,12 @@ cAudioManager::ServicePoliceRadio()
 	if(!m_bIsInitialised) return;
 
 	if(m_nUserPause == 0) {
-		bool crimeReport = SetupCrimeReport();
+		const bool crimeReport = SetupCrimeReport();
 #ifdef FIX_BUGS // Crash at 0x5fe6ef
 		if(CReplay::IsPlayingBack() || !FindPlayerPed() || !FindPlayerPed()->m_pWanted)
 			return;
 #endif
-		CPlayerPed *playerPed = FindPlayerPed();
-		if (playerPed) {
+		if (const CPlayerPed *playerPed = FindPlayerPed()) {
 			wantedLevel = playerPed->m_pWanted->GetWantedLevel();
 			if (!crimeReport) {
 				if (wantedLevel != 0) {
@@ -154,12 +153,8 @@ cAudioManager::ServicePoliceRadio()
 }
 
 void
-cAudioManager::ServicePoliceRadioChannel(uint8 wantedLevel)
+cAudioManager::ServicePoliceRadioChannel(const uint8 wantedLevel)
 {
-	bool processed = false;
-	uint32 sample;
-	int32 freq;
-
 	static int cWait = 0;
 	static bool bChannelOpen = false;
 	static uint8 bMissionAudioPhysicalPlayingStatus = 0;
@@ -212,6 +207,8 @@ cAudioManager::ServicePoliceRadioChannel(uint8 wantedLevel)
 		if (bChannelOpen) DoPoliceRadioCrackle();
 		if ((g_nMissionAudioSfx == NO_SAMPLE || g_nMissionAudioPlayingStatus != 1) &&
 			!SampleManager.GetChannelUsedFlag(policeChannel) && m_sPoliceRadioQueue.policeChannelTimer) {
+			uint32 sample;
+			bool processed = false;
 			if (m_sPoliceRadioQueue.policeChannelTimer) {
 				sample = m_sPoliceRadioQueue.crimesSamples[m_sPoliceRadioQueue.policeChannelCounterSeconds];
 				m_sPoliceRadioQueue.policeChannelTimer--;
@@ -230,6 +227,7 @@ cAudioManager::ServicePoliceRadioChannel(uint8 wantedLevel)
 			if (sample == NO_SAMPLE) {
 				if (!processed) cWait = 30;
 			} else {
+				int32 freq;
 				SampleManager.InitialiseChannel(policeChannel, sample, 0);
 				switch (sample) {
 				case SFX_POLICE_RADIO_MESSAGE_NOISE_1:
@@ -254,17 +252,7 @@ cAudioManager::ServicePoliceRadioChannel(uint8 wantedLevel)
 bool
 cAudioManager::SetupCrimeReport()
 {
-	int16 audioZoneId;
-	CZone *zone;
-	float rangeX;
-	float rangeY;
-	float halfX;
-	float halfY;
-	float quarterX;
-	float quarterY;
 	int i;
-	int32 sampleIndex;
-	bool processed = false;
 
 	if (MusicManager.m_nMusicMode == MUSICMODE_CUTSCENE) return false;
 
@@ -279,12 +267,18 @@ cAudioManager::SetupCrimeReport()
 	}
 
 	if (i == ARRAY_SIZE(m_sPoliceRadioQueue.crimes)) return false;
-	audioZoneId = CTheZones::FindAudioZone(&m_sPoliceRadioQueue.crimes[i].position);
-	if (audioZoneId >= 0 && audioZoneId < NUMAUDIOZONES) {
-		zone = CTheZones::GetAudioZone(audioZoneId);
-		for (int j = 0; j < NUMAUDIOZONES; j++) {
-			if (strcmp(zone->name, ZoneSfx[j].m_aName) == 0) {
-				sampleIndex = ZoneSfx[j].m_nSampleIndex;
+	if (const int16 audioZoneId = CTheZones::FindAudioZone(&m_sPoliceRadioQueue.crimes[i].position); audioZoneId >= 0 && audioZoneId < NUMAUDIOZONES) {
+		bool processed = false;
+		float quarterY;
+		float quarterX;
+		float halfY;
+		float halfX;
+		float rangeY;
+		float rangeX;
+		const CZone *zone = CTheZones::GetAudioZone(audioZoneId);
+		for (const auto & j : ZoneSfx) {
+			if (strcmp(zone->name, j.m_aName) == 0) {
+				const int32 sampleIndex = j.m_nSampleIndex;
 				m_sPoliceRadioQueue.Add(SFX_POLICE_RADIO_MESSAGE_NOISE_1);
 				m_sPoliceRadioQueue.Add(m_anRandomTable[0] % 3 + SFX_WEVE_GOT);
 				m_sPoliceRadioQueue.Add(SFX_A_10);
@@ -345,14 +339,6 @@ cAudioManager::SetupCrimeReport()
 void
 cAudioManager::SetupSuspectLastSeenReport()
 {
-	CVehicle *veh;
-	uint8 color1;
-	int32 main_color;
-	int32 sample;
-
-	int32 color_pre_modifier;
-	int32 color_post_modifier;
-
 	const int32 gCarColourTable[][3] = {
 		{NO_SAMPLE, SFX_POLICE_RADIO_BLACK, NO_SAMPLE},
 		{NO_SAMPLE, SFX_POLICE_RADIO_WHITE, NO_SAMPLE},
@@ -452,16 +438,15 @@ cAudioManager::SetupSuspectLastSeenReport()
 	};
 
 	if (MusicManager.m_nMusicMode != MUSICMODE_CUTSCENE) {
-		veh = FindVehicleOfPlayer();
-		if (veh != nil) {
+		if (const CVehicle *veh = FindVehicleOfPlayer(); veh != nullptr) {
 			if (60 - m_sPoliceRadioQueue.policeChannelTimer > 9) {
-				color1 = veh->m_currentColour1;
-				if (color1 >= ARRAY_SIZE(gCarColourTable)) {
+				if (const uint8 color1 = veh->m_currentColour1; color1 >= ARRAY_SIZE(gCarColourTable)) {
 					debug("\n *** UNKNOWN CAR COLOUR %d *** ", color1);
 				} else {
-					main_color = gCarColourTable[color1][1];
-					color_pre_modifier = gCarColourTable[color1][0];
-					color_post_modifier = gCarColourTable[color1][2];
+					int32 sample;
+					const int32 main_color = gCarColourTable[color1][1];
+					const int32 color_pre_modifier = gCarColourTable[color1][0];
+					const int32 color_post_modifier = gCarColourTable[color1][2];
 					switch (veh->GetModelIndex()) {
 					case MI_LANDSTAL:
 					case MI_PATRIOT:
@@ -651,7 +636,7 @@ cAudioManager::SetupSuspectLastSeenReport()
 }
 
 void
-cAudioManager::ReportCrime(eCrimeType type, const CVector &pos)
+cAudioManager::ReportCrime(const eCrimeType type, const CVector &pos)
 {
 	int32 lastCrime = ARRAY_SIZE(m_sPoliceRadioQueue.crimes);
 	if (m_bIsInitialised && MusicManager.m_nMusicMode != MUSICMODE_CUTSCENE && FindPlayerPed()->m_pWanted->GetWantedLevel() > 0 &&
@@ -677,41 +662,30 @@ cAudioManager::ReportCrime(eCrimeType type, const CVector &pos)
 }
 
 void
-cAudioManager::PlaySuspectLastSeen(float x, float y, float z)
+cAudioManager::PlaySuspectLastSeen(const float x, const float y, const float z)
 {
-	int16 audioZone;
-	CZone *zone;
-	float rangeX;
-	float rangeY;
-	float halfX;
-	float halfY;
-	float quarterX;
-	float quarterY;
-	int32 sample;
-	bool processed = false;
-	CVector vec = CVector(x, y, z);
+	auto vec = CVector(x, y, z);
 
 	if (!m_bIsInitialised) return;
 
 	if (MusicManager.m_nMusicMode != MUSICMODE_CUTSCENE && 60 - m_sPoliceRadioQueue.policeChannelTimer > 9) {
-		audioZone = CTheZones::FindAudioZone(&vec);
-		if (audioZone >= 0 && audioZone < NUMAUDIOZONES) {
-			zone = CTheZones::GetAudioZone(audioZone);
-			for (int i = 0; i < NUMAUDIOZONES; i++) {
-				if (strcmp(zone->name, ZoneSfx[i].m_aName) == 0) {
-					sample = ZoneSfx[i].m_nSampleIndex;
+		if (const int16 audioZone = CTheZones::FindAudioZone(&vec); audioZone >= 0 && audioZone < NUMAUDIOZONES) {
+			bool processed = false;
+			const CZone *zone = CTheZones::GetAudioZone(audioZone);
+			for (const auto & i : ZoneSfx) {
+				if (strcmp(zone->name, i.m_aName) == 0) {
+					const int32 sample = i.m_nSampleIndex;
 					m_sPoliceRadioQueue.Add(SFX_POLICE_RADIO_MESSAGE_NOISE_1);
 					m_sPoliceRadioQueue.Add(SFX_POLICE_RADIO_SUSPECT);
 					m_sPoliceRadioQueue.Add(SFX_POLICE_RADIO_LAST_SEEN);
 					m_sPoliceRadioQueue.Add(SFX_IN);
-					rangeX = zone->maxx - zone->minx;
-					rangeY = zone->maxy - zone->miny;
-					halfX = 0.5f * rangeX + zone->minx;
-					halfY = 0.5f * rangeY + zone->miny;
-					quarterX = 0.25f * rangeX;
-					quarterY = 0.25f * rangeY;
+					const float rangeX = zone->maxx - zone->minx;
+					const float rangeY = zone->maxy - zone->miny;
+					const float halfX = 0.5f * rangeX + zone->minx;
+					const float halfY = 0.5f * rangeY + zone->miny;
+					const float quarterX = 0.25f * rangeX;
 
-					if (vec.y > halfY + quarterY) {
+					if (const float quarterY = 0.25f * rangeY; vec.y > halfY + quarterY) {
 						m_sPoliceRadioQueue.Add(SFX_NORTH);
 						processed = true;
 					} else if (vec.y < halfY - quarterY) {
@@ -739,9 +713,9 @@ cAudioManager::PlaySuspectLastSeen(float x, float y, float z)
 void
 cAudioManager::AgeCrimes()
 {
-	for (uint8 i = 0; i < ARRAY_SIZE(m_sPoliceRadioQueue.crimes); i++) {
-		if (m_sPoliceRadioQueue.crimes[i].type != CRIME_NONE) {
-			if (++m_sPoliceRadioQueue.crimes[i].timer > 1200) m_sPoliceRadioQueue.crimes[i].type = CRIME_NONE;
+	for (auto & crime : m_sPoliceRadioQueue.crimes) {
+		if (crime.type != CRIME_NONE) {
+			if (++crime.timer > 1200) crime.type = CRIME_NONE;
 		}
 	}
 }

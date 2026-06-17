@@ -51,9 +51,8 @@ extern "C" {
 
 #else // AUDIO_OAL
 	#include <AL/al.h>
-	#include <string.h>
 
-	#ifndef GUID_DEFINED
+#ifndef GUID_DEFINED
 		#define GUID_DEFINED
 		typedef struct _GUID
 		{
@@ -158,10 +157,10 @@ typedef struct _EAXLISTENERPROPERTIES
     unsigned long ulEnvironment;   // sets all listener properties
     float flEnvironmentSize;       // environment size in meters
     float flEnvironmentDiffusion;  // environment diffusion
-    long lRoom;                    // room effect level (at mid frequencies)
+    long lRoom;                    // room effect level (at mid-frequencies)
     long lRoomHF;                  // relative room effect level at high frequencies
     long lRoomLF;                  // relative room effect level at low frequencies  
-    float flDecayTime;             // reverberation decay time at mid frequencies
+    float flDecayTime;             // reverberation decay time at mid-frequencies
     float flDecayHFRatio;          // high-frequency to mid-frequency decay time ratio
     float flDecayLFRatio;          // low-frequency to mid-frequency decay time ratio   
     long lReflections;             // early reflections level relative to room effect
@@ -394,9 +393,9 @@ typedef enum
 //
 typedef struct _EAXBUFFERPROPERTIES
 {
-    long lDirect;                 // direct path level (at low and mid frequencies)
+    long lDirect;                 // direct path level (at low and mid-frequencies)
     long lDirectHF;               // relative direct path level at high frequencies
-    long lRoom;                   // room effect level (at low and mid frequencies)
+    long lRoom;                   // room effect level (at low and mid-frequencies)
     long lRoomHF;                 // relative room effect level at high frequencies
     long lObstruction;            // main obstruction control (attenuation at high frequencies) 
     float flObstructionLFRatio;   // obstruction low-frequency level re. main control

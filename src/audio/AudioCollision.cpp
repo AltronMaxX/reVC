@@ -1,6 +1,5 @@
 #include "common.h"
 
-#include "DMAudio.h"
 #include "Entity.h"
 #include "AudioCollision.h"
 #include "AudioManager.h"
@@ -8,20 +7,19 @@
 #include "SurfaceTable.h"
 #include "sampman.h"
 
-const int CollisionSoundIntensity = 60;
+constexpr int CollisionSoundIntensity = 60;
 
-cAudioCollisionManager::cAudioCollisionManager()
-{
-	m_sQueue.m_pEntity1 = nil;
-	m_sQueue.m_pEntity2 = nil;
+cAudioCollisionManager::cAudioCollisionManager() : m_asCollisions1{}, m_asCollisions2{} {
+	m_sQueue.m_pEntity1 = nullptr;
+	m_sQueue.m_pEntity2 = nullptr;
 	m_sQueue.m_bSurface1 = SURFACE_DEFAULT;
 	m_sQueue.m_bSurface2 = SURFACE_DEFAULT;
 	m_sQueue.m_fIntensity2 = 0.0f;
 	m_sQueue.m_fIntensity1 = 0.0f;
 	m_sQueue.m_vecPosition = CVector(0.0f, 0.0f, 0.0f);
 
-	for (int i = 0; i < NUMAUDIOCOLLISIONS; i++)
-		m_bIndicesTable[i] = NUMAUDIOCOLLISIONS;
+	for (unsigned char & i : m_bIndicesTable)
+		i = NUMAUDIOCOLLISIONS;
 
 	m_bCollisionsInQueue = 0;
 }
@@ -30,7 +28,6 @@ void
 cAudioCollisionManager::AddCollisionToRequestedQueue()
 {
 	int32 collisionsIndex;
-	int32 i;
 
 
 	if (m_bCollisionsInQueue < NUMAUDIOCOLLISIONS)
@@ -42,7 +39,7 @@ cAudioCollisionManager::AddCollisionToRequestedQueue()
 
 	m_asCollisions1[collisionsIndex] = m_sQueue;
 
-	i = 0;
+	int32 i = 0;
 	if(collisionsIndex) {
 		while(m_asCollisions1[m_bIndicesTable[i]].m_fDistance <= m_asCollisions1[collisionsIndex].m_fDistance) {
 			if(++i >= collisionsIndex) {
@@ -56,13 +53,13 @@ cAudioCollisionManager::AddCollisionToRequestedQueue()
 }
 
 float
-cAudioManager::GetCollisionLoopingRatio(uint32 a, uint32 b, float c) const
+cAudioManager::GetCollisionLoopingRatio(const float c) const
 {
 	return GetCollisionRatio(c, 0.0f, 0.02f, 0.02f);
 }
 
 float
-cAudioManager::GetCollisionOneShotRatio(int32 a, float b) const
+cAudioManager::GetCollisionOneShotRatio(const int32 a, const float b) const
 {
 	float result;
 
@@ -109,10 +106,9 @@ cAudioManager::GetCollisionOneShotRatio(int32 a, float b) const
 }
 
 float
-cAudioManager::GetCollisionRatio(float a, float b, float c, float d) const
+cAudioManager::GetCollisionRatio(const float a, const float b, const float c, const float d) const
 {
-	float e;
-	e = a;
+	float e = a;
 	if(a <= b) return 0.0f;
 	if(c <= a) e = c;
 	return (e - b) / d;
@@ -121,8 +117,8 @@ cAudioManager::GetCollisionRatio(float a, float b, float c, float d) const
 uint32
 cAudioManager::SetLoopingCollisionRequestedSfxFreqAndGetVol(const cAudioCollision &audioCollision)
 {
-	uint8 surface1 = audioCollision.m_bSurface1;
-	uint8 surface2 = audioCollision.m_bSurface2;
+	const uint8 surface1 = audioCollision.m_bSurface1;
+	const uint8 surface2 = audioCollision.m_bSurface2;
 	int32 vol;
 	float ratio;
 
@@ -156,12 +152,11 @@ cAudioManager::SetLoopingCollisionRequestedSfxFreqAndGetVol(const cAudioCollisio
 }
 
 void
-cAudioManager::SetUpLoopingCollisionSound(const cAudioCollision &col, uint8 counter)
+cAudioManager::SetUpLoopingCollisionSound(const cAudioCollision &col, const uint8 counter)
 {
-    bool distCalculated = false;
 	if(col.m_fIntensity2 > 0.0016f) {
-		uint8 emittingVol = SetLoopingCollisionRequestedSfxFreqAndGetVol(col);
-		if(emittingVol) {
+		if(const uint8 emittingVol = SetLoopingCollisionRequestedSfxFreqAndGetVol(col)) {
+			bool distCalculated = false;
 			CalculateDistance(distCalculated, m_sQueueSample.m_fDistance);
 			m_sQueueSample.m_nVolume = ComputeVolume(emittingVol, CollisionSoundIntensity, m_sQueueSample.m_fDistance);
 			if(m_sQueueSample.m_nVolume) {
@@ -187,7 +182,7 @@ cAudioManager::SetUpLoopingCollisionSound(const cAudioCollision &col, uint8 coun
 		}
 	}
 }
-static const int32 gOneShotCol[] = {SFX_COL_TARMAC_1,
+static constexpr int32 gOneShotCol[] = {SFX_COL_TARMAC_1,
                                     SFX_COL_TARMAC_1,
                                     SFX_COL_GRASS_1,
                                     SFX_COL_GRAVEL_1,
@@ -230,9 +225,6 @@ cAudioManager::SetUpOneShotCollisionSound(const cAudioCollision &col)
 	int16 s1;
 	int16 s2;
 
-	int32 emittingVol;
-	float ratio;
-
 	static uint16 counter = 28;
 
 	for(int32 i = 0; i < 2; i++) {
@@ -243,14 +235,13 @@ cAudioManager::SetUpOneShotCollisionSound(const cAudioCollision &col)
 			s1 = col.m_bSurface1;
 			s2 = col.m_bSurface2;
 		}
-		ratio = GetCollisionOneShotRatio(s1, col.m_fIntensity1);
+		float ratio = GetCollisionOneShotRatio(s1, col.m_fIntensity1);
 		if(s1 == SURFACE_CAR && s2 == SURFACE_PED) ratio /= 4.0f;
 		if(s1 == SURFACE_CAR && ratio < 0.6f) {
 			s1 = SURFACE_CAR_PANEL;
 			ratio = Min(1.f, 2.f * ratio);
 		}
-		emittingVol = 40.f * ratio;
-		if(emittingVol) {
+		if(const int32 emittingVol = 40.f * ratio) {
 			m_sQueueSample.m_fDistance = Sqrt(col.m_fDistance);
 			m_sQueueSample.m_nVolume =
 			    ComputeVolume(emittingVol, CollisionSoundIntensity, m_sQueueSample.m_fDistance);
@@ -337,16 +328,15 @@ cAudioManager::ServiceCollisions()
 
 	m_sQueueSample.m_nEntityIndex = m_nCollisionEntity;
 
-	for (int i = 0; i < NUMAUDIOCOLLISIONS; i++)
-		abRepeatedCollision1[i] = abRepeatedCollision2[i] = false;
+	for (int i1 = 0; i1 < NUMAUDIOCOLLISIONS; i1++)
+		abRepeatedCollision1[i1] = abRepeatedCollision2[i1] = false;
 
 	for (i = 0; i < m_sCollisionManager.m_bCollisionsInQueue; i++) {
 		for (j = 0; j < NUMAUDIOCOLLISIONS; j++) {
-			int index = m_sCollisionManager.m_bIndicesTable[i];
-			if ((m_sCollisionManager.m_asCollisions1[index].m_pEntity1 == m_sCollisionManager.m_asCollisions2[j].m_pEntity1)
-				&& (m_sCollisionManager.m_asCollisions1[index].m_pEntity2 == m_sCollisionManager.m_asCollisions2[j].m_pEntity2)
-				&& (m_sCollisionManager.m_asCollisions1[index].m_bSurface1 == m_sCollisionManager.m_asCollisions2[j].m_bSurface1)
-				&& (m_sCollisionManager.m_asCollisions1[index].m_bSurface2 == m_sCollisionManager.m_asCollisions2[j].m_bSurface2)
+			if (const int index = m_sCollisionManager.m_bIndicesTable[i]; (m_sCollisionManager.m_asCollisions1[index].m_pEntity1 == m_sCollisionManager.m_asCollisions2[j].m_pEntity1)
+			                                                        && (m_sCollisionManager.m_asCollisions1[index].m_pEntity2 == m_sCollisionManager.m_asCollisions2[j].m_pEntity2)
+			                                                        && (m_sCollisionManager.m_asCollisions1[index].m_bSurface1 == m_sCollisionManager.m_asCollisions2[j].m_bSurface1)
+			                                                        && (m_sCollisionManager.m_asCollisions1[index].m_bSurface2 == m_sCollisionManager.m_asCollisions2[j].m_bSurface2)
 				) {
 				abRepeatedCollision1[index] = true;
 				abRepeatedCollision2[j] = true;
@@ -359,8 +349,8 @@ cAudioManager::ServiceCollisions()
 
 	for (i = 0; i < NUMAUDIOCOLLISIONS; i++) {
 		if (!abRepeatedCollision2[i]) {
-			m_sCollisionManager.m_asCollisions2[i].m_pEntity1 = nil;
-			m_sCollisionManager.m_asCollisions2[i].m_pEntity2 = nil;
+			m_sCollisionManager.m_asCollisions2[i].m_pEntity1 = nullptr;
+			m_sCollisionManager.m_asCollisions2[i].m_pEntity2 = nullptr;
 			m_sCollisionManager.m_asCollisions2[i].m_bSurface1 = SURFACE_DEFAULT;
 			m_sCollisionManager.m_asCollisions2[i].m_bSurface2 = SURFACE_DEFAULT;
 			m_sCollisionManager.m_asCollisions2[i].m_fIntensity2 = 0.0f;
@@ -371,8 +361,7 @@ cAudioManager::ServiceCollisions()
 	}
 
 	for (i = 0; i < m_sCollisionManager.m_bCollisionsInQueue; i++) {
-		int index = m_sCollisionManager.m_bIndicesTable[i];
-		if (!abRepeatedCollision1[index]) {
+		if (const int index = m_sCollisionManager.m_bIndicesTable[i]; !abRepeatedCollision1[index]) {
 			for (j = 0; j < NUMAUDIOCOLLISIONS; j++) {
 				if (!abRepeatedCollision2[j]) {
 					m_sCollisionManager.m_asCollisions2[j].m_nBaseVolume = 1;
@@ -388,16 +377,15 @@ cAudioManager::ServiceCollisions()
 		}
 	}
 
-	for (int i = 0; i < NUMAUDIOCOLLISIONS; i++)
-		m_sCollisionManager.m_bIndicesTable[i] = NUMAUDIOCOLLISIONS;
+	for (unsigned char & i1 : m_sCollisionManager.m_bIndicesTable)
+		i1 = NUMAUDIOCOLLISIONS;
 	m_sCollisionManager.m_bCollisionsInQueue = 0;
 }
 
 void
-cAudioManager::ReportCollision(CEntity *entity1, CEntity *entity2, uint8 surface1, uint8 surface2, float collisionPower,
+cAudioManager::ReportCollision(CEntity *entity1, CEntity *entity2, const uint8 surface1, const uint8 surface2, const float collisionPower,
                                float velocity)
 {
-	float distSquared;
 	CVector v1;
 	CVector v2;
 
@@ -413,9 +401,8 @@ cAudioManager::ReportCollision(CEntity *entity1, CEntity *entity2, uint8 surface
 		v1 = entity1->GetPosition();
 		v2 = entity2->GetPosition();
 	}
-	CVector pos = (v1 + v2) * 0.5f;
-	distSquared = GetDistanceSquared(pos);
-	if(distSquared < SQR(CollisionSoundIntensity)) {
+	const CVector pos = (v1 + v2) * 0.5f;
+	if(const float distSquared = GetDistanceSquared(pos); distSquared < SQR(CollisionSoundIntensity)) {
 		m_sCollisionManager.m_sQueue.m_pEntity1 = entity1;
 		m_sCollisionManager.m_sQueue.m_pEntity2 = entity2;
 		m_sCollisionManager.m_sQueue.m_bSurface1 = surface1;

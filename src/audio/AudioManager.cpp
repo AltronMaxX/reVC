@@ -14,9 +14,9 @@
 
 cAudioManager AudioManager;
 
-const int channels = ARRAY_SIZE(AudioManager.m_asActiveSamples);
-const int policeChannel = channels + 1;
-const int allChannels = channels + 2;
+constexpr int channels = ARRAY_SIZE(AudioManager.m_asActiveSamples);
+constexpr int policeChannel = channels + 1;
+constexpr int allChannels = channels + 2;
 
 #define SPEED_OF_SOUND 343.f
 #define TIME_SPENT 40
@@ -122,7 +122,7 @@ cAudioManager::Service()
 }
 
 int32
-cAudioManager::CreateEntity(eAudioType type, void *entity)
+cAudioManager::CreateEntity(const eAudioType type, void *entity)
 {
 	if (!m_bIsInitialised)
 		return AEHANDLE_ERROR_NOAUDIOSYS;
@@ -149,7 +149,7 @@ cAudioManager::CreateEntity(eAudioType type, void *entity)
 }
 
 void
-cAudioManager::DestroyEntity(int32 id)
+cAudioManager::DestroyEntity(const int32 id)
 {
 	if (m_bIsInitialised && id >= 0 && id < NUM_AUDIOENTITIES && m_asAudioEntities[id].m_bIsUsed) {
 		m_asAudioEntities[id].m_bIsUsed = false;
@@ -165,14 +165,14 @@ cAudioManager::DestroyEntity(int32 id)
 }
 
 void
-cAudioManager::SetEntityStatus(int32 id, uint8 status)
+cAudioManager::SetEntityStatus(const int32 id, const uint8 status)
 {
 	if (m_bIsInitialised && id >= 0 && id < NUM_AUDIOENTITIES && m_asAudioEntities[id].m_bIsUsed)
 		m_asAudioEntities[id].m_bStatus = status;
 }
 
 void
-cAudioManager::PlayOneShot(int32 index, uint16 sound, float vol)
+cAudioManager::PlayOneShot(const int32 index, const uint16 sound, const float vol)
 {
 	static const uint8 OneShotPriority[] = { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 4, 2, 5, 5, 3, 5, 2, 2, 1, 1, 3, 1, 3, 3, 1, 1, 1, 1, 4, 4, 4, 3, 1, 1, 1, 1, 1,
 											1, 1, 1, 1, 1, 1, 1, 1, 6, 1, 1, 1, 1, 1, 1, 3, 4, 2, 0, 0, 6, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 0, 0, 0,
@@ -222,43 +222,43 @@ cAudioManager::PlayOneShot(int32 index, uint16 sound, float vol)
 }
 
 void
-cAudioManager::SetMP3BoostVolume(uint8 volume) const
+cAudioManager::SetMP3BoostVolume(const uint8 volume) const
 {
 	SampleManager.SetMP3BoostVolume(volume);
 }
 
 void
-cAudioManager::SetEffectsMasterVolume(uint8 volume) const
+cAudioManager::SetEffectsMasterVolume(const uint8 volume) const
 {
 	SampleManager.SetEffectsMasterVolume(volume);
 }
 
 void
-cAudioManager::SetMusicMasterVolume(uint8 volume) const
+cAudioManager::SetMusicMasterVolume(const uint8 volume) const
 {
 	SampleManager.SetMusicMasterVolume(volume);
 }
 
 void
-cAudioManager::SetEffectsFadeVol(uint8 volume) const
+cAudioManager::SetEffectsFadeVol(const uint8 volume) const
 {
 	SampleManager.SetEffectsFadeVolume(volume);
 }
 
 void
-cAudioManager::SetMonoMode(uint8 mono)
+cAudioManager::SetMonoMode(const uint8 mono)
 {
 	SampleManager.SetMonoMode(mono);
 }
 
 void
-cAudioManager::SetMusicFadeVol(uint8 volume) const
+cAudioManager::SetMusicFadeVol(const uint8 volume) const
 {
 	SampleManager.SetMusicFadeVolume(volume);
 }
 
 void
-cAudioManager::ResetTimers(uint32 time)
+cAudioManager::ResetTimers(const uint32 time)
 {
 	if (m_bIsInitialised) {
 		m_bTimerJustReset = true;
@@ -305,10 +305,10 @@ cAudioManager::DestroyAllGameCreatedEntities()
 					DestroyEntity(i);
 					break;
 				case AUDIOTYPE_SCRIPTOBJECT:
-					entity = (cAudioScriptObject *)m_asAudioEntities[i].m_pEntity;
+					entity = static_cast<cAudioScriptObject *>(m_asAudioEntities[i].m_pEntity);
 					if (entity) {
 						delete entity;
-						m_asAudioEntities[i].m_pEntity = nil;
+						m_asAudioEntities[i].m_pEntity = nullptr;
 					}
 					DestroyEntity(i);
 					break;
@@ -333,7 +333,7 @@ char *
 cAudioManager::Get3DProviderName(uint8 id) const
 {
 	if (!m_bIsInitialised)
-		return nil;
+		return nullptr;
 #ifdef AUDIO_OAL
 	id = CLAMP(id, 0, SampleManager.GetNum3DProvidersAvailable() - 1);
 #else
@@ -363,7 +363,7 @@ cAudioManager::AutoDetect3DProviders() const
 }
 
 int8
-cAudioManager::SetCurrent3DProvider(uint8 which)
+cAudioManager::SetCurrent3DProvider(const uint8 which)
 {
 	if (!m_bIsInitialised)
 		return -1;
@@ -376,7 +376,7 @@ cAudioManager::SetCurrent3DProvider(uint8 which)
 		m_nActiveSampleQueue = 0;
 	ClearRequestedQueue();
 	ClearActiveSamples();
-	int8 current = SampleManager.SetCurrent3DProvider(which);
+	const int8 current = SampleManager.SetCurrent3DProvider(which);
 	if (current > 0) {
 		m_nActiveSamples = SampleManager.GetMaximumSupportedChannels();
 		if (m_nActiveSamples > 1)
@@ -386,9 +386,9 @@ cAudioManager::SetCurrent3DProvider(uint8 which)
 }
 
 void
-cAudioManager::SetSpeakerConfig(int32 conf) const
+cAudioManager::SetSpeakerConfig(const int32 conf) const
 {
-	SampleManager.SetSpeakerConfig(conf);
+	SampleManager.SetSpeakerConfig();
 }
 
 bool
@@ -417,7 +417,7 @@ cAudioManager::ReacquireDigitalHandle() const
 }
 
 void
-cAudioManager::SetDynamicAcousticModelingStatus(uint8 status)
+cAudioManager::SetDynamicAcousticModelingStatus(const uint8 status)
 {
 	m_bDynamicAcousticModelingStatus = status!=0;
 }
@@ -479,44 +479,42 @@ cAudioManager::ServiceSoundEffects()
 	SampleManager.Service();
 #endif
 	for (int32 i = 0; i < m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal; ++i) {
-		cAudioScriptObject *object = (cAudioScriptObject *)m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity;
+		const auto *object = static_cast<cAudioScriptObject *>(m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].
+			m_pEntity);
 		delete object;
-		m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity = nil;
+		m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity = nullptr;
 		DestroyEntity(m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]);
 	}
 	m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal = 0;
 }
 
 uint8
-cAudioManager::ComputeVolume(uint8 emittingVolume, float soundIntensity, float distance) const
+cAudioManager::ComputeVolume(const uint8 emittingVolume, const float soundIntensity, const float distance) const
 {
-	float newSoundIntensity;
-	float newEmittingVolume;
-
 	if (soundIntensity <= 0.0f)
 		return 0;
 
-	newSoundIntensity = soundIntensity / 5.0f;
+	const float newSoundIntensity = soundIntensity / 5.0f;
 	if (newSoundIntensity > distance)
 		return emittingVolume;
 
-	newEmittingVolume = emittingVolume * SQR((soundIntensity - newSoundIntensity - (distance - newSoundIntensity))
-		/ (soundIntensity - newSoundIntensity));
+	const float newEmittingVolume = emittingVolume * SQR((soundIntensity - newSoundIntensity - (distance - newSoundIntensity))
+		                          / (soundIntensity - newSoundIntensity));
 	return Min(127u, newEmittingVolume);
 }
 
 void
-cAudioManager::TranslateEntity(Const CVector *in, CVector *out) const
+cAudioManager::TranslateEntity(const CVector *in, CVector *out) const
 {
 	*out = MultiplyInverse(TheCamera.GetMatrix(), *in);
 }
 
 int32
-cAudioManager::ComputePan(float dist, CVector *vec)
+cAudioManager::ComputePan(const float dist, const CVector *vec)
 {
 	const uint8 PanTable[64] = { 0,  3,  8, 12, 16, 19, 22, 24, 26, 28, 30, 31, 33, 34, 36, 37, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 49, 50, 51, 52, 53, 53,
 								54, 55, 55, 56, 56, 57, 57, 58, 58, 58, 59, 59, 59, 60, 60, 61, 61, 61, 61, 62, 62, 62, 62, 62, 63, 63, 63, 63, 63, 63, 63, 63};
-	int32 index = Min(63, Abs(int32(vec->x / (dist / 64.f))));
+	const int32 index = Min(63, Abs(int32(vec->x / (dist / 64.f))));
 
 	if (vec->x > 0.f)
 		return Max(20, 63 - PanTable[index]);
@@ -524,14 +522,12 @@ cAudioManager::ComputePan(float dist, CVector *vec)
 }
 
 uint32
-cAudioManager::ComputeDopplerEffectedFrequency(uint32 oldFreq, float position1, float position2, float speedMultiplier) const
+cAudioManager::ComputeDopplerEffectedFrequency(const uint32 oldFreq, const float position1, const float position2, const float speedMultiplier) const
 {
 	uint32 newFreq = oldFreq;
 	if (!TheCamera.Get_Just_Switched_Status() && speedMultiplier != 0.0f) {
-		float dist = position2 - position1;
-		if (dist != 0.0f) {
-			float speedOfSource = (dist / m_nTimeSpent) * speedMultiplier;
-			if (m_fSpeedOfSound > Abs(speedOfSource)) {
+		if (const float dist = position2 - position1; dist != 0.0f) {
+			if (float speedOfSource = dist / m_nTimeSpent * speedMultiplier; m_fSpeedOfSound > Abs(speedOfSource)) {
 				speedOfSource = CLAMP2(speedOfSource, 0.0f, 1.5f);
 				newFreq = (oldFreq * m_fSpeedOfSound) / (speedOfSource + m_fSpeedOfSound);
 			}
@@ -541,17 +537,15 @@ cAudioManager::ComputeDopplerEffectedFrequency(uint32 oldFreq, float position1, 
 }
 
 int32
-cAudioManager::RandomDisplacement(uint32 seed) const
+cAudioManager::RandomDisplacement(const uint32 seed) const
 {
-	int32 value;
-
 	static bool bPos = true;
 	static uint32 Adjustment = 0;
 
 	if (!seed)
 		return 0;
 
-	value = m_anRandomTable[(Adjustment + seed) % 5] % seed;
+	int32 value = m_anRandomTable[(Adjustment + seed) % 5] % seed;
 	Adjustment += value;
 
 	if (value % 2) {
@@ -574,13 +568,10 @@ cAudioManager::InterrogateAudioEntities()
 void
 cAudioManager::AddSampleToRequestedQueue()
 {
-	int32 calculatedVolume;
-	uint8 sampleIndex;
-	bool bReflections;
-
 	if (m_sQueueSample.m_nSampleIndex < TOTAL_AUDIO_SAMPLES) {
-		calculatedVolume = m_sQueueSample.m_nReleasingVolumeModificator * (MAX_VOLUME - m_sQueueSample.m_nVolume);
-		sampleIndex = m_SampleRequestQueuesStatus[m_nActiveSampleQueue];
+		bool bReflections;
+		const int32 calculatedVolume = m_sQueueSample.m_nReleasingVolumeModificator * (MAX_VOLUME - m_sQueueSample.m_nVolume);
+		uint8 sampleIndex = m_SampleRequestQueuesStatus[m_nActiveSampleQueue];
 		if (sampleIndex >= m_nActiveSamples) {
 			sampleIndex = m_abSampleQueueIndexTable[m_nActiveSampleQueue][m_nActiveSamples - 1];
 			if (m_asSamples[m_nActiveSampleQueue][sampleIndex].m_nCalculatedVolume <= calculatedVolume)
@@ -616,7 +607,7 @@ cAudioManager::AddSampleToRequestedQueue()
 	}
 }
 void
-cAudioManager::AddDetailsToRequestedOrderList(uint8 sample)
+cAudioManager::AddDetailsToRequestedOrderList(const uint8 sample)
 {
 	uint32 i = 0;
 	if (sample != 0) {
@@ -640,13 +631,11 @@ cAudioManager::AddReflectionsToRequestedQueue()
 #else
   	uint32 oldFreq;
 #endif
-	float reflectionDistance;
-	int32 noise;
-	uint8 emittingVolume;
+    uint8 emittingVolume;
 
-	uint32 oldCounter = m_sQueueSample.m_nCounter;
-	float oldDist = m_sQueueSample.m_fDistance;
-	CVector oldPos = m_sQueueSample.m_vecPos;
+	const uint32 oldCounter = m_sQueueSample.m_nCounter;
+	const float oldDist = m_sQueueSample.m_fDistance;
+	const CVector oldPos = m_sQueueSample.m_vecPos;
 	if ( CTimer::GetIsSlowMotionActive() ) {
 		emittingVolume = m_sQueueSample.m_nVolume;
 		oldFreq = m_sQueueSample.m_nFrequency;
@@ -655,14 +644,14 @@ cAudioManager::AddReflectionsToRequestedQueue()
 	}
 	m_sQueueSample.m_fSoundIntensity /= 2.f;
 
-	int halfOldFreq = oldFreq >> 1;
+	const int halfOldFreq = oldFreq >> 1;
 
 	for (uint32 i = 0; i < ARRAY_SIZE(m_afReflectionsDistances); i++) {
 		if ( CTimer::GetIsSlowMotionActive() )
 			m_afReflectionsDistances[i] = GetRandomNumberInRange(i % 4, 0, 2) * 100.f / 8.f;
 
-		reflectionDistance = m_afReflectionsDistances[i];
-		if (reflectionDistance > 0.0f && reflectionDistance < 100.f && reflectionDistance < m_sQueueSample.m_fSoundIntensity) {
+		if (const float reflectionDistance = m_afReflectionsDistances[i];
+			reflectionDistance > 0.0f && reflectionDistance < 100.f && reflectionDistance < m_sQueueSample.m_fSoundIntensity) {
 			m_sQueueSample.m_nLoopsRemaining = CTimer::GetIsSlowMotionActive() ? (reflectionDistance * 800.f / 1029.f) : (reflectionDistance * 500.f / 1029.f);
 			if (m_sQueueSample.m_nLoopsRemaining > 3) {
 				m_sQueueSample.m_fDistance = m_afReflectionsDistances[i];
@@ -675,8 +664,7 @@ cAudioManager::AddReflectionsToRequestedQueue()
 						if ( CTimer::GetIsSlowMotionActive() ) {
 							m_sQueueSample.m_nFrequency = halfOldFreq + ((halfOldFreq * i) / ARRAY_SIZE(m_afReflectionsDistances));
 						} else {
-							noise = RandomDisplacement(m_sQueueSample.m_nFrequency / 32);
-							if (noise <= 0)
+							if (const int32 noise = RandomDisplacement(m_sQueueSample.m_nFrequency / 32); noise <= 0)
 								m_sQueueSample.m_nFrequency += noise;
 							else
 								m_sQueueSample.m_nFrequency -= noise;
@@ -736,7 +724,7 @@ cAudioManager::UpdateReflections()
 		camPos.y += 1.0f;
 		m_avecReflectionsPos[4] = camPos;
 		m_avecReflectionsPos[4].z += 100.0f;
-		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[4].z, colpoint, ent, true, false, false, false, true, false, nil))
+		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[4].z, colpoint, ent, true, false, false, false, true, false, nullptr))
 			m_afReflectionsDistances[4] = colpoint.point.z - camPos.z;
 		else
 			m_afReflectionsDistances[4] = 100.0f;
@@ -745,7 +733,7 @@ cAudioManager::UpdateReflections()
 		camPos.y -= 1.0f;
 		m_avecReflectionsPos[5] = camPos;
 		m_avecReflectionsPos[5].z += 100.0f;
-		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[5].z, colpoint, ent, true, false, false, false, true, false, nil))
+		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[5].z, colpoint, ent, true, false, false, false, true, false, nullptr))
 			m_afReflectionsDistances[5] = colpoint.point.z - camPos.z;
 		else
 			m_afReflectionsDistances[5] = 100.0f;
@@ -754,7 +742,7 @@ cAudioManager::UpdateReflections()
 		camPos.x -= 1.0f;
 		m_avecReflectionsPos[6] = camPos;
 		m_avecReflectionsPos[6].z += 100.0f;
-		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[6].z, colpoint, ent, true, false, false, false, true, false, nil))
+		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[6].z, colpoint, ent, true, false, false, false, true, false, nullptr))
 			m_afReflectionsDistances[6] = colpoint.point.z - camPos.z;
 		else
 			m_afReflectionsDistances[6] = 100.0f;
@@ -763,7 +751,7 @@ cAudioManager::UpdateReflections()
 		camPos.x += 1.0f;
 		m_avecReflectionsPos[7] = camPos;
 		m_avecReflectionsPos[7].z += 100.0f;
-		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[7].z, colpoint, ent, true, false, false, false, true, false, nil))
+		if (CWorld::ProcessVerticalLine(camPos, m_avecReflectionsPos[7].z, colpoint, ent, true, false, false, false, true, false, nullptr))
 			m_afReflectionsDistances[7] = colpoint.point.z - camPos.z;
 		else
 			m_afReflectionsDistances[7] = 100.0f;
@@ -775,7 +763,7 @@ cAudioManager::AddReleasingSounds()
 {
 	bool toProcess[44]; // why not 27?
 
-	int8 queue = m_nActiveSampleQueue == 0 ? 1 : 0;
+	const int8 queue = m_nActiveSampleQueue == 0 ? 1 : 0;
 
 	for (int32 i = 0; i < m_SampleRequestQueuesStatus[queue]; i++) {
 		tSound &sample = m_asSamples[queue][m_abSampleQueueIndexTable[queue][i]];
@@ -823,14 +811,10 @@ void
 cAudioManager::ProcessActiveQueues()
 {
 	CVector position;
-	uint32 freqDivided;
-	uint32 loopCount;
 	uint8 emittingVol;
 	uint8 vol;
-	uint8 offset;
 	float x;
 	bool flag;
-	bool missionState;
 
 	for (int32 i = 0; i < m_nActiveSamples; i++) {
 		m_asSamples[m_nActiveSampleQueue][i].m_bIsProcessed = false;
@@ -840,11 +824,11 @@ cAudioManager::ProcessActiveQueues()
 		tSound& sample = m_asSamples[m_nActiveSampleQueue][m_abSampleQueueIndexTable[m_nActiveSampleQueue][i]];
 		if (sample.m_nSampleIndex != NO_SAMPLE) {
 			for (int32 j = 0; j < m_nActiveSamples; j++) {
-				if (sample.m_nEntityIndex == m_asActiveSamples[j].m_nEntityIndex && 
+				if (sample.m_nEntityIndex == m_asActiveSamples[j].m_nEntityIndex &&
 					sample.m_nCounter == m_asActiveSamples[j].m_nCounter &&
 					sample.m_nSampleIndex == m_asActiveSamples[j].m_nSampleIndex) {
 					if (sample.m_nLoopCount) {
-						
+
 						if (m_FrameCounter & 1) {
 							if (!(j & 1)) {
 								flag = false;
@@ -900,9 +884,9 @@ cAudioManager::ProcessActiveQueues()
 									emittingVol = vol;
 								}
 
-								missionState = false;
-								for (int32 k = 0; k < ARRAY_SIZE(m_sMissionAudio.m_bIsMobile); k++) {
-									if (m_sMissionAudio.m_bIsMobile[k]) {
+								bool missionState = false;
+								for (bool k : m_sMissionAudio.m_bIsMobile) {
+									if (k) {
 										missionState = true;
 										break;
 									}
@@ -947,11 +931,10 @@ cAudioManager::ProcessActiveQueues()
 				sample.m_nReleasingVolumeDivider = 1;
 			} else {
 				for (uint8 j = 0; j < m_nActiveSamples; j++) {
-					uint8 k = (j + field_6) % m_nActiveSamples;
-					if (!m_asActiveSamples[k].m_bIsProcessed) {
+					if (const uint8 k = (j + field_6) % m_nActiveSamples; !m_asActiveSamples[k].m_bIsProcessed) {
 						if (sample.m_nLoopCount != 0) {
-							freqDivided = sample.m_nFrequency / m_nTimeSpent;
-							loopCount = sample.m_nLoopCount * SampleManager.GetSampleLength(sample.m_nSampleIndex);
+							const uint32 freqDivided = sample.m_nFrequency / m_nTimeSpent;
+							const uint32 loopCount = sample.m_nLoopCount * SampleManager.GetSampleLength(sample.m_nSampleIndex);
 							if (freqDivided == 0)
 								continue;
 							sample.m_nReleasingVolumeDivider = loopCount / freqDivided + 1;
@@ -967,8 +950,8 @@ cAudioManager::ProcessActiveQueues()
 						if (SampleManager.InitialiseChannel(k, m_asActiveSamples[k].m_nSampleIndex, m_asActiveSamples[k].m_nBankIndex)) {
 							SampleManager.SetChannelFrequency(k, m_asActiveSamples[k].m_nFrequency);
 							bool isMobile = false;
-							for (int32 l = 0; l < ARRAY_SIZE(m_sMissionAudio.m_bIsMobile); l++) {
-								if (m_sMissionAudio.m_bIsMobile[l]) {
+							for (const bool l : m_sMissionAudio.m_bIsMobile) {
+								if (l) {
 									isMobile = true;
 									break;
 								}
@@ -985,8 +968,7 @@ cAudioManager::ProcessActiveQueues()
 							SampleManager.SetChannelLoopCount(k, m_asActiveSamples[k].m_nLoopCount);
 							SampleManager.SetChannelReverbFlag(k, m_asActiveSamples[k].m_bReverbFlag);
 							if (m_asActiveSamples[k].m_bIs2D) {
-								offset = m_asActiveSamples[k].m_nOffset;
-								if (offset == 63) {
+								if (const uint8 offset = m_asActiveSamples[k].m_nOffset; offset == 63) {
 									x = 0.0f;
 								} else if (offset >= 63) {
 									x = (offset - 63) * 1000.0f / 63;
@@ -1057,8 +1039,8 @@ cAudioManager::ClearActiveSamples()
 void
 cAudioManager::GenerateIntegerRandomNumberTable()
 {
-	for (int32 i = 0; i < ARRAY_SIZE(m_anRandomTable); i++) {
-		m_anRandomTable[i] = myrand();
+	for (int & i : m_anRandomTable) {
+		i = myrand();
 	}
 }
 
@@ -1067,20 +1049,17 @@ void
 cAudioManager::AdjustSamplesVolume()
 {
 	for (int i = 0; i < m_SampleRequestQueuesStatus[m_nActiveSampleQueue]; i++) {
-		tSound *pSample = &m_asSamples[m_nActiveSampleQueue][m_abSampleQueueIndexTable[m_nActiveSampleQueue][i] + 1];
-
-		if (!pSample->m_bIs2D)
+		if (tSound *pSample = &m_asSamples[m_nActiveSampleQueue][m_abSampleQueueIndexTable[m_nActiveSampleQueue][i] + 1]; !pSample->m_bIs2D)
 			pSample->m_nEmittingVolume = ComputeEmittingVolume(pSample->m_nEmittingVolume, pSample->m_fSoundIntensity, pSample->m_fDistance);
 	}
 }
 
 uint8
-cAudioManager::ComputeEmittingVolume(uint8 emittingVolume, float intensity, float dist)
+cAudioManager::ComputeEmittingVolume(const uint8 emittingVolume, const float intensity, const float dist)
 {
-	float quatIntensity = intensity / 4.0f;
-	float diffIntensity = intensity - quatIntensity;
-	if (dist > diffIntensity)
-		return (quatIntensity - (dist - diffIntensity)) * (float)emittingVolume / quatIntensity;
+	const float quatIntensity = intensity / 4.0f;
+	if (const float diffIntensity = intensity - quatIntensity; dist > diffIntensity)
+		return (quatIntensity - (dist - diffIntensity)) * static_cast<float>(emittingVolume) / quatIntensity;
 	return emittingVolume;
 }
 #endif

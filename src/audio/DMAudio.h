@@ -17,17 +17,17 @@ class cDMAudio
 {
 public:
 	~cDMAudio()
-	{ }
+	= default;
 
-	void Initialise(void);
-	void Terminate(void);
-	void Service(void);
+	void Initialise();
+	void Terminate();
+	void Service();
 	
 	int32 CreateEntity(eAudioType type, void *UID);
 	void DestroyEntity(int32 audioEntity);
 	void SetEntityStatus(int32 audioEntity, uint8 status);
 	void PlayOneShot(int32 audioEntity, uint16 oneShot, float volume);
-	void DestroyAllGameCreatedEntities(void);
+	void DestroyAllGameCreatedEntities();
 	
 	void SetMonoMode(uint8 mono);
 	void SetMP3BoostVolume(uint8 volume);
@@ -36,27 +36,27 @@ public:
 	void SetEffectsFadeVol(uint8 volume);
 	void SetMusicFadeVol(uint8 volume);
 	
-	uint8 GetNum3DProvidersAvailable(void);
+	uint8 GetNum3DProvidersAvailable();
 	char *Get3DProviderName(uint8 id);
 	
-	int8 AutoDetect3DProviders(void);
+	int8 AutoDetect3DProviders();
 	
-	int8 GetCurrent3DProviderIndex(void);
+	int8 GetCurrent3DProviderIndex();
 	int8 SetCurrent3DProvider(uint8 which);
 	
 	void SetSpeakerConfig(int32 config);
 	
-	bool IsMP3RadioChannelAvailable(void);
+	bool IsMP3RadioChannelAvailable();
 	
-	void ReleaseDigitalHandle(void);
-	void ReacquireDigitalHandle(void);
+	void ReleaseDigitalHandle();
+	void ReacquireDigitalHandle();
 	
 	void SetDynamicAcousticModelingStatus(uint8 status);
 	
-	bool CheckForAnAudioFileOnCD(void);
+	bool CheckForAnAudioFileOnCD();
 	
-	char GetCDAudioDriveLetter(void);
-	bool IsAudioInitialised(void);
+	char GetCDAudioDriveLetter();
+	bool IsAudioInitialised();
 	
 	void ReportCrime(eCrimeType crime, CVector const &pos);
 	
@@ -71,15 +71,15 @@ public:
 	void PlayFrontEndSound(uint16 frontend, uint32 volume);
 	void PlayRadioAnnouncement(uint32 announcement);
 	void PlayFrontEndTrack(uint32 track, uint8 frontendFlag);
-	void StopFrontEndTrack(void);
+	void StopFrontEndTrack();
 	
 	void ResetTimers(uint32 time);
 	
 	void ChangeMusicMode(uint8 mode);
 	
 	void PreloadCutSceneMusic(uint32 track);
-	void PlayPreloadedCutSceneMusic(void);
-	void StopCutSceneMusic(void);
+	void PlayPreloadedCutSceneMusic();
+	void StopCutSceneMusic();
 	
 	void PreloadMissionAudio(uint8 slot, Const char *missionAudio);
 	uint8 GetMissionAudioLoadingStatus(uint8 slot);
@@ -88,7 +88,7 @@ public:
 	bool IsMissionAudioSampleFinished(uint8 slot);
 	void ClearMissionAudio(uint8 slot);
 
-	uint8 GetRadioInCar(void);
+	uint8 GetRadioInCar();
 	void SetRadioInCar(uint32 radio);
 	void SetRadioChannel(uint32 radio, int32 pos);
 

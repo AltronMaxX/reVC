@@ -29,7 +29,7 @@ cAudioScriptObject::operator new(size_t sz)
 }
 
 void *
-cAudioScriptObject::operator new(size_t sz, int handle)
+cAudioScriptObject::operator new(size_t sz, const int handle)
 {
 	return CPools::GetAudioScriptObjectPool()->New(handle);
 }
@@ -37,17 +37,17 @@ cAudioScriptObject::operator new(size_t sz, int handle)
 void
 cAudioScriptObject::operator delete(void *p, size_t sz)
 {
-	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
+	CPools::GetAudioScriptObjectPool()->Delete(static_cast<cAudioScriptObject *>(p));
 }
 
 void
 cAudioScriptObject::operator delete(void *p, int handle)
 {
-	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
+	CPools::GetAudioScriptObjectPool()->Delete(static_cast<cAudioScriptObject *>(p));
 }
 
 void
-cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
+cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, const uint32 size)
 {
 	INITSAVEBUF
 
@@ -58,7 +58,7 @@ cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
 	for (int32 i = 0; i < pool_size; i++) {
 		int handle;
 		ReadSaveBuf(&handle, buf);
-		cAudioScriptObject *p = new(handle) cAudioScriptObject;
+		auto *p = new(handle) cAudioScriptObject;
 		assert(p != nil);
 		ReadSaveBuf(p, buf);
 		p->AudioEntity = DMAudio.CreateLoopingScriptObject(p);
@@ -72,15 +72,14 @@ cAudioScriptObject::SaveAllAudioScriptObjects(uint8 *buf, uint32 *size)
 {
 	INITSAVEBUF
 
-	int32 pool_size = CPools::GetAudioScriptObjectPool()->GetNoOfUsedSpaces();
+	const int32 pool_size = CPools::GetAudioScriptObjectPool()->GetNoOfUsedSpaces();
 	*size = SAVE_HEADER_SIZE + sizeof(int32) + pool_size * (sizeof(cAudioScriptObject) + sizeof(int32));
 	WriteSaveHeader(buf, 'A', 'U', 'D', '\0', *size - SAVE_HEADER_SIZE);
 	WriteSaveBuf(buf, pool_size);
 
 	int32 i = CPools::GetAudioScriptObjectPool()->GetSize();
 	while (i--) {
-		cAudioScriptObject *p = CPools::GetAudioScriptObjectPool()->GetSlot(i);
-		if (p != nil) {
+		if (cAudioScriptObject *p = CPools::GetAudioScriptObjectPool()->GetSlot(i); p != nullptr) {
 			WriteSaveBuf(buf, CPools::GetAudioScriptObjectPool()->GetIndex(p));
 			WriteSaveBuf(buf, *p);
 		}
@@ -90,7 +89,7 @@ cAudioScriptObject::SaveAllAudioScriptObjects(uint8 *buf, uint32 *size)
 }
 
 void
-PlayOneShotScriptObject(uint8 id, CVector const &pos)
+PlayOneShotScriptObject(const uint8 id, CVector const &pos)
 {
 	cAudioScriptObject *audioScriptObject = new cAudioScriptObject();
 	audioScriptObject->Posn = pos;

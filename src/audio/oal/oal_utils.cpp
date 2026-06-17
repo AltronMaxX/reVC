@@ -6,7 +6,7 @@
 /*
  * When linking to a static openal-soft library,
  * the extension function inside the openal library conflict with the variables here.
- * Therefore declare these re3 owned symbols in a private namespace.
+ * Therefore, declare these re3 owned symbols in a private namespace.
  */
 
 namespace re3_openal {
@@ -91,45 +91,45 @@ void EFXInit()
 #undef LOAD_PROC
 }
 
-void SetEffectsLevel(ALuint uiFilter, float level)
+void SetEffectsLevel(const ALuint uiFilter, const float level)
 {
 	alFilteri(uiFilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
 	alFilterf(uiFilter, AL_LOWPASS_GAIN, 1.0f);
 	alFilterf(uiFilter, AL_LOWPASS_GAINHF, level);
 }
 
-static inline float gain_to_mB(float gain)
+static float gain_to_mB(const float gain)
 {
-    return (gain > 1e-5f) ? (float)(log10f(gain) * 2000.0f) : -10000l;
+    return gain > 1e-5f ? log10f(gain) * 2000.0f : -10000l;
 }
 
-static inline float mB_to_gain(float millibels)
+static float mB_to_gain(const float millibels)
 {
-    return (millibels > -10000.0f) ? powf(10.0f, millibels/2000.0f) : 0.0f;
+    return millibels > -10000.0f ? powf(10.0f, millibels/2000.0f) : 0.0f;
 }
 
-static inline float CLAMPF(float val, float minval, float maxval)
+static float CLAMPF(const float val, const float minval, const float maxval)
 {
     if(val >= maxval) return maxval;
     if(val <= minval) return minval;
     return val;
 }
 
-void EAX3_Set(ALuint effect, const EAXLISTENERPROPERTIES *props)
+void EAX3_Set(const ALuint effect, const EAXLISTENERPROPERTIES *props)
 {
 	alEffecti (effect, AL_EFFECT_TYPE,                     AL_EFFECT_EAXREVERB);
 	alEffectf (effect, AL_EAXREVERB_DENSITY,               CLAMPF(powf(props->flEnvironmentSize, 3.0f) / 16.0f, 0.0f, 1.0f));
 	alEffectf (effect, AL_EAXREVERB_DIFFUSION,             props->flEnvironmentDiffusion);
-	alEffectf (effect, AL_EAXREVERB_GAIN,                  mB_to_gain((float)props->lRoom));
-	alEffectf (effect, AL_EAXREVERB_GAINHF,                mB_to_gain((float)props->lRoomHF));
-	alEffectf (effect, AL_EAXREVERB_GAINLF,                mB_to_gain((float)props->lRoomLF));
+	alEffectf (effect, AL_EAXREVERB_GAIN,                  mB_to_gain(static_cast<float>(props->lRoom)));
+	alEffectf (effect, AL_EAXREVERB_GAINHF,                mB_to_gain(static_cast<float>(props->lRoomHF)));
+	alEffectf (effect, AL_EAXREVERB_GAINLF,                mB_to_gain(static_cast<float>(props->lRoomLF)));
 	alEffectf (effect, AL_EAXREVERB_DECAY_TIME,            props->flDecayTime);
 	alEffectf (effect, AL_EAXREVERB_DECAY_HFRATIO,         props->flDecayHFRatio);
 	alEffectf (effect, AL_EAXREVERB_DECAY_LFRATIO,         props->flDecayLFRatio);
-	alEffectf (effect, AL_EAXREVERB_REFLECTIONS_GAIN,      CLAMPF(mB_to_gain((float)props->lReflections), AL_EAXREVERB_MIN_REFLECTIONS_GAIN, AL_EAXREVERB_MAX_REFLECTIONS_GAIN));
+	alEffectf (effect, AL_EAXREVERB_REFLECTIONS_GAIN,      CLAMPF(mB_to_gain(static_cast<float>(props->lReflections)), AL_EAXREVERB_MIN_REFLECTIONS_GAIN, AL_EAXREVERB_MAX_REFLECTIONS_GAIN));
 	alEffectf (effect, AL_EAXREVERB_REFLECTIONS_DELAY,     props->flReflectionsDelay);
 	alEffectfv(effect, AL_EAXREVERB_REFLECTIONS_PAN,       &props->vReflectionsPan.x);
-	alEffectf (effect, AL_EAXREVERB_LATE_REVERB_GAIN,      CLAMPF(mB_to_gain((float)props->lReverb), AL_EAXREVERB_MIN_LATE_REVERB_GAIN, AL_EAXREVERB_MAX_LATE_REVERB_GAIN));
+	alEffectf (effect, AL_EAXREVERB_LATE_REVERB_GAIN,      CLAMPF(mB_to_gain(static_cast<float>(props->lReverb)), AL_EAXREVERB_MIN_LATE_REVERB_GAIN, AL_EAXREVERB_MAX_LATE_REVERB_GAIN));
 	alEffectf (effect, AL_EAXREVERB_LATE_REVERB_DELAY,     props->flReverbDelay);
 	alEffectfv(effect, AL_EAXREVERB_LATE_REVERB_PAN,       &props->vReverbPan.x);
 	alEffectf (effect, AL_EAXREVERB_ECHO_TIME,             props->flEchoTime);
@@ -143,35 +143,31 @@ void EAX3_Set(ALuint effect, const EAXLISTENERPROPERTIES *props)
 	alEffecti (effect, AL_EAXREVERB_DECAY_HFLIMIT,         (props->ulFlags&EAXLISTENERFLAGS_DECAYHFLIMIT) ? AL_TRUE : AL_FALSE);
 }
 
-void EFX_Set(ALuint effect, const EAXLISTENERPROPERTIES *props)
+void EFX_Set(const ALuint effect, const EAXLISTENERPROPERTIES *props)
 {
 	alEffecti(effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
 	
 	alEffectf(effect, AL_REVERB_DENSITY,               CLAMPF(powf(props->flEnvironmentSize, 3.0f) / 16.0f, 0.0f, 1.0f));
 	alEffectf(effect, AL_REVERB_DIFFUSION,             props->flEnvironmentDiffusion);
-	alEffectf(effect, AL_REVERB_GAIN,                  mB_to_gain((float)props->lRoom));
-	alEffectf(effect, AL_REVERB_GAINHF,                mB_to_gain((float)props->lRoomHF));
+	alEffectf(effect, AL_REVERB_GAIN,                  mB_to_gain(static_cast<float>(props->lRoom)));
+	alEffectf(effect, AL_REVERB_GAINHF,                mB_to_gain(static_cast<float>(props->lRoomHF)));
 	alEffectf(effect, AL_REVERB_DECAY_TIME,            props->flDecayTime);
 	alEffectf(effect, AL_REVERB_DECAY_HFRATIO,         props->flDecayHFRatio);
-	alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN,      CLAMPF(mB_to_gain((float)props->lReflections), AL_EAXREVERB_MIN_REFLECTIONS_GAIN, AL_EAXREVERB_MAX_REFLECTIONS_GAIN));
+	alEffectf(effect, AL_REVERB_REFLECTIONS_GAIN,      CLAMPF(mB_to_gain(static_cast<float>(props->lReflections)), AL_EAXREVERB_MIN_REFLECTIONS_GAIN, AL_EAXREVERB_MAX_REFLECTIONS_GAIN));
 	alEffectf(effect, AL_REVERB_REFLECTIONS_DELAY,     props->flReflectionsDelay);
-	alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN,      CLAMPF(mB_to_gain((float)props->lReverb), AL_EAXREVERB_MIN_LATE_REVERB_GAIN, AL_EAXREVERB_MAX_LATE_REVERB_GAIN));
+	alEffectf(effect, AL_REVERB_LATE_REVERB_GAIN,      CLAMPF(mB_to_gain(static_cast<float>(props->lReverb)), AL_EAXREVERB_MIN_LATE_REVERB_GAIN, AL_EAXREVERB_MAX_LATE_REVERB_GAIN));
 	alEffectf(effect, AL_REVERB_LATE_REVERB_DELAY,     props->flReverbDelay);
 	alEffectf(effect, AL_REVERB_AIR_ABSORPTION_GAINHF, CLAMPF(mB_to_gain(props->flAirAbsorptionHF), AL_EAXREVERB_MIN_AIR_ABSORPTION_GAINHF, AL_EAXREVERB_MAX_AIR_ABSORPTION_GAINHF));
 	alEffectf(effect, AL_REVERB_ROOM_ROLLOFF_FACTOR,   props->flRoomRolloffFactor);
 	alEffecti(effect, AL_REVERB_DECAY_HFLIMIT,         (props->ulFlags&EAXLISTENERFLAGS_DECAYHFLIMIT) ? AL_TRUE : AL_FALSE);
 }
 
-void EAX3_SetReverbMix(ALuint filter, float mix)
+void EAX3_SetReverbMix(const ALuint filter, const float mix)
 {
-	//long vol=(long)linear_to_dB(mix);
-	//DSPROPERTY_EAXBUFFER_ROOMHF,
-	//DSPROPERTY_EAXBUFFER_ROOM,
-	//DSPROPERTY_EAXBUFFER_REVERBMIX,
-	
-	long mbvol = gain_to_mB(mix);
-	float mb   = mbvol;
-	float mbhf = mbvol;
+
+	const long mbvol = gain_to_mB(mix);
+	const float mb   = mbvol;
+	const float mbhf = mbvol;
 	
 	alFilteri(filter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
 	alFilterf(filter, AL_LOWPASS_GAIN,   mB_to_gain(Min(mb, 0.0f)));

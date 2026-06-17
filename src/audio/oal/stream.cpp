@@ -40,37 +40,37 @@ class CSortStereoBuffer
 	uint16* PcmBuf;
 	size_t BufSize;
 public:
-	CSortStereoBuffer() : PcmBuf(nil), BufSize(0) {}
+	CSortStereoBuffer() : PcmBuf(nullptr), BufSize(0) {}
 	~CSortStereoBuffer()
 	{
 		if (PcmBuf)
 			free(PcmBuf);
 	}
 
-	uint16* GetBuffer(size_t size)
+	uint16* GetBuffer(const size_t size)
 	{
-		if (size == 0) return nil;
+		if (size == 0) return nullptr;
 		if (!PcmBuf)
 		{
 			BufSize = size;
-			PcmBuf = (uint16*)malloc(BufSize);
+			PcmBuf = static_cast<uint16 *>(malloc(BufSize));
 		}
 		else if (BufSize < size)
 		{
 			BufSize = size;
-			PcmBuf = (uint16*)realloc(PcmBuf, size);
+			PcmBuf = static_cast<uint16 *>(realloc(PcmBuf, size));
 		}
 		return PcmBuf;
 	}
 
-	void SortStereo(void* buf, size_t size)
+	void SortStereo(void* buf, const size_t size)
 	{
-		uint16* InBuf = (uint16*)buf;
+		auto* InBuf = static_cast<uint16 *>(buf);
 		uint16* OutBuf = GetBuffer(size);
 
 		if (!OutBuf) return;
 
-		size_t rightStart = size / 4;
+		const size_t rightStart = size / 4;
 		for (size_t i = 0; i < size / 4; i++)
 		{
 			OutBuf[i] = InBuf[i*2];
@@ -101,7 +101,7 @@ class CImaADPCMDecoder
 		32767
 	};
 
-	int16 Sample, StepIndex;
+	int16 Sample{}, StepIndex{};
 
 public:
 	CImaADPCMDecoder()
@@ -109,25 +109,25 @@ public:
 		Init(0, 0);
 	}
 
-	void Init(int16 _Sample, int16 _StepIndex)
+	void Init(const int16 _Sample, const int16 _StepIndex)
 	{
 		Sample = _Sample;
 		StepIndex = _StepIndex;
 	}
 
-	void Decode(uint8 *inbuf, int16 *_outbuf, size_t size)
+	void Decode(const uint8 *inbuf, int16 *_outbuf, const size_t size)
 	{
 		int16* outbuf = _outbuf;
 		for (size_t i = 0; i < size; i++)
 		{
-			*(outbuf++) = DecodeSample(inbuf[i] & 0xF);
-			*(outbuf++) = DecodeSample(inbuf[i] >> 4);
+			*outbuf++ = DecodeSample(inbuf[i] & 0xF);
+			*outbuf++ = DecodeSample(inbuf[i] >> 4);
 		}
 	}
 
-	int16 DecodeSample(uint8 adpcm)
+	int16 DecodeSample(const uint8 adpcm)
 	{
-		uint16 step = StepTable[StepIndex];
+		const uint16 step = StepTable[StepIndex];
 
 		if (adpcm & 4)
 			StepIndex += ((adpcm & 3) + 1) * 2;
@@ -142,7 +142,7 @@ public:
 		if (adpcm & 4) delta += step;
 		if (adpcm & 8) delta = -delta;
 
-		int newSample = Sample + delta;
+		const int newSample = Sample + delta;
 		Sample = CLAMP(newSample, -32768, 32767);
 		return Sample;
 	}
@@ -165,13 +165,13 @@ class CWavFile : public IDecoder
 
 	struct tFormatHeader
 	{
-		uint16 AudioFormat;
-		uint16 NumChannels;
-		uint32 SampleRate;
-		uint32 ByteRate;
-		uint16 BlockAlign;
-		uint16 BitsPerSample;
-		uint16 extra[2]; // adpcm only
+		uint16 AudioFormat{};
+		uint16 NumChannels{};
+		uint32 SampleRate{};
+		uint32 ByteRate{};
+		uint16 BlockAlign{};
+		uint16 BitsPerSample{};
+		uint16 extra[2]{}; // adpcm only
 
 		tFormatHeader() { memset(this, 0, sizeof(*this)); }
 	};
@@ -194,24 +194,24 @@ class CWavFile : public IDecoder
 	{
 		if (m_pFile) {
 			fclose(m_pFile);
-			m_pFile = nil;
+			m_pFile = nullptr;
 		}
 		delete[] m_pAdpcmBuffer;
 		delete[] m_ppPcmBuffers;
 		delete[] m_pAdpcmDecoders;
 	}
 
-	uint32 GetCurrentSample() const
+	[[nodiscard]] uint32 GetCurrentSample() const
 	{
 		// TODO: 64 bit?
-		uint32 FilePos = ftell(m_pFile);
+		const uint32 FilePos = ftell(m_pFile);
 		if (FilePos <= m_DataStartOffset)
 			return 0;
 		return (FilePos - m_DataStartOffset) / m_FormatHeader.BlockAlign * m_nSamplesPerBlock;
 	}
 
 public:
-	CWavFile(const char* path) : m_bIsOpen(false), m_DataStartOffset(0), m_nSampleCount(0), m_nSamplesPerBlock(0), m_pAdpcmBuffer(nil), m_ppPcmBuffers(nil), m_pAdpcmDecoders(nil)
+	explicit CWavFile(const char* path) : m_bIsOpen(false), m_DataStartOffset(0), m_nSampleCount(0), m_nSamplesPerBlock(0), m_pAdpcmBuffer(nullptr), m_ppPcmBuffers(nullptr), m_pAdpcmDecoders(nullptr)
 	{
 		m_pFile = fopen(path, "rb");
 		if (!m_pFile) return;
@@ -222,7 +222,7 @@ public:
 				return; \
 			}
 
-		tDataHeader DataHeader;
+		tDataHeader DataHeader{};
 
 		CLOSE_ON_ERROR(fread(&DataHeader, sizeof(DataHeader), 1, m_pFile) == 0);
 		CLOSE_ON_ERROR(DataHeader.ID != 'FFIR');
@@ -279,43 +279,43 @@ public:
 #undef CLOSE_ON_ERROR
 	}
 
-	~CWavFile()
+	~CWavFile() override
 	{
 		Close();
 	}
 
-	bool IsOpened()
+	bool IsOpened() override
 	{
 		return m_bIsOpen;
 	}
 
-	uint32 GetSampleSize()
+	uint32 GetSampleSize() override
 	{
 		return sizeof(uint16);
 	}
 
-	uint32 GetSampleCount()
+	uint32 GetSampleCount() override
 	{
 		return m_nSampleCount;
 	}
 
-	uint32 GetSampleRate()
+	uint32 GetSampleRate() override
 	{
 		return m_FormatHeader.SampleRate;
 	}
 
-	uint32 GetChannels()
+	uint32 GetChannels() override
 	{
 		return m_FormatHeader.NumChannels;
 	}
 
-	void Seek(uint32 milliseconds)
+	void Seek(const uint32 milliseconds) override
 	{
 		if (!IsOpened()) return;
 		fseek(m_pFile, m_DataStartOffset + ms2samples(milliseconds) / m_nSamplesPerBlock * m_FormatHeader.BlockAlign, SEEK_SET);
 	}
 
-	uint32 Tell()
+	uint32 Tell() override
 	{
 		if (!IsOpened()) return 0;
 		return samples2ms(GetCurrentSample());
@@ -323,14 +323,14 @@ public:
 
 #define SAMPLES_IN_LINE (8)
 
-	uint32 Decode(void* buffer)
+	uint32 Decode(void* buffer) override
 	{
 		if (!IsOpened()) return 0;
 		
 		if (m_FormatHeader.AudioFormat == WAVEFMT_PCM)
 		{
 			// just read the file and sort the samples
-			uint32 size = fread(buffer, 1, GetBufferSize(), m_pFile);
+			const uint32 size = fread(buffer, 1, GetBufferSize(), m_pFile);
 			if (m_FormatHeader.NumChannels == 2)
 				SortStereoBuffer.SortStereo(buffer, size);
 			return size;
@@ -339,19 +339,19 @@ public:
 		{
 			// trim the buffer size if we're at the end of our file
 			uint32 nMaxSamples = GetBufferSamples() / m_FormatHeader.NumChannels;
-			uint32 nSamplesLeft = m_nSampleCount - GetCurrentSample();
+			const uint32 nSamplesLeft = m_nSampleCount - GetCurrentSample();
 			nMaxSamples = Min(nMaxSamples, nSamplesLeft);
 
 			// align sample count to our block
 			nMaxSamples = nMaxSamples / m_nSamplesPerBlock * m_nSamplesPerBlock;
 
 			// count the size of output buffer
-			uint32 OutBufSizePerChannel = nMaxSamples * GetSampleSize();
-			uint32 OutBufSize = OutBufSizePerChannel * m_FormatHeader.NumChannels;
+			const uint32 OutBufSizePerChannel = nMaxSamples * GetSampleSize();
+			const uint32 OutBufSize = OutBufSizePerChannel * m_FormatHeader.NumChannels;
 
 			// calculate the pointers to individual channel buffers
 			for (uint32 i = 0; i < m_FormatHeader.NumChannels; i++)
-				m_ppPcmBuffers[i] = (int16*)((int8*)buffer + OutBufSizePerChannel * i);
+				m_ppPcmBuffers[i] = reinterpret_cast<int16 *>(static_cast<int8 *>(buffer) + OutBufSizePerChannel * i);
 
 			uint32 samplesRead = 0;
 			while (samplesRead < nMaxSamples)
@@ -364,9 +364,9 @@ public:
 				// get the first sample in adpcm block and initialise the decoder(s)
 				for (uint32 i = 0; i < m_FormatHeader.NumChannels; i++)
 				{
-					int16 Sample = *(int16*)pAdpcmBuf;
+					const int16 Sample = *reinterpret_cast<int16 *>(pAdpcmBuf);
 					pAdpcmBuf += sizeof(int16);
-					int16 Step = *(int16*)pAdpcmBuf;
+					const int16 Step = *reinterpret_cast<int16 *>(pAdpcmBuf);
 					pAdpcmBuf += sizeof(int16);
 					m_pAdpcmDecoders[i].Init(Sample, Step);
 					*(m_ppPcmBuffers[i]) = Sample;
@@ -476,18 +476,18 @@ protected:
 	uint32 m_nChannels;
 	
 	CMP3File() :
-		m_pMH(nil),
+		m_pMH(nullptr),
 		m_bOpened(false),
 		m_nRate(0),
 		m_nChannels(0) {}
 public:
-	CMP3File(const char *path) :
-		m_pMH(nil),
+	explicit CMP3File(const char *path) :
+		m_pMH(nullptr),
 		m_bOpened(false),
 		m_nRate(0),
 		m_nChannels(0)
 	{
-		m_pMH = mpg123_new(nil, nil);
+		m_pMH = mpg123_new(nullptr, nullptr);
 		if ( m_pMH )
 		{
 #ifdef MP3_USE_FUZZY_SEEK
@@ -505,7 +505,7 @@ public:
 			m_nRate = rate;
 			m_nChannels = channels;
 			
-			if ( IsOpened() )
+			if (CMP3File::IsOpened() )
 			{
 				mpg123_format_none(m_pMH);
 				mpg123_format(m_pMH, rate, channels, encoding);
@@ -513,93 +513,93 @@ public:
 		}
 	}
 	
-	~CMP3File()
+	~CMP3File() override
 	{
 		if ( m_pMH )
 		{
 			mpg123_close(m_pMH);
 			mpg123_delete(m_pMH);
-			m_pMH = nil;
+			m_pMH = nullptr;
 		}
 	}
 	
-	bool IsOpened()
+	bool IsOpened() override
 	{
 		return m_bOpened;
 	}
 	
-	uint32 GetSampleSize()
+	uint32 GetSampleSize() override
 	{
 		return sizeof(uint16);
 	}
 	
-	uint32 GetSampleCount()
+	uint32 GetSampleCount() override
 	{
 		if ( !IsOpened() ) return 0;
 		return mpg123_length(m_pMH);
 	}
 	
-	uint32 GetSampleRate()
+	uint32 GetSampleRate() override
 	{
 		return m_nRate;
 	}
 	
-	uint32 GetChannels()
+	uint32 GetChannels() override
 	{
 		return m_nChannels;
 	}
 	
-	void Seek(uint32 milliseconds)
+	void Seek(const uint32 milliseconds) override
 	{
 		if ( !IsOpened() ) return;
 		mpg123_seek(m_pMH, ms2samples(milliseconds), SEEK_SET);
 	}
 	
-	uint32 Tell()
+	uint32 Tell() override
 	{
 		if ( !IsOpened() ) return 0;
 		return samples2ms(mpg123_tell(m_pMH));
 	}
 	
-	uint32 Decode(void *buffer)
+	uint32 Decode(void *buffer) override
 	{
 		if ( !IsOpened() ) return 0;
 		
 		size_t size;
-		int err = mpg123_read(m_pMH, (unsigned char *)buffer, GetBufferSize(), &size);
+		const int err = mpg123_read(m_pMH, buffer, GetBufferSize(), &size);
 #if defined(__LP64__) || defined(_WIN64)
 		assert("We can't handle audio files more then 2 GB yet :shrug:" && (size < UINT32_MAX));
 #endif
 		if (err != MPG123_OK && err != MPG123_DONE) return 0;
 		if (GetChannels() == 2)
 			SortStereoBuffer.SortStereo(buffer, size);
-		return (uint32)size;
+		return size;
 	}
 };
 
 class CADFFile : public CMP3File
 {
-	static ssize_t r_read(void* fh, void* buf, size_t size)
+	static ssize_t r_read(void* fh, void* buf, const size_t size)
 	{
-		size_t bytesRead = fread(buf, 1, size, (FILE*)fh);
-		uint8* _buf = (uint8*)buf;
+		const size_t bytesRead = fread(buf, 1, size, static_cast<FILE *>(fh));
+		auto* _buf = static_cast<uint8 *>(buf);
 		for (size_t i = 0; i < size; i++)
 			_buf[i] ^= 0x22;
 		return bytesRead;
 	}
-	static off_t r_seek(void* fh, off_t pos, int seekType)
+	static off_t r_seek(void* fh, const off_t pos, const int seekType)
 	{
-		fseek((FILE*)fh, pos, seekType);
-		return ftell((FILE*)fh);
+		fseek(static_cast<FILE *>(fh), pos, seekType);
+		return ftell(static_cast<FILE *>(fh));
 	}
 	static void r_close(void* fh)
 	{
-		fclose((FILE*)fh);
+		fclose(static_cast<FILE *>(fh));
 	}
 public:
-	CADFFile(const char* path)
+	explicit CADFFile(const char* path)
 	{
-		m_pMH = mpg123_new(nil, nil);
+		m_pMH = mpg123_new(nullptr, nullptr);
 		if (m_pMH)
 		{
 #ifdef MP3_USE_FUZZY_SEEK
@@ -618,7 +618,7 @@ public:
 			m_nRate = rate;
 			m_nChannels = channels;
 
-			if (IsOpened())
+			if (CMP3File::IsOpened())
 			{
 				mpg123_format_none(m_pMH);
 				mpg123_format(m_pMH, rate, channels, encoding);
@@ -639,8 +639,8 @@ class CVagDecoder
 					{  98.0 / 64.0, -55.0 / 64.0 },
 					{  122.0 / 64.0, -60.0 / 64.0 } };
 
-	double s_1;
-	double s_2;
+	double s_1{};
+	double s_2{};
 public:
 	CVagDecoder()
 	{
@@ -652,41 +652,39 @@ public:
 		s_1 = s_2 = 0.0;
 	}
 
-	static short quantize(double sample)
+	static short quantize(const double sample)
 	{
-		int a = int(sample + 0.5);
-		return short(CLAMP(a, -32768, 32767));
+		const int a = lround(sample + 0.5);
+		return static_cast<short>(CLAMP(a, -32768, 32767));
 	}
 
 	void Decode(void* _inbuf, int16* _outbuf, size_t size)
 	{
-		uint8* inbuf = (uint8*)_inbuf;
+		const uint8* inbuf = static_cast<uint8 *>(_inbuf);
 		int16* outbuf = _outbuf;
 		size &= ~(VAG_LINE_SIZE - 1);
 
 		while (size > 0) {
 			double samples[VAG_SAMPLES_IN_LINE];
 
-			int predict_nr, shift_factor, flags;
-			predict_nr = *(inbuf++);
-			shift_factor = predict_nr & 0xf;
+			int predict_nr = *(inbuf++);
+			const int shift_factor = predict_nr & 0xf;
 			predict_nr >>= 4;
-			flags = *(inbuf++);
-			if (flags == 7) // TODO: ignore?
+			if (const int flags = *inbuf++; flags == 7) // TODO: ignore?
 				break;
 			for (int i = 0; i < VAG_SAMPLES_IN_LINE; i += 2) {
-				int d = *(inbuf++);
-				int16 s = int16((d & 0xf) << 12);
-				samples[i] = (double)(s >> shift_factor);
-				s = int16((d & 0xf0) << 8);
-				samples[i + 1] = (double)(s >> shift_factor);
+				const int d = *inbuf++;
+				auto s = static_cast<int16>((d & 0xf) << 12);
+				samples[i] = static_cast<double>(s >> shift_factor);
+				s = static_cast<int16>((d & 0xf0) << 8);
+				samples[i + 1] = static_cast<double>(s >> shift_factor);
 			}
 
-			for (int i = 0; i < VAG_SAMPLES_IN_LINE; i++) {
-				samples[i] = samples[i] + s_1 * f[predict_nr][0] + s_2 * f[predict_nr][1];
+			for (double & sample : samples) {
+				sample = sample + s_1 * f[predict_nr][0] + s_2 * f[predict_nr][1];
 				s_2 = s_1;
-				s_1 = samples[i];
-				*(outbuf++) = quantize(samples[i] + 0.5);
+				s_1 = sample;
+				*outbuf++ = quantize(sample + 0.5);
 			}
 			size -= VAG_LINE_SIZE;
 		}
@@ -714,7 +712,7 @@ class CVbFile : public IDecoder
 	uint8 **m_ppVagBuffers; // buffers that cache actual ADPCM file data
 	int16 **m_ppPcmBuffers;
 
-	void ReadBlock(int32 block = -1)
+	void ReadBlock(const int32 block = -1)
 	{
 		// just read next block if -1
 		if (block != -1)
@@ -726,8 +724,8 @@ class CVbFile : public IDecoder
 	}
 
 public:
-	CVbFile(const char* path, uint32 nSampleRate = 32000, uint8 nChannels = 2) : m_nSampleRate(nSampleRate), m_nChannels(nChannels), m_pVagDecoders(nil), m_ppVagBuffers(nil), m_ppPcmBuffers(nil),
-		m_FileSize(0), m_nNumberOfBlocks(0), m_bBlockRead(false), m_LineInBlock(0), m_CurrentBlock(0)
+	explicit CVbFile(const char* path, const uint32 nSampleRate = 32000, const uint8 nChannels = 2) : m_pVagDecoders(nullptr), m_FileSize(0), m_nNumberOfBlocks(0), m_nSampleRate(nSampleRate), m_nChannels(nChannels),
+	                                                                                      m_bBlockRead(false), m_LineInBlock(0), m_CurrentBlock(0), m_ppVagBuffers(nullptr), m_ppPcmBuffers(nullptr)
 	{
 		m_pFile = fopen(path, "rb");
 		if (!m_pFile) return;
@@ -744,7 +742,7 @@ public:
 			m_ppVagBuffers[i] = new uint8[VB_BLOCK_SIZE];
 	}
 
-	~CVbFile()
+	~CVbFile() override
 	{
 		if (m_pFile)
 		{
@@ -758,33 +756,33 @@ public:
 		}
 	}
 
-	bool IsOpened()
+	bool IsOpened() override
 	{
-		return m_pFile != nil;
+		return m_pFile != nullptr;
 	}
 
-	uint32 GetSampleSize()
+	uint32 GetSampleSize() override
 	{
 		return sizeof(uint16);
 	}
 
-	uint32 GetSampleCount()
+	uint32 GetSampleCount() override
 	{
 		if (!IsOpened()) return 0;
 		return m_nNumberOfBlocks * NUM_VAG_LINES_IN_BLOCK * VAG_SAMPLES_IN_LINE;
 	}
 
-	uint32 GetSampleRate()
+	uint32 GetSampleRate() override
 	{
 		return m_nSampleRate;
 	}
 
-	uint32 GetChannels()
+	uint32 GetChannels() override
 	{
 		return m_nChannels;
 	}
 
-	void Seek(uint32 milliseconds)
+	void Seek(const uint32 milliseconds) override
 	{
 		if (!IsOpened()) return;
 		uint32 samples = ms2samples(milliseconds);
@@ -800,10 +798,9 @@ public:
 			m_bBlockRead = false;
 
 		// find a line of our sample within our block
-		uint32 remainingSamples = samples - block * NUM_VAG_SAMPLES_IN_BLOCK;
-		uint32 newLine = remainingSamples / VAG_SAMPLES_IN_LINE / VAG_LINE_SIZE;
+		const uint32 remainingSamples = samples - block * NUM_VAG_SAMPLES_IN_BLOCK;
 
-		if (m_CurrentBlock != block || m_LineInBlock != newLine)
+		if (const uint32 newLine = remainingSamples / VAG_SAMPLES_IN_LINE / VAG_LINE_SIZE; m_CurrentBlock != block || m_LineInBlock != newLine)
 		{
 			m_CurrentBlock = block;
 			m_LineInBlock = newLine;
@@ -813,14 +810,14 @@ public:
 
 	}
 
-	uint32 Tell()
+	uint32 Tell() override
 	{
 		if (!IsOpened()) return 0;
-		uint32 pos = (m_CurrentBlock * NUM_VAG_LINES_IN_BLOCK + m_LineInBlock) * VAG_SAMPLES_IN_LINE;
+		const uint32 pos = (m_CurrentBlock * NUM_VAG_LINES_IN_BLOCK + m_LineInBlock) * VAG_SAMPLES_IN_LINE;
 		return samples2ms(pos);
 	}
 
-	uint32 Decode(void* buffer)
+	uint32 Decode(void* buffer) override
 	{
 		if (!IsOpened()) return 0;
 
@@ -831,13 +828,13 @@ public:
 			ReadBlock(m_CurrentBlock);
 
 		// trim the buffer size if we're at the end of our file
-		int numberOfRequiredLines = GetBufferSamples() / m_nChannels / VAG_SAMPLES_IN_LINE;
-		int numberOfRemainingLines = (m_nNumberOfBlocks - m_CurrentBlock) * NUM_VAG_LINES_IN_BLOCK - m_LineInBlock;
-		int bufSizePerChannel = Min(numberOfRequiredLines, numberOfRemainingLines) * VAG_SAMPLES_IN_LINE * GetSampleSize();
+		const int numberOfRequiredLines = GetBufferSamples() / m_nChannels / VAG_SAMPLES_IN_LINE;
+		const int numberOfRemainingLines = (m_nNumberOfBlocks - m_CurrentBlock) * NUM_VAG_LINES_IN_BLOCK - m_LineInBlock;
+		const int bufSizePerChannel = Min(numberOfRequiredLines, numberOfRemainingLines) * VAG_SAMPLES_IN_LINE * GetSampleSize();
 
 		// calculate the pointers to individual channel buffers
 		for (uint32 i = 0; i < m_nChannels; i++)
-			m_ppPcmBuffers[i] = (int16*)((int8*)buffer + bufSizePerChannel * i);
+			m_ppPcmBuffers[i] = reinterpret_cast<int16 *>(static_cast<int8 *>(buffer) + bufSizePerChannel * i);
 
 		int size = 0;
 		while (size < bufSizePerChannel)
@@ -975,13 +972,13 @@ void CStream::Terminate()
 #endif
 }
 
-CStream::CStream(char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS], uint32 overrideSampleRate) :
+CStream::CStream(const char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS], uint32 overrideSampleRate) :
 	m_pAlSources(sources),
 	m_alBuffers(buffers),
-	m_pBuffer(nil),
+	m_pBuffer(nullptr),
 	m_bPaused(false),
 	m_bActive(false),
-	m_pSoundFile(nil),
+	m_pSoundFile(nullptr),
 	m_bReset(false),
 	m_nVolume(0),
 	m_nPan(0),
@@ -991,8 +988,7 @@ CStream::CStream(char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBU
 {
 // Be case-insensitive on linux (from https://github.com/OneSadCookie/fcaseopen/)
 #if !defined(_WIN32)
-	char *real = casepath(filename);
-	if (real) {
+if (char *real = casepath(filename)) {
 		strcpy(m_aFilename, real);
 		free(real);
 	} else {
@@ -1023,7 +1019,7 @@ CStream::CStream(char *filename, ALuint *sources, ALuint (&buffers)[NUM_STREAMBU
 		m_pSoundFile = new COpusFile(m_aFilename);
 #endif
 	else 
-		m_pSoundFile = nil;
+		m_pSoundFile = nullptr;
 
 	if ( IsOpened() )
 	{
@@ -1055,28 +1051,25 @@ void CStream::Delete()
 	if ( m_pSoundFile )
 	{
 		delete m_pSoundFile;
-		m_pSoundFile = nil;
+		m_pSoundFile = nullptr;
 	}
 	
 	if ( m_pBuffer )
 	{
 		free(m_pBuffer);
-		m_pBuffer = nil;
+		m_pBuffer = nullptr;
 	}
 }
 
-bool CStream::HasSource()
-{
+bool CStream::HasSource() const {
 	return (m_pAlSources[0] != AL_NONE) && (m_pAlSources[1] != AL_NONE);
 }
 
-bool CStream::IsOpened()
-{
+bool CStream::IsOpened() const {
 	return m_pSoundFile && m_pSoundFile->IsOpened();
 }
 
-bool CStream::IsPlaying()
-{
+bool CStream::IsPlaying() const {
 	if ( !HasSource() || !IsOpened() ) return false;
 	
 	if ( !m_bPaused )
@@ -1091,8 +1084,7 @@ bool CStream::IsPlaying()
 	return false;
 }
 
-void CStream::Pause()
-{
+void CStream::Pause() const {
 	if ( !HasSource() ) return;
 	ALint sourceState = AL_PAUSED;
 	alGetSourcei(m_pAlSources[0], AL_SOURCE_STATE, &sourceState);
@@ -1103,7 +1095,7 @@ void CStream::Pause()
 		alSourcePause(m_pAlSources[1]);
 }
 
-void CStream::SetPause(bool bPause)
+void CStream::SetPause(const bool bPause)
 {
 	if ( !HasSource() ) return;
 	if ( bPause )
@@ -1119,33 +1111,30 @@ void CStream::SetPause(bool bPause)
 	}
 }
 
-void CStream::SetPitch(float pitch)
-{
+void CStream::SetPitch(const float pitch) const {
 	if ( !HasSource() ) return;
 	alSourcef(m_pAlSources[0], AL_PITCH, pitch);
 	alSourcef(m_pAlSources[1], AL_PITCH, pitch);
 }
 
-void CStream::SetGain(float gain)
-{
+void CStream::SetGain(const float gain) const {
 	if ( !HasSource() ) return;
 	alSourcef(m_pAlSources[0], AL_GAIN, gain);
 	alSourcef(m_pAlSources[1], AL_GAIN, gain);
 }
 
-void CStream::SetPosition(int i, float x, float y, float z)
-{
+void CStream::SetPosition(const int i, const float x, const float y, const float z) const {
 	if ( !HasSource() ) return;
 	alSource3f(m_pAlSources[i], AL_POSITION, x, y, z);
 }
 
-void CStream::SetVolume(uint32 nVol)
+void CStream::SetVolume(const uint32 nVol)
 {
 	m_nVolume = nVol;
-	SetGain(ALfloat(nVol) / MAX_VOLUME);
+	SetGain(static_cast<ALfloat>(nVol) / MAX_VOLUME);
 }
 
-void CStream::SetPan(uint8 nPan)
+void CStream::SetPan(const uint8 nPan)
 {
 	m_nPan = CLAMP((int8)nPan - 63, 0, 63);
 	SetPosition(0, (m_nPan - 63) / 64.0f, 0.0f, Sqrt(1.0f - SQR((m_nPan - 63) / 64.0f)));
@@ -1157,15 +1146,14 @@ void CStream::SetPan(uint8 nPan)
 }
 
 // Should only be called if source is stopped
-void CStream::SetPosMS(uint32 nPos)
+void CStream::SetPosMS(const uint32 nPos)
 {
 	if ( !IsOpened() ) return;
 	m_pSoundFile->Seek(nPos);
 	ClearBuffers();
 }
 
-uint32 CStream::GetPosMS()
-{
+uint32 CStream::GetPosMS() const {
 	if ( !HasSource() ) return 0;
 	if ( !IsOpened() ) return 0;
 	
@@ -1178,14 +1166,12 @@ uint32 CStream::GetPosMS()
 		+ m_pSoundFile->samples2ms(offset/m_pSoundFile->GetSampleSize()) / m_pSoundFile->GetChannels();
 }
 
-uint32 CStream::GetLengthMS()
-{
+uint32 CStream::GetLengthMS() const {
 	if ( !IsOpened() ) return 0;
 	return m_pSoundFile->GetLength();
 }
 
-bool CStream::FillBuffer(ALuint *alBuffer)
-{
+bool CStream::FillBuffer(const ALuint *alBuffer) const {
 	if ( !HasSource() )
 		return false;
 	if ( !IsOpened() )
@@ -1194,24 +1180,23 @@ bool CStream::FillBuffer(ALuint *alBuffer)
 		return false;
 	if ( !(alBuffer[1] != AL_NONE && alIsBuffer(alBuffer[1])) )
 		return false;
-	
-	uint32 size = m_pSoundFile->Decode(m_pBuffer);
+
+	const uint32 size = m_pSoundFile->Decode(m_pBuffer);
 	if( size == 0 )
 		return false;
-	
-	uint32 channelSize = size / m_pSoundFile->GetChannels();
+
+	const uint32 channelSize = size / m_pSoundFile->GetChannels();
 
 	alBufferData(alBuffer[0], AL_FORMAT_MONO16, m_pBuffer, channelSize, m_pSoundFile->GetSampleRate());
 	// TODO: use just one buffer if we play mono
 	if (m_pSoundFile->GetChannels() == 1)
 		alBufferData(alBuffer[1], AL_FORMAT_MONO16, m_pBuffer, channelSize, m_pSoundFile->GetSampleRate());
 	else
-		alBufferData(alBuffer[1], AL_FORMAT_MONO16, (uint8*)m_pBuffer + channelSize, channelSize, m_pSoundFile->GetSampleRate());
+		alBufferData(alBuffer[1], AL_FORMAT_MONO16, static_cast<uint8 *>(m_pBuffer) + channelSize, channelSize, m_pSoundFile->GetSampleRate());
 	return true;
 }
 
-int32 CStream::FillBuffers()
-{
+int32 CStream::FillBuffers() const {
 	int32 i = 0;
 	for ( i = 0; i < NUM_STREAMBUFFERS/2; i++ )
 	{
@@ -1224,8 +1209,7 @@ int32 CStream::FillBuffers()
 	return i;
 }
 
-void CStream::ClearBuffers()
-{
+void CStream::ClearBuffers() const {
 	if ( !HasSource() ) return;
 	
 	ALint buffersQueued[2];
@@ -1239,7 +1223,7 @@ void CStream::ClearBuffers()
 		alSourceUnqueueBuffers(m_pAlSources[1], 1, &value);
 }
 
-bool CStream::Setup(bool imSureQueueIsEmpty)
+bool CStream::Setup(const bool imSureQueueIsEmpty)
 {
 	if ( IsOpened() )
 	{
@@ -1259,14 +1243,14 @@ bool CStream::Setup(bool imSureQueueIsEmpty)
 	return IsOpened();
 }
 
-void CStream::SetLoopCount(int32 count)
+void CStream::SetLoopCount(const int32 count)
 {
 	if ( !HasSource() ) return;
 
 	m_nLoopCount = count;
 }
 
-void CStream::SetPlay(bool state)
+void CStream::SetPlay(const bool state)
 {
 	if ( !HasSource() ) return;
 	if ( state )
@@ -1376,7 +1360,7 @@ void CStream::Update()
 		}
 
 		// Two reasons: 1-Source may be starved to audio and stopped itself, 2- We're already waiting it to starve and die for looping track!
-		if (m_bActive && (buffersRefilled || (totalBuffers[1] - buffersProcessed[1] != 0)))
+		if (m_bActive && (buffersRefilled || totalBuffers[1] - buffersProcessed[1] != 0))
 			SetPlay(true);
 	}
 }
