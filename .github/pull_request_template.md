@@ -4,7 +4,7 @@ We **don't** accept custom codes, as long as it's not wrapped via preprocessor c
 
 We accept only these kinds of PRs;
 
-- A new feature that exists in at least one of the GTAs (if it wasn't in III/VC then it doesn't have to be decompilation)  
+- A new feature that exists in GTA Vice City, or a clearly isolated compatibility improvement
 - Game, UI or UX bug fixes (if it's a fix to R* code, it should be behind FIX_BUGS)
 - Platform-specific and/or unused code that's not been reversed yet
 - Makes reversed code more understandable/accurate, as in "which code would produce this assembly".

@@ -1,4 +1,4 @@
-<img src="https://github.com/AltronMaxX/re3/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
+<img src="https://github.com/AltronMaxX/reVC/blob/miami/logo.png?raw=true" alt="reVC logo" width="200">
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FAltronMaxX%2FreVC%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/AltronMaxX/reVC/goto?ref=miami)
 <a href="https://discord.gg/ERYg58ttcE"><img src="https://img.shields.io/badge/discord-join-7289DA.svg?logo=discord&longCache=true&style=flat" /></a>
@@ -68,10 +68,10 @@ The following things would be nice to have/do:
 
 ## Modding
 
-Asset modifications (models, texture, handling, script, ...) should work the same way as with original GTA for the most part.
+Asset modifications (models, texture, handling, script, ...) should work the same way as with the original game for the most part.
 
 Mods that make changes to the code (dll/asi, CLEO, limit adjusters) will *not* work.
-Some things these mods do are already implemented in re3 (much of SkyGFX, GInput, SilentPatch, Widescreen fix),
+Some things these mods do are already implemented in reVC (much of SkyGFX, GInput, SilentPatch, Widescreen fix),
 others can easily be achieved (increasing limis, see `config.h`),
 others will simply have to be rewritten and integrated into the code directly.
 Sorry for the inconvenience.
@@ -80,7 +80,7 @@ Sorry for the inconvenience.
 
 When using premake, you may want to point GTA_VC_RE_DIR environment variable to GTA Vice City root folder if you want the executable to be moved there via post-build script.
 
-Clone the repository with `git clone --recursive -b miami https://github.com/GTAmodding/re3.git reVC`. Then `cd reVC` into the cloned repository.
+Clone the repository with `git clone --recursive -b miami https://github.com/AltronMaxX/reVC.git`. Then `cd reVC` into the cloned repository.
 
 <details><summary>Linux Premake</summary>
 
@@ -115,7 +115,7 @@ Microsoft recently discontinued its downloads of the DX9 SDK. You can download a
 
 > :information_source: There are various settings in [config.h](https://github.com/AltronMaxX/reVC/tree/miami/src/core/config.h), you may want to take a look there.
 
-> :information_source: reVC uses completely homebrew RenderWare-replacement rendering engine; [librw](https://github.com/aap/librw/). librw comes as submodule of re3, but you also can use LIBRW enviorenment variable to specify path to your own librw.
+> :information_source: reVC uses completely homebrew RenderWare-replacement rendering engine; [librw](https://github.com/aap/librw/). librw is included as a submodule, but you also can use LIBRW enviorenment variable to specify path to your own librw.
 
 If you feel the need, you can also use CodeWarrior 7 to compile reVC using the supplied codewarrior/reVC.mcp project - this requires the original RW34 libraries, and the DX8 SDK. The build is unstable compared to the MSVC builds though, and is mostly meant to serve as a reference.
 
@@ -126,7 +126,7 @@ We **don't** accept custom codes, as long as it's not wrapped via preprocessor c
 
 We accept only these kinds of PRs;
 
-- A new feature that exists in at least one of the GTAs (if it wasn't in III/VC then it doesn't have to be decompilation)  
+- A new feature that exists in at least one Vice City release or supported platform variant
 - Game, UI or UX bug fixes (if it's a fix to original code, it should be behind FIX_BUGS)
 - Platform-specific and/or unused code that's not been reversed yet
 - Makes reversed code more understandable/accurate, as in "which code would produce this assembly".
@@ -135,39 +135,6 @@ We accept only these kinds of PRs;
 - Code that increase maintainability  
 
 We have a [Coding Style](https://github.com/AltronMaxX/reVC/blob/master/CODING_STYLE.md) document that isn't followed or enforced very well.
-
-Do not use features from C++11 or later.
-
-
-## History
-
-re3 was started sometime in the spring of 2018,
-initially as a way to test reversed collision and physics code
-inside the game.
-This was done by replacing single functions of the game
-with their reversed counterparts using a dll.
-
-After a bit of work the project lay dormant for about a year
-and was picked up again and pushed to github in May 2019.
-At the time I (aap) had reversed around 10k lines of code and estimated
-the final game to have around 200-250k.
-Others quickly joined the effort (Fire_Head, shfil, erorcun and Nick007J
-in time order, and Serge a bit later) and we made very quick progress
-throughout the summer of 2019
-after which the pace slowed down a bit.
-
-Due to everyone staying home during the start of the Corona pandemic
-everybody had a lot of time to work on re3 again and
-we finally got a standalone exe in April 2020 (around 180k lines by then).
-
-After the initial excitement and fixing and polishing the code further,
-reVC was started in early May 2020 by starting from re3 code,
-not by starting from scratch replacing functions with a dll.
-After a few months of mostly steady progress we considered reVC
-finished in December.
-
-Since then we have started reLCS, which is currently work in progress.
-
 
 ## License
 

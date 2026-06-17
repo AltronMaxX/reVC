@@ -73,9 +73,9 @@ if(${PROJECT}_INSTALL)
     endif()
 
     set(CPACK_PACKAGE_NAME "${PROJECT_NAME}${platform}${audio}${os}${compiler}")
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GTA III reversed")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "GTA Vice City reversed")
     set(CPACK_PACKAGE_VENDOR "GTAModding")
-    # FIXME: missing license (https://github.com/GTAmodding/re3/issues/794)
+    # FIXME: missing license
     # set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/LICENSE")
     # set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
     set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_NAME}")

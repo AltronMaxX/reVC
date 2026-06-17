@@ -225,6 +225,7 @@ CCamera::Init(void)
 	LODDistMultiplier = 1.0f;
 	GenerationDistMultiplier = 1.0f;
 	PopulationDistMultiplier = 1.0f;
+	VehicleLODDistMultiplier = 1.0f;
 	m_bCamDirectlyBehind = false;
 	m_bCamDirectlyInFront = false;
 	m_motionBlur = 0;
@@ -633,6 +634,7 @@ CCamera::Process(void)
 	GenerationDistMultiplier = LODDistMultiplier;
 	LODDistMultiplier *= CRenderer::ms_lodDistScale;
 	PopulationDistMultiplier = Min(LODDistMultiplier, 3.0f);
+	VehicleLODDistMultiplier = PopulationDistMultiplier;
 
 	CDraw::SetNearClipZ(RwCameraGetNearClipPlane(m_pRwCamera));
 	CDraw::SetFarClipZ(RwCameraGetFarClipPlane(m_pRwCamera));

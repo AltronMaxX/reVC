@@ -57,7 +57,7 @@ void CCarGenerator::DoInternalProcessing()
 			m_nTimer += 4;
 			return;
 		}
-		CStreaming::RequestModel(m_nModelIndex, STREAMFLAGS_DEPENDENCY);
+		CStreaming::RequestModel(m_nModelIndex, STREAMFLAGS_DEPENDENCY | STREAMFLAGS_PRIORITY);
 		mi = m_nModelIndex;
 	}
 	else {

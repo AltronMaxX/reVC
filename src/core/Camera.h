@@ -419,6 +419,7 @@ public:
 	float LODDistMultiplier;
 	float GenerationDistMultiplier;
 	float PopulationDistMultiplier;
+	float VehicleLODDistMultiplier;
 	float m_fAlphaSpeedAtStartInter;
 	float m_fAlphaWhenInterPol;
 	float m_fAlphaDuringInterPol;

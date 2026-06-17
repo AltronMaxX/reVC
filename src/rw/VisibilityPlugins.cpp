@@ -136,9 +136,7 @@ CVisibilityPlugins::InsertAtomicIntoBoatSortedList(RpAtomic *a, float dist)
 	return !!m_alphaBoatAtomicList.InsertSorted(item);
 }
 
-// can't increase this yet unfortunately...
-// probably have to fix fading for this so material alpha isn't overwritten
-#define VEHICLE_LODDIST_MULTIPLIER (TheCamera.GenerationDistMultiplier)
+#define VEHICLE_LODDIST_MULTIPLIER (TheCamera.VehicleLODDistMultiplier)
 
 void
 CVisibilityPlugins::SetRenderWareCamera(RwCamera *camera)
