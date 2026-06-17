@@ -28,7 +28,7 @@ VALIDATE_SIZE(AnimBlendFrameData, 0x18);
 class CAnimBlendClumpData
 {
 public:
-	CAnimBlendLink link;
+	CAnimBlendLink link{};
 	int32 numFrames;
 	union {
 		CVector2D *velocity2d;
@@ -37,9 +37,11 @@ public:
 	// order of frames is determined by RW hierarchy
 	AnimBlendFrameData *frames;
 
-	CAnimBlendClumpData(void);
-	~CAnimBlendClumpData(void);
+	CAnimBlendClumpData();
+	~CAnimBlendClumpData();
 	void SetNumberOfFrames(int n);
-	void SetNumberOfBones(int n) { SetNumberOfFrames(n); }
-	void ForAllFrames(void (*cb)(AnimBlendFrameData*, void*), void *arg);
+
+	void ForAllFrames(void (*cb)(AnimBlendFrameData*, void*), void *arg) const;
+
+	void SetNumberOfBones(const int n) { SetNumberOfFrames(n); }
 };

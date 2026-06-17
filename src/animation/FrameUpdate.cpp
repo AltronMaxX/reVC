@@ -1,7 +1,5 @@
 #include "common.h"
 
-#include "NodeName.h"
-#include "VisibilityPlugins.h"
 #include "AnimBlendClumpData.h"
 #include "AnimBlendAssociation.h"
 #include "RpAnimBlend.h"
@@ -9,16 +7,12 @@
 CAnimBlendClumpData *gpAnimBlendClump;
 
 // PS2 names without "NonSkinned"
-void FrameUpdateCallBackNonSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData *frame, void *arg);
+void FrameUpdateCallBackWithVelocityExtractionNonSkinned(const AnimBlendFrameData *frame, void *arg);
+void FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(const AnimBlendFrameData *frame, void *arg);
 
-void FrameUpdateCallBackSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData *frame, void *arg);
+void FrameUpdateCallBackWithVelocityExtractionSkinned(const AnimBlendFrameData *frame, void *arg);
+void FrameUpdateCallBackWith3dVelocityExtractionSkinned(const AnimBlendFrameData *frame, void *arg);
 
-void FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData *frame, void *arg);
 
 void
 FrameUpdateCallBackNonSkinned(AnimBlendFrameData *frame, void *arg)
@@ -28,7 +22,7 @@ FrameUpdateCallBackNonSkinned(AnimBlendFrameData *frame, void *arg)
 	float totalBlendAmount = 0.0f;
 	RwMatrix *mat = RwFrameGetMatrix(frame->frame);
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(frame->flag & AnimBlendFrameData::VELOCITY_EXTRACTION &&
 	   gpAnimBlendClump->velocity2d){
@@ -77,7 +71,7 @@ FrameUpdateCallBackNonSkinned(AnimBlendFrameData *frame, void *arg)
 }
 
 void
-FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackWithVelocityExtractionNonSkinned(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -88,7 +82,7 @@ FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData *frame, v
 	bool looped = false;
 	RwMatrix *mat = RwFrameGetMatrix(frame->frame);
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(updateData->foobar)
 		for(node = updateData->nodes; *node; node++)
@@ -107,7 +101,7 @@ FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData *frame, v
 
 	for(node = updateData->nodes; *node; node++){
 		if((*node)->sequence){
-			bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
+			const bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
 #ifdef FIX_BUGS
 			if(DotProduct(rot, q) < 0.0f)
 				rot -= q;
@@ -163,7 +157,7 @@ FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData *frame, v
 
 // original code uses do loops?
 void
-FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -174,7 +168,7 @@ FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData *frame,
 	bool looped = false;
 	RwMatrix *mat = RwFrameGetMatrix(frame->frame);
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(updateData->foobar)
 		for(node = updateData->nodes; *node; node++)
@@ -191,7 +185,7 @@ FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData *frame,
 
 	for(node = updateData->nodes; *node; node++){
 		if((*node)->sequence){
-			bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
+			const bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
 #ifdef FIX_BUGS
 			if(DotProduct(rot, q) < 0.0f)
 				rot -= q;
@@ -239,7 +233,7 @@ FrameUpdateCallBackSkinned(AnimBlendFrameData *frame, void *arg)
 	float totalBlendAmount = 0.0f;
 	RpHAnimStdInterpFrame *xform = frame->hanimFrame;
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(frame->flag & AnimBlendFrameData::VELOCITY_EXTRACTION &&
 	   gpAnimBlendClump->velocity2d){
@@ -289,7 +283,7 @@ FrameUpdateCallBackSkinned(AnimBlendFrameData *frame, void *arg)
 }
 
 void
-FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackWithVelocityExtractionSkinned(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -300,7 +294,7 @@ FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData *frame, void
 	bool looped = false;
 	RpHAnimStdInterpFrame *xform = frame->hanimFrame;
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(updateData->foobar)
 		for(node = updateData->nodes; *node; node++)
@@ -319,7 +313,7 @@ FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData *frame, void
 
 	for(node = updateData->nodes; *node; node++){
 		if((*node)->sequence){
-			bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
+			const bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
 			if(DotProduct(rot, q) < 0.0f)
 				rot -= q;
 			else
@@ -373,7 +367,7 @@ FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData *frame, void
 }
 
 void
-FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackWith3dVelocityExtractionSkinned(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -384,7 +378,7 @@ FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData *frame, vo
 	bool looped = false;
 	RpHAnimStdInterpFrame *xform = frame->hanimFrame;
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(updateData->foobar)
 		for(node = updateData->nodes; *node; node++)
@@ -401,7 +395,7 @@ FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData *frame, vo
 
 	for(node = updateData->nodes; *node; node++){
 		if((*node)->sequence){
-			bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
+			const bool nodelooped = (*node)->Update(vec, q, 1.0f-totalBlendAmount);
 #ifdef FIX_BUGS
 			if(DotProduct(rot, q) < 0.0f)
 				rot -= q;
@@ -450,7 +444,7 @@ FrameUpdateCallBackOffscreen(AnimBlendFrameData *frame, void *arg)
 
 
 void
-FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackNonSkinnedCompressed(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -458,13 +452,13 @@ FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
 	CVector trans(0.0f, 0.0f, 0.0f);
 	CVector cur(0.0f, 0.0f, 0.0f);
 	CVector end(0.0f, 0.0f, 0.0f);
-	bool looped = false;
 	RwMatrix *mat = RwFrameGetMatrix(frame->frame);
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(frame->flag & AnimBlendFrameData::VELOCITY_EXTRACTION &&
 	   gpAnimBlendClump->velocity2d){
+		bool looped = false;
 		if(updateData->foobar)
 			for(node = updateData->nodes; *node; node++)
 				if((*node)->sequence && (*node)->association->IsPartial())
@@ -480,7 +474,7 @@ FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
 
 		for(node = updateData->nodes; *node; node++){
 			if((*node)->sequence){
-				bool nodelooped = (*node)->UpdateCompressed(vec, q, 1.0f-totalBlendAmount);
+				const bool nodelooped = (*node)->UpdateCompressed(vec, q, 1.0f-totalBlendAmount);
 #ifdef FIX_BUGS
 				if(DotProduct(rot, q) < 0.0f)
 					rot -= q;
@@ -557,7 +551,7 @@ FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
 }
 
 void
-FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
+FrameUpdateCallBackSkinnedCompressed(const AnimBlendFrameData *frame, void *arg)
 {
 	CVector vec, pos(0.0f, 0.0f, 0.0f);
 	CQuaternion q, rot(0.0f, 0.0f, 0.0f, 0.0f);
@@ -565,13 +559,13 @@ FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
 	CVector trans(0.0f, 0.0f, 0.0f);
 	CVector cur(0.0f, 0.0f, 0.0f);
 	CVector end(0.0f, 0.0f, 0.0f);
-	bool looped = false;
 	RpHAnimStdInterpFrame *xform = frame->hanimFrame;
 	CAnimBlendNode **node;
-	AnimBlendFrameUpdateData *updateData = (AnimBlendFrameUpdateData*)arg;
+	auto *updateData = static_cast<AnimBlendFrameUpdateData *>(arg);
 
 	if(frame->flag & AnimBlendFrameData::VELOCITY_EXTRACTION &&
 	   gpAnimBlendClump->velocity2d){
+		bool looped = false;
 		if(updateData->foobar)
 			for(node = updateData->nodes; *node; node++)
 				if((*node)->sequence && (*node)->association->IsPartial())
@@ -587,7 +581,7 @@ FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData *frame, void *arg)
 
 		for(node = updateData->nodes; *node; node++){
 			if((*node)->sequence){
-				bool nodelooped = (*node)->UpdateCompressed(vec, q, 1.0f-totalBlendAmount);
+				const bool nodelooped = (*node)->UpdateCompressed(vec, q, 1.0f-totalBlendAmount);
 #ifdef FIX_BUGS
 				if(DotProduct(rot, q) < 0.0f)
 					rot -= q;

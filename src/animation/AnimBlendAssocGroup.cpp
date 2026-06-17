@@ -19,64 +19,63 @@
 #include "AnimBlendAssociation.h"
 #include "AnimBlendAssocGroup.h"
 
-CAnimBlendAssocGroup::CAnimBlendAssocGroup(void)
+CAnimBlendAssocGroup::CAnimBlendAssocGroup()
 {
-	animBlock = nil;
-	assocList = nil;
+	animBlock = nullptr;
+	assocList = nullptr;
 	numAssociations = 0;
 	firstAnimId = 0;
 	groupId = -1;
 }
 
-CAnimBlendAssocGroup::~CAnimBlendAssocGroup(void)
+CAnimBlendAssocGroup::~CAnimBlendAssocGroup()
 {
 	DestroyAssociations();
 }
 
 void
-CAnimBlendAssocGroup::DestroyAssociations(void)
+CAnimBlendAssocGroup::DestroyAssociations()
 {
 	if(assocList){
 		delete[] assocList;
-		assocList = nil;
+		assocList = nullptr;
 		numAssociations = 0;
 	}
 }
 
 CAnimBlendAssociation*
-CAnimBlendAssocGroup::GetAnimation(uint32 id)
+CAnimBlendAssocGroup::GetAnimation(const uint32 id) const
 {
 	return &assocList[id - firstAnimId];
 }
 
 CAnimBlendAssociation*
-CAnimBlendAssocGroup::GetAnimation(const char *name)
+CAnimBlendAssocGroup::GetAnimation(const char *name) const
 {
-	int i;
-	for(i = 0; i < numAssociations; i++)
+	for(int i = 0; i < numAssociations; i++)
 		if(!CGeneral::faststricmp(assocList[i].hierarchy->name, name))
 			return &assocList[i];
 	debug("\n\nCan't find the fucking animation %s\n\n\n", name);
-	return nil;
+	return nullptr;
 }
 
 
 CAnimBlendAssociation*
-CAnimBlendAssocGroup::CopyAnimation(uint32 id)
+CAnimBlendAssocGroup::CopyAnimation(const uint32 id) const
 {
-	CAnimBlendAssociation *anim = GetAnimation(id);
-	if(anim == nil)
-		return nil;
+	const CAnimBlendAssociation *anim = GetAnimation(id);
+	if(anim == nullptr)
+		return nullptr;
 	CAnimManager::UncompressAnimation(anim->hierarchy);
 	return new CAnimBlendAssociation(*anim);
 }
 
 CAnimBlendAssociation*
-CAnimBlendAssocGroup::CopyAnimation(const char *name)
+CAnimBlendAssocGroup::CopyAnimation(const char *name) const
 {
-	CAnimBlendAssociation *anim = GetAnimation(name);
-	if(anim == nil)
-		return nil;
+	const CAnimBlendAssociation *anim = GetAnimation(name);
+	if(anim == nullptr)
+		return nullptr;
 	CAnimManager::UncompressAnimation(anim->hierarchy);
 	return new CAnimBlendAssociation(*anim);
 }
@@ -84,11 +83,9 @@ CAnimBlendAssocGroup::CopyAnimation(const char *name)
 bool
 strcmpIgnoringDigits(const char *s1, const char *s2)
 {
-	char c1, c2;
-
 	for(;;){
-		c1 = *s1;
-		c2 = *s2;
+		char c1 = *s1;
+		char c2 = *s2;
 		if(c1) s1++;
 		if(c2) s2++;
 		if(c1 == '\0' && c2 == '\0') return true;
@@ -114,8 +111,6 @@ strcmpIgnoringDigits(const char *s1, const char *s2)
 CBaseModelInfo*
 GetModelFromName(const char *name)
 {
-	int i;
-	CBaseModelInfo *mi;
 	char playername[32];
 
 	if(strncasecmp(name, "CSplay", 6) == 0 &&
@@ -126,37 +121,32 @@ GetModelFromName(const char *name)
 		name = playername;
 	}
 
-	for(i = 0; i < MODELINFOSIZE; i++){
-		mi = CModelInfo::GetModelInfo(i);
-		if(mi && mi->GetRwObject() && RwObjectGetType(mi->GetRwObject()) == rpCLUMP &&
-		   strcmpIgnoringDigits(mi->GetModelName(), name))
+	for(int i = 0; i < MODELINFOSIZE; i++){
+		if(CBaseModelInfo *mi = CModelInfo::GetModelInfo(i); mi && mi->GetRwObject() && RwObjectGetType(mi->GetRwObject()) == rpCLUMP &&
+		                                                     strcmpIgnoringDigits(mi->GetModelName(), name))
 			return mi;
 	}
-	return nil;
+	return nullptr;
 }
 
 void
 CAnimBlendAssocGroup::CreateAssociations(const char *name)
 {
-	int i;
-	CAnimBlock *animBlock;
-
 	DestroyAssociations();
 
-	animBlock = CAnimManager::GetAnimationBlock(name);
+	CAnimBlock *animBlock = CAnimManager::GetAnimationBlock(name);
 	assocList = new CAnimBlendAssociation[animBlock->numAnims];
 	numAssociations = 0;
 
-	for(i = 0; i < animBlock->numAnims; i++){
+	for(int i = 0; i < animBlock->numAnims; i++){
 		CAnimBlendHierarchy *anim = CAnimManager::GetAnimation(animBlock->firstIndex + i);
-		CBaseModelInfo *model = GetModelFromName(anim->name);
-		if(model){
+		if(CBaseModelInfo *model = GetModelFromName(anim->name)){
 			debug("Associated anim %s with model %s\n", anim->name, model->GetModelName());
-			RpClump *clump = (RpClump*)model->CreateInstance();
+			auto *clump = reinterpret_cast<RpClump *>(model->CreateInstance());
 			RpAnimBlendClumpInit(clump);
 			assocList[i].Init(clump, anim);
 			if(IsClumpSkinned(clump))
-				RpClumpForAllAtomics(clump, AtomicRemoveAnimFromSkinCB, nil);
+				RpClumpForAllAtomics(clump, AtomicRemoveAnimFromSkinCB, nullptr);
 			RpClumpDestroy(clump);
 			assocList[i].animId = firstAnimId + i;
 			assocList[i].groupId = groupId;
@@ -170,15 +160,13 @@ CAnimBlendAssocGroup::CreateAssociations(const char *name)
 void
 CAnimBlendAssocGroup::CreateAssociations(const char *blockName, RpClump *clump, const char **animNames, int numAssocs)
 {
-	int i;
-
 	DestroyAssociations();
 
 	animBlock = CAnimManager::GetAnimationBlock(blockName);
 	assocList = new CAnimBlendAssociation[numAssocs];
 
 	numAssociations = 0;
-	for(i = 0; i < numAssocs; i++){
+	for(int i = 0; i < numAssocs; i++){
 		assocList[i].Init(clump, CAnimManager::GetAnimation(animNames[i], animBlock));
 		assocList[i].animId = firstAnimId + i;
 		assocList[i].groupId = groupId;

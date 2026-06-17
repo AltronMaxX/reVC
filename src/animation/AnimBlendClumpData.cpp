@@ -3,15 +3,15 @@
 #include "AnimBlendClumpData.h"
 #include "MemoryMgr.h"
 
-CAnimBlendClumpData::CAnimBlendClumpData(void)
+CAnimBlendClumpData::CAnimBlendClumpData()
 {
 	numFrames = 0;
-	velocity2d = nil;
-	frames = nil;
+	velocity2d = nullptr;
+	frames = nullptr;
 	link.Init();
 }
 
-CAnimBlendClumpData::~CAnimBlendClumpData(void)
+CAnimBlendClumpData::~CAnimBlendClumpData()
 {
 	link.Remove();
 	if(frames)
@@ -19,18 +19,17 @@ CAnimBlendClumpData::~CAnimBlendClumpData(void)
 }
 
 void
-CAnimBlendClumpData::SetNumberOfFrames(int n)
+CAnimBlendClumpData::SetNumberOfFrames(const int n)
 {
 	if(frames)
 		RwFreeAlign(frames);
 	numFrames = n;
-	frames = (AnimBlendFrameData*)RwMallocAlign(numFrames * sizeof(AnimBlendFrameData), 64);
+	frames = static_cast<AnimBlendFrameData *>(RwMallocAlign(numFrames * sizeof(AnimBlendFrameData), 64));
 }
 
 void
-CAnimBlendClumpData::ForAllFrames(void (*cb)(AnimBlendFrameData*, void*), void *arg)
+CAnimBlendClumpData::ForAllFrames(void (*cb)(AnimBlendFrameData*, void*), void *arg) const
 {
-	int i;
-	for(i = 0; i < numFrames; i++)
+	for(int i = 0; i < numFrames; i++)
 		cb(&frames[i], arg);
 }

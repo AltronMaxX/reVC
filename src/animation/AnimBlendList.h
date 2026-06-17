@@ -7,9 +7,9 @@ public:
 	CAnimBlendLink *next;
 	CAnimBlendLink *prev;
 
-	void Init(void){
-		next = nil;
-		prev = nil;
+	void Init(){
+		next = nullptr;
+		prev = nullptr;
 	}
 	void Prepend(CAnimBlendLink *link){
 		if(next)
@@ -18,7 +18,7 @@ public:
 		link->prev = this;
 		next = link;
 	}
-	void Remove(void){
+	void Remove(){
 		if(prev)
 			prev->next = next;
 		if(next)

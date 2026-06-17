@@ -4,7 +4,6 @@
 #include "RwHelper.h"
 #include "ModelInfo.h"
 #include "ModelIndices.h"
-#include "FileMgr.h"
 #include "RpAnimBlend.h"
 #include "AnimBlendClumpData.h"
 #include "AnimBlendAssociation.h"
@@ -968,7 +967,7 @@ const AnimAssocDefinition CAnimManager::ms_aAnimAssocDefinitions[NUM_ANIM_ASSOC_
 #undef awc
 
 void
-CAnimManager::Initialise(void)
+CAnimManager::Initialise()
 {
 	ms_numAnimations = 0;
 	ms_numAnimBlocks = 0;
@@ -976,7 +975,7 @@ CAnimManager::Initialise(void)
 }
 
 void
-CAnimManager::Shutdown(void)
+CAnimManager::Shutdown()
 {
 	int i;
 
@@ -1005,11 +1004,11 @@ CAnimManager::UncompressAnimation(CAnimBlendHierarchy *hier)
 			}
 		}else{
 			CLink<CAnimBlendHierarchy*> *link = ms_animCache.Insert(hier);
-			if(link == nil){
+			if(link == nullptr){
 				CAnimBlendHierarchy *lastHier = ms_animCache.tail.prev->item;
 				lastHier->RemoveUncompressedData();
 				ms_animCache.Remove(ms_animCache.tail.prev);
-				lastHier->linkPtr = nil;
+				lastHier->linkPtr = nullptr;
 				link = ms_animCache.Insert(hier);
 			}
 			hier->linkPtr = link;
@@ -1023,27 +1022,23 @@ CAnimManager::RemoveFromUncompressedCache(CAnimBlendHierarchy *hier)
 {
 	if(hier->linkPtr){
 		ms_animCache.Remove(hier->linkPtr);
-		hier->linkPtr = nil;
+		hier->linkPtr = nullptr;
 	}
 }
 
 CAnimBlock*
 CAnimManager::GetAnimationBlock(const char *name)
 {
-	int i;
-
-	for(i = 0; i < ms_numAnimBlocks; i++)
+	for(int i = 0; i < ms_numAnimBlocks; i++)
 		if(strcasecmp(ms_aAnimBlocks[i].name, name) == 0)
 			return &ms_aAnimBlocks[i];
-	return nil;
+	return nullptr;
 }
 
 int32
 CAnimManager::GetAnimationBlockIndex(const char *name)
 {
-	int i;
-
-	for(i = 0; i < ms_numAnimBlocks; i++)
+	for(int i = 0; i < ms_numAnimBlocks; i++)
 		if(strcasecmp(ms_aAnimBlocks[i].name, name) == 0)
 			return i;
 	return -1;
@@ -1053,7 +1048,7 @@ int32
 CAnimManager::RegisterAnimBlock(const char *name)
 {
 	CAnimBlock *animBlock = GetAnimationBlock(name);
-	if(animBlock == nil){
+	if(animBlock == nullptr){
 		animBlock = &ms_aAnimBlocks[ms_numAnimBlocks++];
 		strncpy(animBlock->name, name, MAX_ANIMBLOCK_NAME);
 		animBlock->numAnims = 0;
@@ -1063,25 +1058,25 @@ CAnimManager::RegisterAnimBlock(const char *name)
 }
 
 int32
-CAnimManager::GetNumRefsToAnimBlock(int32 block)
+CAnimManager::GetNumRefsToAnimBlock(const int32 block)
 {
 	return ms_aAnimBlocks[block].refCount;
 }
 
 void
-CAnimManager::AddAnimBlockRef(int32 block)
+CAnimManager::AddAnimBlockRef(const int32 block)
 {
 	ms_aAnimBlocks[block].refCount++;
 }
 
 void
-CAnimManager::RemoveAnimBlockRefWithoutDelete(int32 block)
+CAnimManager::RemoveAnimBlockRefWithoutDelete(const int32 block)
 {
 	ms_aAnimBlocks[block].refCount--;
 }
 
 void
-CAnimManager::RemoveAnimBlockRef(int32 block)
+CAnimManager::RemoveAnimBlockRef(const int32 block)
 {
 	ms_aAnimBlocks[block].refCount--;
 	if(ms_aAnimBlocks[block].refCount == 0)
@@ -1089,12 +1084,11 @@ CAnimManager::RemoveAnimBlockRef(int32 block)
 }
 
 void
-CAnimManager::RemoveAnimBlock(int32 block)
+CAnimManager::RemoveAnimBlock(const int32 block)
 {
 	int i;
-	CAnimBlock *animblock;
 
-	animblock = &ms_aAnimBlocks[block];
+	CAnimBlock *animblock = &ms_aAnimBlocks[block];
 	debug("Removing ANIMS %s\n", animblock->name);
 	for(i = 0; i < NUM_ANIM_ASSOC_GROUPS; i++)
 		if(ms_aAnimAssocGroups[i].animBlock == animblock)
@@ -1106,50 +1100,49 @@ CAnimManager::RemoveAnimBlock(int32 block)
 }
 
 CAnimBlendHierarchy*
-CAnimManager::GetAnimation(const char *name, CAnimBlock *animBlock)
+CAnimManager::GetAnimation(const char *name, const CAnimBlock *animBlock)
 {
-	int i;
 	CAnimBlendHierarchy *hier = &ms_aAnimations[animBlock->firstIndex];
 
-	for(i = 0; i < animBlock->numAnims; i++){
+	for(int i = 0; i < animBlock->numAnims; i++){
 		if(strcasecmp(hier->name, name) == 0)
 			return hier;
 		hier++;
 	}
-	return nil;
+	return nullptr;
 }
 
 const char*
-CAnimManager::GetAnimGroupName(AssocGroupId groupId)
+CAnimManager::GetAnimGroupName(const AssocGroupId groupId)
 {
 	return ms_aAnimAssocDefinitions[groupId].name;
 }
 
 CAnimBlendAssociation*
-CAnimManager::CreateAnimAssociation(AssocGroupId groupId, AnimationId animId)
+CAnimManager::CreateAnimAssociation(const AssocGroupId groupId, const AnimationId animId)
 {
 	return ms_aAnimAssocGroups[groupId].CopyAnimation(animId);
 }
 
 CAnimBlendAssociation*
-CAnimManager::GetAnimAssociation(AssocGroupId groupId, AnimationId animId)
+CAnimManager::GetAnimAssociation(const AssocGroupId groupId, const AnimationId animId)
 {
 	return ms_aAnimAssocGroups[groupId].GetAnimation(animId);
 }
 
 CAnimBlendAssociation*
-CAnimManager::GetAnimAssociation(AssocGroupId groupId, const char *name)
+CAnimManager::GetAnimAssociation(const AssocGroupId groupId, const char *name)
 {
 	return ms_aAnimAssocGroups[groupId].GetAnimation(name);
 }
 
 CAnimBlendAssociation*
-CAnimManager::AddAnimation(RpClump *clump, AssocGroupId groupId, AnimationId animId)
+CAnimManager::AddAnimation(RpClump *clump, const AssocGroupId groupId, const AnimationId animId)
 {
 	CAnimBlendAssociation *anim = CreateAnimAssociation(groupId, animId);
 	CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
 	if(anim->IsMovement()){
-		CAnimBlendAssociation *syncanim = nil;
+		const CAnimBlendAssociation *syncanim = nullptr;
 		CAnimBlendLink *link;
 		for(link = clumpData->link.next; link; link = link->next){
 			syncanim = CAnimBlendAssociation::FromLink(link);
@@ -1169,7 +1162,7 @@ CAnimManager::AddAnimation(RpClump *clump, AssocGroupId groupId, AnimationId ani
 }
 
 CAnimBlendAssociation*
-CAnimManager::AddAnimationAndSync(RpClump *clump, CAnimBlendAssociation *syncanim, AssocGroupId groupId, AnimationId animId)
+CAnimManager::AddAnimationAndSync(RpClump *clump, const CAnimBlendAssociation *syncanim, const AssocGroupId groupId, const AnimationId animId)
 {
 	CAnimBlendAssociation *anim = CreateAnimAssociation(groupId, animId);
 	CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
@@ -1184,16 +1177,16 @@ CAnimManager::AddAnimationAndSync(RpClump *clump, CAnimBlendAssociation *syncani
 }
 
 CAnimBlendAssociation*
-CAnimManager::BlendAnimation(RpClump *clump, AssocGroupId groupId, AnimationId animId, float delta)
+CAnimManager::BlendAnimation(RpClump *clump, const AssocGroupId groupId, const AnimationId animId, const float delta)
 {
 	int removePrevAnim = 0;
-	CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
+	const CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
 	CAnimBlendAssociation *anim = GetAnimAssociation(groupId, animId);
-	bool isMovement = anim->IsMovement();
-	bool isPartial = anim->IsPartial();
-	CAnimBlendLink *link;
-	CAnimBlendAssociation *found = nil, *movementAnim = nil;
-	for(link = clumpData->link.next; link; link = link->next){
+	const bool isMovement = anim->IsMovement();
+	const bool isPartial = anim->IsPartial();
+	CAnimBlendAssociation *found = nullptr;
+	const CAnimBlendAssociation *movementAnim = nullptr;
+	for(CAnimBlendLink *link = clumpData->link.next; link; link = link->next){
 		anim = CAnimBlendAssociation::FromLink(link);
 		if(isMovement && anim->IsMovement())
 			movementAnim = anim;
@@ -1202,8 +1195,7 @@ CAnimManager::BlendAnimation(RpClump *clump, AssocGroupId groupId, AnimationId a
 		else{
 			if(isPartial == anim->IsPartial()){
 				if(anim->blendAmount > 0.0f){
-					float blendDelta = -delta*anim->blendAmount;
-					if(blendDelta < anim->blendDelta || !isPartial)
+					if(const float blendDelta = -delta*anim->blendAmount; blendDelta < anim->blendDelta || !isPartial)
 						anim->blendDelta = blendDelta;
 				}else{
 					anim->blendDelta = -1.0f;
@@ -1231,7 +1223,7 @@ CAnimManager::BlendAnimation(RpClump *clump, AssocGroupId groupId, AnimationId a
 }
 
 void
-CAnimManager::LoadAnimFiles(void)
+CAnimManager::LoadAnimFiles()
 {
 	LoadAnimFile("ANIM\\PED.IFP");
 	ms_aAnimAssocGroups = new CAnimBlendAssocGroup[NUM_ANIM_ASSOC_GROUPS];
@@ -1239,28 +1231,25 @@ CAnimManager::LoadAnimFiles(void)
 }
 
 void
-CAnimManager::CreateAnimAssocGroups(void)
+CAnimManager::CreateAnimAssocGroups()
 {
-	int i, j;
-
-	for(i = 0; i < NUM_ANIM_ASSOC_GROUPS; i++){
-		CAnimBlock *block = GetAnimationBlock(ms_aAnimAssocDefinitions[i].blockName);
-		if(block == nil || !block->isLoaded || ms_aAnimAssocGroups[i].assocList)
+	for(int i = 0; i < NUM_ANIM_ASSOC_GROUPS; i++){
+		if(const CAnimBlock *block = GetAnimationBlock(ms_aAnimAssocDefinitions[i].blockName); block == nullptr || !block->isLoaded || ms_aAnimAssocGroups[i].assocList)
 			continue;
 
 		CBaseModelInfo *mi = CModelInfo::GetModelInfo(ms_aAnimAssocDefinitions[i].modelIndex);
-		RpClump *clump = (RpClump*)mi->CreateInstance();
+		auto *clump = reinterpret_cast<RpClump *>(mi->CreateInstance());
 		RpAnimBlendClumpInit(clump);
 		CAnimBlendAssocGroup *group = &ms_aAnimAssocGroups[i];
 		const AnimAssocDefinition *def = &ms_aAnimAssocDefinitions[i];
 		group->groupId = i;
 		group->firstAnimId = def->animDescs[0].animId;
 		group->CreateAssociations(def->blockName, clump, def->animNames, def->numAnims);
-		for(j = 0; j < group->numAssociations; j++)
+		for(int j = 0; j < group->numAssociations; j++)
 			// GetAnimation(i) in III (but it's in LoadAnimFiles), GetAnimation(group->animDesc[j].animId) in VC
 			group->GetAnimation(def->animDescs[j].animId)->flags |= def->animDescs[j].flags;
 		if(IsClumpSkinned(clump))
-			RpClumpForAllAtomics(clump, AtomicRemoveAnimFromSkinCB, nil);
+			RpClumpForAllAtomics(clump, AtomicRemoveAnimFromSkinCB, nullptr);
 		RpClumpDestroy(clump);
 	}
 }
@@ -1268,15 +1257,14 @@ CAnimManager::CreateAnimAssocGroups(void)
 void
 CAnimManager::LoadAnimFile(const char *filename)
 {
-	RwStream *stream;
-	stream = RwStreamOpen(rwSTREAMFILENAME, rwSTREAMREAD, filename);
+	RwStream *stream = RwStreamOpen(rwSTREAMFILENAME, rwSTREAMREAD, filename);
 	assert(stream);
 	LoadAnimFile(stream, true);
-	RwStreamClose(stream, nil);
+	RwStreamClose(stream, nullptr);
 }
 
 void
-CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedAnims)[32])
+CAnimManager::LoadAnimFile(RwStream *stream, bool compress, const char (*uncompressedAnims)[32])
 {
 	#define ROUNDSIZE(x) if((x) & 3) (x) += 4 - ((x)&3)
 	struct IfpHeader {
@@ -1285,8 +1273,7 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 	};
 	IfpHeader anpk, info, name, dgan, cpan, anim;
 	char buf[256];
-	int j, k, l;
-	float *fbuf = (float*)buf;
+	const auto *fbuf = reinterpret_cast<float *>(buf);
 
 	// block name
 	RwStreamRead(stream, &anpk, sizeof(IfpHeader));
@@ -1297,13 +1284,13 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 	CAnimBlock *animBlock = GetAnimationBlock(buf+4);
 	if(animBlock){
 		if(animBlock->numAnims == 0){
-			animBlock->numAnims = *(int*)buf;
+			animBlock->numAnims = *reinterpret_cast<int *>(buf);
 			animBlock->firstIndex = ms_numAnimations;
 		}
 	}else{
 		animBlock = &ms_aAnimBlocks[ms_numAnimBlocks++];
 		strncpy(animBlock->name, buf+4, MAX_ANIMBLOCK_NAME);
-		animBlock->numAnims = *(int*)buf;
+		animBlock->numAnims = *reinterpret_cast<int *>(buf);
 		animBlock->firstIndex = ms_numAnimations;
 	}
 
@@ -1311,7 +1298,7 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 	animBlock->isLoaded = true;
 
 	int animIndex = animBlock->firstIndex;
-	for(j = 0; j < animBlock->numAnims; j++){
+	for(int j = 0; j < animBlock->numAnims; j++){
 		assert(animIndex < ARRAY_SIZE(ms_aAnimations));
 		CAnimBlendHierarchy *hier = &ms_aAnimations[animIndex++];
 
@@ -1339,26 +1326,26 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 		hier->keepCompressed = false;
 
 		// DG info has number of nodes/sequences
-		RwStreamRead(stream, (char*)&dgan, sizeof(IfpHeader));
+		RwStreamRead(stream, &dgan, sizeof(IfpHeader));
 		ROUNDSIZE(dgan.size);
-		RwStreamRead(stream, (char*)&info, sizeof(IfpHeader));
+		RwStreamRead(stream, &info, sizeof(IfpHeader));
 		ROUNDSIZE(info.size);
 		RwStreamRead(stream, buf, info.size);
-		hier->numSequences = *(int*)buf;
+		hier->numSequences = *reinterpret_cast<int *>(buf);
 		hier->sequences = new CAnimBlendSequence[hier->numSequences];
 
 		CAnimBlendSequence *seq = hier->sequences;
-		for(k = 0; k < hier->numSequences; k++, seq++){
+		for(int k = 0; k < hier->numSequences; k++, seq++){
 			// Each node has a name and key frames
 			RwStreamRead(stream, &cpan, sizeof(IfpHeader));
 			ROUNDSIZE(dgan.size);
 			RwStreamRead(stream, &anim, sizeof(IfpHeader));
 			ROUNDSIZE(anim.size);
 			RwStreamRead(stream, buf, anim.size);
-			int numFrames = *(int*)(buf+28);
+			const int numFrames = *reinterpret_cast<int *>(buf + 28);
 			seq->SetName(buf);
 			if(anim.size == 44)
-				seq->SetBoneTag(*(int*)(buf+40));
+				seq->SetBoneTag(*reinterpret_cast<int *>(buf + 40));
 			if(numFrames == 0)
 				continue;
 
@@ -1377,7 +1364,7 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 			if(strstr(seq->name, "L Toe"))
 				debug("anim %s has toe keyframes\n", hier->name); // BUG: seq->name
 
-			for(l = 0; l < numFrames; l++){
+			for(int l = 0; l < numFrames; l++){
 				if(hasScale){
 					RwStreamRead(stream, buf, 0x2C);
 					CQuaternion rot(fbuf[0], fbuf[1], fbuf[2], fbuf[3]);
@@ -1385,13 +1372,13 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 					CVector trans(fbuf[4], fbuf[5], fbuf[6]);
 
 					if(compressHier){
-						KeyFrameTransCompressed *kf = (KeyFrameTransCompressed*)seq->GetKeyFrameCompressed(l);
+						auto *kf = static_cast<KeyFrameTransCompressed *>(seq->GetKeyFrameCompressed(l));
 						kf->SetRotation(rot);
 						kf->SetTranslation(trans);
 						// scaling ignored
 						kf->SetTime(fbuf[10]);	// absolute time here
 					}else{
-						KeyFrameTrans *kf = (KeyFrameTrans*)seq->GetKeyFrame(l);
+						auto *kf = static_cast<KeyFrameTrans *>(seq->GetKeyFrame(l));
 						kf->rotation = rot;
 						kf->translation = trans;
 						// scaling ignored
@@ -1404,12 +1391,12 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 					CVector trans(fbuf[4], fbuf[5], fbuf[6]);
 
 					if(compressHier){
-						KeyFrameTransCompressed *kf = (KeyFrameTransCompressed*)seq->GetKeyFrameCompressed(l);
+						auto *kf = static_cast<KeyFrameTransCompressed *>(seq->GetKeyFrameCompressed(l));
 						kf->SetRotation(rot);
 						kf->SetTranslation(trans);
 						kf->SetTime(fbuf[7]);	// absolute time here
 					}else{
-						KeyFrameTrans *kf = (KeyFrameTrans*)seq->GetKeyFrame(l);
+						auto *kf = static_cast<KeyFrameTrans *>(seq->GetKeyFrame(l));
 						kf->rotation = rot;
 						kf->translation = trans;
 						kf->deltaTime = fbuf[7];	// absolute time here
@@ -1420,11 +1407,11 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 					rot.Invert();
 
 					if(compressHier){
-						KeyFrameCompressed *kf = (KeyFrameCompressed*)seq->GetKeyFrameCompressed(l);
+						auto *kf = (KeyFrameCompressed*)seq->GetKeyFrameCompressed(l);
 						kf->SetRotation(rot);
 						kf->SetTime(fbuf[4]);	// absolute time here
 					}else{
-						KeyFrame *kf = (KeyFrame*)seq->GetKeyFrame(l);
+						auto *kf = seq->GetKeyFrame(l);
 						kf->rotation = rot;
 						kf->deltaTime = fbuf[4];	// absolute time here
 					}
@@ -1442,12 +1429,11 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 }
 
 void
-CAnimManager::RemoveLastAnimFile(void)
+CAnimManager::RemoveLastAnimFile()
 {
-	int i;
 	ms_numAnimBlocks--;
 	ms_numAnimations = ms_aAnimBlocks[ms_numAnimBlocks].firstIndex;
-	for(i = 0; i < ms_aAnimBlocks[ms_numAnimBlocks].numAnims; i++)
+	for(int i = 0; i < ms_aAnimBlocks[ms_numAnimBlocks].numAnims; i++)
 		ms_aAnimations[ms_aAnimBlocks[ms_numAnimBlocks].firstIndex + i].Shutdown();
 	ms_aAnimBlocks[ms_numAnimBlocks].isLoaded = false;
 }

@@ -3,7 +3,7 @@
 #include "Bones.h"
 
 int
-ConvertPedNode2BoneTag(int node)
+ConvertPedNode2BoneTag(const int node)
 {
 	switch(node){
 	case PED_MID:	return BONE_spine1;
@@ -29,7 +29,7 @@ ConvertPedNode2BoneTag(int node)
 }
 
 const char*
-ConvertBoneTag2BoneName(int tag)
+ConvertBoneTag2BoneName(const int tag)
 {
 	switch(tag){
 	case BONE_root:	return "Root";
@@ -55,5 +55,5 @@ ConvertBoneTag2BoneName(int tag)
 	case BONE_r_calf:	return "R Calf";
 	case BONE_r_foot:	return "R Foot";
 	}
-	return nil;
+	return nullptr;
 }

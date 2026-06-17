@@ -114,11 +114,11 @@ class CAnimManager
 	static CLinkList<CAnimBlendHierarchy*> ms_animCache;
 public:
 
-	static void Initialise(void);
-	static void Shutdown(void);
+	static void Initialise();
+	static void Shutdown();
 	static void UncompressAnimation(CAnimBlendHierarchy *anim);
 	static void RemoveFromUncompressedCache(CAnimBlendHierarchy *hier);
-	static CAnimBlock *GetAnimationBlock(int32 block) { return &ms_aAnimBlocks[block]; }
+	static CAnimBlock *GetAnimationBlock(const int32 block) { return &ms_aAnimBlocks[block]; }
 	static CAnimBlock *GetAnimationBlock(const char *name);
 	static int32 GetAnimationBlockIndex(const char *name);
 	static int32 RegisterAnimBlock(const char *name);
@@ -127,19 +127,19 @@ public:
 	static void RemoveAnimBlockRefWithoutDelete(int32 block);
 	static void RemoveAnimBlockRef(int32 block);
 	static void RemoveAnimBlock(int32 block);
-	static CAnimBlendHierarchy *GetAnimation(const char *name, CAnimBlock *animBlock);
-	static CAnimBlendHierarchy *GetAnimation(int32 n) { return &ms_aAnimations[n]; }
+	static CAnimBlendHierarchy *GetAnimation(const char *name, const CAnimBlock *animBlock);
+	static CAnimBlendHierarchy *GetAnimation(const int32 n) { return &ms_aAnimations[n]; }
 	static const char *GetAnimGroupName(AssocGroupId groupId);
 	static CAnimBlendAssociation *CreateAnimAssociation(AssocGroupId groupId, AnimationId animId);
 	static CAnimBlendAssociation *GetAnimAssociation(AssocGroupId groupId, AnimationId animId);
 	static CAnimBlendAssociation *GetAnimAssociation(AssocGroupId groupId, const char *name);
 	static CAnimBlendAssociation *AddAnimation(RpClump *clump, AssocGroupId groupId, AnimationId animId);
-	static CAnimBlendAssociation *AddAnimationAndSync(RpClump *clump, CAnimBlendAssociation *syncanim, AssocGroupId groupId, AnimationId animId);
+	static CAnimBlendAssociation *AddAnimationAndSync(RpClump *clump, const CAnimBlendAssociation *syncanim, AssocGroupId groupId, AnimationId animId);
 	static CAnimBlendAssociation *BlendAnimation(RpClump *clump, AssocGroupId groupId, AnimationId animId, float delta);
-	static void LoadAnimFiles(void);
+	static void LoadAnimFiles();
 	static void LoadAnimFile(const char *filename);
-	static void LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedAnims)[32] = nil);
-	static void CreateAnimAssocGroups(void);
-	static void RemoveLastAnimFile(void);
-	static CAnimBlendAssocGroup* GetAnimAssocGroups(void) { return ms_aAnimAssocGroups; }
+	static void LoadAnimFile(RwStream *stream, bool compress, const char (*uncompressedAnims)[32] = nullptr);
+	static void CreateAnimAssocGroups();
+	static void RemoveLastAnimFile();
+	static CAnimBlendAssocGroup* GetAnimAssocGroups() { return ms_aAnimAssocGroups; }
 };

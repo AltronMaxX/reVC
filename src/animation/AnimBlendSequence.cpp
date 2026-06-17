@@ -3,16 +3,15 @@
 #include "AnimBlendSequence.h"
 #include "MemoryHeap.h"
 
-CAnimBlendSequence::CAnimBlendSequence(void)
-{
+CAnimBlendSequence::CAnimBlendSequence() {
 	type = 0;
 	numFrames = 0;
-	keyFrames = nil;
-	keyFramesCompressed = nil;
+	keyFrames = nullptr;
+	keyFramesCompressed = nullptr;
 	boneTag = -1;
 }
 
-CAnimBlendSequence::~CAnimBlendSequence(void)
+CAnimBlendSequence::~CAnimBlendSequence()
 {
 	if(keyFrames)
 		RwFree(keyFrames);
@@ -21,13 +20,13 @@ CAnimBlendSequence::~CAnimBlendSequence(void)
 }
 
 void
-CAnimBlendSequence::SetName(char *name)
+CAnimBlendSequence::SetName(const char *name)
 {
 	strncpy(this->name, name, 24);
 }
 
 void
-CAnimBlendSequence::SetNumFrames(int numFrames, bool translation, bool compressed)
+CAnimBlendSequence::SetNumFrames(int numFrames, const bool translation, const bool compressed)
 {
 	if(translation){
 		type |= KF_ROT | KF_TRANS;
@@ -46,18 +45,14 @@ CAnimBlendSequence::SetNumFrames(int numFrames, bool translation, bool compresse
 }
 
 void
-CAnimBlendSequence::RemoveQuaternionFlips(void)
+CAnimBlendSequence::RemoveQuaternionFlips() const
 {
-	int i;
-	CQuaternion last;
-	KeyFrame *frame;
-
 	if(numFrames < 2)
 		return;
 
-	frame = GetKeyFrame(0);
-	last = frame->rotation;
-	for(i = 1; i < numFrames; i++){
+	KeyFrame *frame = GetKeyFrame(0);
+	CQuaternion last = frame->rotation;
+	for(int i = 1; i < numFrames; i++){
 		frame = GetKeyFrame(i);
 		if(DotProduct(last, frame->rotation) < 0.0f)
 			frame->rotation = -frame->rotation;
@@ -66,7 +61,7 @@ CAnimBlendSequence::RemoveQuaternionFlips(void)
 }
 
 void
-CAnimBlendSequence::Uncompress(void)
+CAnimBlendSequence::Uncompress()
 {
 	int i;
 
@@ -75,13 +70,13 @@ CAnimBlendSequence::Uncompress(void)
 
 	PUSH_MEMID(MEMID_ANIMATION);
 
-	float rotScale = 1.0f/4096.0f;
-	float timeScale = 1.0f/60.0f;
-	float transScale = 1.0f/1024.0f;
+	constexpr float rotScale = 1.0f/4096.0f;
+	constexpr float timeScale = 1.0f/60.0f;
+	constexpr float transScale = 1.0f/1024.0f;
 	if(type & KF_TRANS){
 		void *newKfs = RwMalloc(numFrames * sizeof(KeyFrameTrans));
-		KeyFrameTransCompressed *ckf = (KeyFrameTransCompressed*)keyFramesCompressed;
-		KeyFrameTrans *kf = (KeyFrameTrans*)newKfs;
+		const auto *ckf = static_cast<KeyFrameTransCompressed *>(keyFramesCompressed);
+		auto *kf = static_cast<KeyFrameTrans *>(newKfs);
 		for(i = 0; i < numFrames; i++){
 			kf->rotation.x = ckf->rot[0]*rotScale;
 			kf->rotation.y = ckf->rot[1]*rotScale;
@@ -97,8 +92,8 @@ CAnimBlendSequence::Uncompress(void)
 		keyFrames = newKfs;
 	}else{
 		void *newKfs = RwMalloc(numFrames * sizeof(KeyFrame));
-		KeyFrameCompressed *ckf = (KeyFrameCompressed*)keyFramesCompressed;
-		KeyFrame *kf = (KeyFrame*)newKfs;
+		const auto *ckf = static_cast<KeyFrameCompressed *>(keyFramesCompressed);
+		auto *kf = static_cast<KeyFrame *>(newKfs);
 		for(i = 0; i < numFrames; i++){
 			kf->rotation.x = ckf->rot[0]*rotScale;
 			kf->rotation.y = ckf->rot[1]*rotScale;
@@ -113,13 +108,13 @@ CAnimBlendSequence::Uncompress(void)
 	REGISTER_MEMPTR(&keyFrames);
 
 	RwFree(keyFramesCompressed);
-	keyFramesCompressed = nil;
+	keyFramesCompressed = nullptr;
 
 	POP_MEMID();
 }
 
 void
-CAnimBlendSequence::CompressKeyframes(void)
+CAnimBlendSequence::CompressKeyframes()
 {
 	int i;
 
@@ -128,14 +123,14 @@ CAnimBlendSequence::CompressKeyframes(void)
 
 	PUSH_MEMID(MEMID_ANIMATION);
 
-	float rotScale = 4096.0f;
-	float timeScale = 60.0f;
-	float transScale = 1024.0f;
+	constexpr float rotScale = 4096.0f;
+	constexpr float timeScale = 60.0f;
 	if(type & KF_TRANS){
 		void *newKfs = RwMalloc(numFrames * sizeof(KeyFrameTransCompressed));
-		KeyFrameTransCompressed *ckf = (KeyFrameTransCompressed*)newKfs;
-		KeyFrameTrans *kf = (KeyFrameTrans*)keyFrames;
+		auto *ckf = static_cast<KeyFrameTransCompressed *>(newKfs);
+		const auto *kf = static_cast<KeyFrameTrans *>(keyFrames);
 		for(i = 0; i < numFrames; i++){
+			constexpr float transScale = 1024.0f;
 			ckf->rot[0] = kf->rotation.x*rotScale;
 			ckf->rot[1] = kf->rotation.y*rotScale;
 			ckf->rot[2] = kf->rotation.z*rotScale;
@@ -150,8 +145,8 @@ CAnimBlendSequence::CompressKeyframes(void)
 		keyFramesCompressed = newKfs;
 	}else{
 		void *newKfs = RwMalloc(numFrames * sizeof(KeyFrameCompressed));
-		KeyFrameCompressed *ckf = (KeyFrameCompressed*)newKfs;
-		KeyFrame *kf = (KeyFrame*)keyFrames;
+		auto *ckf = static_cast<KeyFrameCompressed *>(newKfs);
+		const auto *kf = static_cast<KeyFrame *>(keyFrames);
 		for(i = 0; i < numFrames; i++){
 			ckf->rot[0] = kf->rotation.x*rotScale;
 			ckf->rot[1] = kf->rotation.y*rotScale;
@@ -169,13 +164,13 @@ CAnimBlendSequence::CompressKeyframes(void)
 }
 
 void
-CAnimBlendSequence::RemoveUncompressedData(void)
+CAnimBlendSequence::RemoveUncompressedData()
 {
 	if(numFrames == 0)
 		return;
 	CompressKeyframes();
 	RwFree(keyFrames);
-	keyFrames = nil;
+	keyFrames = nullptr;
 }
 
 #ifdef USE_CUSTOM_ALLOCATOR

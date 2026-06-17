@@ -12,25 +12,29 @@ class CAnimBlendSequence;
 class CAnimBlendHierarchy
 {
 public:
-	char name[24];
+	char name[24]{};
 	CAnimBlendSequence *sequences;
 	int16 numSequences;
 	bool compressed;
-	bool keepCompressed;
+	bool keepCompressed{};
 	float totalLength;
 	CLink<CAnimBlendHierarchy*> *linkPtr;
 
-	CAnimBlendHierarchy(void);
-	void Shutdown(void);
-	void SetName(char *name);
-	void CalcTotalTime(void);
-	void CalcTotalTimeCompressed(void);
-	void RemoveQuaternionFlips(void);
-	void RemoveAnimSequences(void);
-	void Uncompress(void);
-	void RemoveUncompressedData(void);
+	CAnimBlendHierarchy();
+	void Shutdown();
+	void SetName(const char *name);
+	void CalcTotalTime();
+	void CalcTotalTimeCompressed();
+
+	void RemoveQuaternionFlips() const;
+
+	void RemoveAnimSequences();
+	void Uncompress();
+	void RemoveUncompressedData();
+#ifdef USE_CUSTOM_ALLOCATOR
 	void MoveMemory(bool onlyone = false);
-	bool IsCompressed() { return !!compressed; };
+#endif
+	[[nodiscard]] bool IsCompressed() const { return !!compressed; };
 };
 
 VALIDATE_SIZE(CAnimBlendHierarchy, 0x28);

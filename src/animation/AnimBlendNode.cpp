@@ -4,17 +4,17 @@
 #include "AnimBlendNode.h"
 
 void 
-CAnimBlendNode::Init(void)
+CAnimBlendNode::Init()
 {
 	frameA = -1;
 	frameB = -1;
 	remainingTime = 0.0f;
-	sequence = nil;
-	association = nil;
+	sequence = nullptr;
+	association = nullptr;
 }
 
 bool
-CAnimBlendNode::Update(CVector &trans, CQuaternion &rot, float weight)
+CAnimBlendNode::Update(CVector &trans, CQuaternion &rot, const float weight)
 {
 	bool looped = false;
 
@@ -27,11 +27,10 @@ CAnimBlendNode::Update(CVector &trans, CQuaternion &rot, float weight)
 			looped = NextKeyFrame();
 	}
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTrans *kfA = (KeyFrameTrans*)sequence->GetKeyFrame(frameA);
-		KeyFrameTrans *kfB = (KeyFrameTrans*)sequence->GetKeyFrame(frameB);
-		float t = kfA->deltaTime == 0.0f ? 0.0f : (kfA->deltaTime - remainingTime)/kfA->deltaTime;
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kfA = static_cast<KeyFrameTrans *>(sequence->GetKeyFrame(frameA));
+		const auto *kfB = static_cast<KeyFrameTrans *>(sequence->GetKeyFrame(frameB));
+		const float t = kfA->deltaTime == 0.0f ? 0.0f : (kfA->deltaTime - remainingTime)/kfA->deltaTime;
 		if(sequence->type & CAnimBlendSequence::KF_TRANS){
 			trans = kfB->translation + t*(kfA->translation - kfB->translation);
 			trans *= blend;
@@ -46,7 +45,7 @@ CAnimBlendNode::Update(CVector &trans, CQuaternion &rot, float weight)
 }
 
 bool
-CAnimBlendNode::UpdateCompressed(CVector &trans, CQuaternion &rot, float weight)
+CAnimBlendNode::UpdateCompressed(CVector &trans, CQuaternion &rot, const float weight)
 {
 	bool looped = false;
 
@@ -59,11 +58,10 @@ CAnimBlendNode::UpdateCompressed(CVector &trans, CQuaternion &rot, float weight)
 			looped = NextKeyFrameCompressed();
 	}
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTransCompressed *kfA = (KeyFrameTransCompressed*)sequence->GetKeyFrameCompressed(frameA);
-		KeyFrameTransCompressed *kfB = (KeyFrameTransCompressed*)sequence->GetKeyFrameCompressed(frameB);
-		float t = kfA->deltaTime == 0 ? 0.0f : (kfA->GetDeltaTime() - remainingTime)/kfA->GetDeltaTime();
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kfA = static_cast<KeyFrameTransCompressed *>(sequence->GetKeyFrameCompressed(frameA));
+		const auto *kfB = static_cast<KeyFrameTransCompressed *>(sequence->GetKeyFrameCompressed(frameB));
+		const float t = kfA->deltaTime == 0 ? 0.0f : (kfA->GetDeltaTime() - remainingTime)/kfA->GetDeltaTime();
 		if(sequence->type & CAnimBlendSequence::KF_TRANS){
 			CVector transA, transB;
 			kfA->GetTranslation(&transA);
@@ -84,14 +82,12 @@ CAnimBlendNode::UpdateCompressed(CVector &trans, CQuaternion &rot, float weight)
 }
 
 bool
-CAnimBlendNode::NextKeyFrame(void)
+CAnimBlendNode::NextKeyFrame()
 {
-	bool looped;
-
 	if(sequence->numFrames <= 1)
 		return false;
 
-	looped = false;
+	bool looped = false;
 	frameB = frameA;
 
 	// Advance as long as we have to
@@ -121,14 +117,12 @@ CAnimBlendNode::NextKeyFrame(void)
 }
 
 bool
-CAnimBlendNode::NextKeyFrameCompressed(void)
+CAnimBlendNode::NextKeyFrameCompressed()
 {
-	bool looped;
-
 	if(sequence->numFrames <= 1)
 		return false;
 
-	looped = false;
+	bool looped = false;
 	frameB = frameA;
 
 	// Advance as long as we have to
@@ -193,7 +187,7 @@ CAnimBlendNode::FindKeyFrame(float t)
 }
 
 bool
-CAnimBlendNode::SetupKeyFrameCompressed(void)
+CAnimBlendNode::SetupKeyFrameCompressed()
 {
 	if(sequence->numFrames < 1)
 		return false;
@@ -212,12 +206,12 @@ CAnimBlendNode::SetupKeyFrameCompressed(void)
 }
 
 void
-CAnimBlendNode::CalcDeltas(void)
+CAnimBlendNode::CalcDeltas()
 {
 	if((sequence->type & CAnimBlendSequence::KF_ROT) == 0)
 		return;
-	KeyFrame *kfA = sequence->GetKeyFrame(frameA);
-	KeyFrame *kfB = sequence->GetKeyFrame(frameB);
+	const KeyFrame *kfA = sequence->GetKeyFrame(frameA);
+	const KeyFrame *kfB = sequence->GetKeyFrame(frameB);
 	float cos = DotProduct(kfA->rotation, kfB->rotation);
 	if(cos > 1.0f)
 		cos = 1.0f;
@@ -226,7 +220,7 @@ CAnimBlendNode::CalcDeltas(void)
 }
 
 void
-CAnimBlendNode::CalcDeltasCompressed(void)
+CAnimBlendNode::CalcDeltasCompressed()
 {
 	if((sequence->type & CAnimBlendSequence::KF_ROT) == 0)
 		return;
@@ -248,15 +242,14 @@ CAnimBlendNode::CalcDeltasCompressed(void)
 }
 
 void
-CAnimBlendNode::GetCurrentTranslation(CVector &trans, float weight)
+CAnimBlendNode::GetCurrentTranslation(CVector &trans, const float weight) const
 {
 	trans = CVector(0.0f, 0.0f, 0.0f);
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTrans *kfA = (KeyFrameTrans*)sequence->GetKeyFrame(frameA);
-		KeyFrameTrans *kfB = (KeyFrameTrans*)sequence->GetKeyFrame(frameB);
-		float t = kfA->deltaTime == 0.0f ? 0.0f : (kfA->deltaTime - remainingTime)/kfA->deltaTime;
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kfA = static_cast<KeyFrameTrans *>(sequence->GetKeyFrame(frameA));
+		const auto *kfB = static_cast<KeyFrameTrans *>(sequence->GetKeyFrame(frameB));
+		const float t = kfA->deltaTime == 0.0f ? 0.0f : (kfA->deltaTime - remainingTime)/kfA->deltaTime;
 		if(sequence->type & CAnimBlendSequence::KF_TRANS){
 			trans = kfB->translation + t*(kfA->translation - kfB->translation);
 			trans *= blend;
@@ -265,15 +258,14 @@ CAnimBlendNode::GetCurrentTranslation(CVector &trans, float weight)
 }
 
 void
-CAnimBlendNode::GetCurrentTranslationCompressed(CVector &trans, float weight)
+CAnimBlendNode::GetCurrentTranslationCompressed(CVector &trans, const float weight) const
 {
 	trans = CVector(0.0f, 0.0f, 0.0f);
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTransCompressed *kfA = (KeyFrameTransCompressed*)sequence->GetKeyFrameCompressed(frameA);
-		KeyFrameTransCompressed *kfB = (KeyFrameTransCompressed*)sequence->GetKeyFrameCompressed(frameB);
-		float t = kfA->deltaTime == 0 ? 0.0f : (kfA->GetDeltaTime() - remainingTime)/kfA->GetDeltaTime();
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kfA = static_cast<KeyFrameTransCompressed *>(sequence->GetKeyFrameCompressed(frameA));
+		const auto *kfB = static_cast<KeyFrameTransCompressed *>(sequence->GetKeyFrameCompressed(frameB));
+		const float t = kfA->deltaTime == 0 ? 0.0f : (kfA->GetDeltaTime() - remainingTime)/kfA->GetDeltaTime();
 		if(sequence->type & CAnimBlendSequence::KF_TRANS){
 			CVector transA, transB;
 			kfA->GetTranslation(&transA);
@@ -285,26 +277,24 @@ CAnimBlendNode::GetCurrentTranslationCompressed(CVector &trans, float weight)
 }
 
 void
-CAnimBlendNode::GetEndTranslation(CVector &trans, float weight)
+CAnimBlendNode::GetEndTranslation(CVector &trans, const float weight) const
 {
 	trans = CVector(0.0f, 0.0f, 0.0f);
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTrans *kf = (KeyFrameTrans*)sequence->GetKeyFrame(sequence->numFrames-1);
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kf = static_cast<KeyFrameTrans *>(sequence->GetKeyFrame(sequence->numFrames - 1));
 		if(sequence->type & CAnimBlendSequence::KF_TRANS)
 			trans = kf->translation * blend;
 	}
 }
 
 void
-CAnimBlendNode::GetEndTranslationCompressed(CVector &trans, float weight)
+CAnimBlendNode::GetEndTranslationCompressed(CVector &trans, const float weight) const
 {
 	trans = CVector(0.0f, 0.0f, 0.0f);
 
-	float blend = association->GetBlendAmount(weight);
-	if(blend > 0.0f){
-		KeyFrameTransCompressed *kf = (KeyFrameTransCompressed*)sequence->GetKeyFrameCompressed(sequence->numFrames-1);
+	if(const float blend = association->GetBlendAmount(weight); blend > 0.0f){
+		const auto *kf = static_cast<KeyFrameTransCompressed *>(sequence->GetKeyFrameCompressed(sequence->numFrames - 1));
 		if(sequence->type & CAnimBlendSequence::KF_TRANS){
 			CVector pos;
 			kf->GetTranslation(&pos);

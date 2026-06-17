@@ -29,29 +29,29 @@ public:
 	static uint32 ms_cutsceneLoadStatus;
 
 	static void StartCutsceneProcessing() { ms_cutsceneProcessing = true; }
-	static bool IsRunning(void) { return ms_running; }
-	static bool HasLoaded(void) { return ms_loaded; }
-	static bool IsCutsceneProcessing(void) { return ms_cutsceneProcessing; }
-	static bool WasCutsceneSkipped(void) { return ms_wasCutsceneSkipped; }
-	static bool UseLodMultiplier(void) { return ms_useLodMultiplier; }
-	static CCutsceneObject* GetCutsceneObject(int id) { return ms_pCutsceneObjects[id]; }
-	static int GetCutsceneTimeInMilleseconds(void) { return 1000.0f * ms_cutsceneTimer; }
-	static char *GetCutsceneName(void) { return ms_cutsceneName; }
+	static bool IsRunning() { return ms_running; }
+	static bool HasLoaded() { return ms_loaded; }
+	static bool IsCutsceneProcessing() { return ms_cutsceneProcessing; }
+	static bool WasCutsceneSkipped() { return ms_wasCutsceneSkipped; }
+	static bool UseLodMultiplier() { return ms_useLodMultiplier; }
+	static CCutsceneObject* GetCutsceneObject(const int id) { return ms_pCutsceneObjects[id]; }
+	static int GetCutsceneTimeInMilleseconds() { return 1000.0f * ms_cutsceneTimer; }
+	static char *GetCutsceneName() { return ms_cutsceneName; }
 	static void SetCutsceneOffset(const CVector& vec) { ms_cutsceneOffset = vec; }
-	static bool HasCutsceneFinished(void);
+	static bool HasCutsceneFinished();
 
-	static void Initialise(void);
-	static void Shutdown(void);
+	static void Initialise();
+	static void Shutdown();
 	static void LoadCutsceneData(const char *szCutsceneName);
-	static void FinishCutscene(void);
-	static void SetupCutsceneToStart(void);
-	static void SetCutsceneAnim(const char *animName, CObject *pObject);
+	static void FinishCutscene();
+	static void SetupCutsceneToStart();
+	static void SetCutsceneAnim(const char *animName, const CObject *pObject);
 	static void SetCutsceneAnimToLoop(const char *animName);
-	static CCutsceneHead *AddCutsceneHead(CObject *pObject, int modelId);
+	static CCutsceneHead *AddCutsceneHead();
 	static CCutsceneObject *CreateCutsceneObject(int modelId);
-	static void DeleteCutsceneData(void);
+	static void DeleteCutsceneData();
 	static void LoadAnimationUncompressed(char const*);
-	static void Update(void);
+	static void Update();
 
 	static void AttachObjectToParent(CObject *pObject, CEntity *pAttachTo);
 	static void AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const char *frame);

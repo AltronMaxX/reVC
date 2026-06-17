@@ -7,10 +7,9 @@
 #include "AnimBlendAssociation.h"
 #include "MemoryMgr.h"
 
-CAnimBlendAssociation::CAnimBlendAssociation(void)
-{
+CAnimBlendAssociation::CAnimBlendAssociation() {
 	groupId = -1;
-	nodes = nil;
+	nodes = nullptr;
 	blendAmount = 1.0f;
 	blendDelta = 0.0f;
 	currentTime = 0.0f;
@@ -22,9 +21,9 @@ CAnimBlendAssociation::CAnimBlendAssociation(void)
 	link.Init();
 }
 
-CAnimBlendAssociation::CAnimBlendAssociation(CAnimBlendAssociation &other)
+CAnimBlendAssociation::CAnimBlendAssociation(const CAnimBlendAssociation &other)
 {
-	nodes = nil;
+	nodes = nullptr;
 	blendAmount = 1.0f;
 	blendDelta = 0.0f;
 	currentTime = 0.0f;
@@ -35,7 +34,7 @@ CAnimBlendAssociation::CAnimBlendAssociation(CAnimBlendAssociation &other)
 	Init(other);
 }
 
-CAnimBlendAssociation::~CAnimBlendAssociation(void)
+CAnimBlendAssociation::~CAnimBlendAssociation()
 {
 	FreeAnimBlendNodeArray();
 	link.Remove();
@@ -43,17 +42,15 @@ CAnimBlendAssociation::~CAnimBlendAssociation(void)
 
 
 void
-CAnimBlendAssociation::AllocateAnimBlendNodeArray(int n)
+CAnimBlendAssociation::AllocateAnimBlendNodeArray(const int n)
 {
-	int i;
-
-	nodes = (CAnimBlendNode*)RwMallocAlign(n*sizeof(CAnimBlendNode), 64);
-	for(i = 0; i < n; i++)
+	nodes = static_cast<CAnimBlendNode *>(RwMallocAlign(n * sizeof(CAnimBlendNode), 64));
+	for(int i = 0; i < n; i++)
 		nodes[i].Init();
 }
 
 void
-CAnimBlendAssociation::FreeAnimBlendNodeArray(void)
+CAnimBlendAssociation::FreeAnimBlendNodeArray() const
 {
 	if(nodes)
 		RwFreeAlign(nodes);
@@ -65,7 +62,7 @@ CAnimBlendAssociation::Init(RpClump *clump, CAnimBlendHierarchy *hier)
 	int i;
 	AnimBlendFrameData *frame;
 
-	CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
+	const CAnimBlendClumpData *clumpData = *RPANIMBLENDCLUMPDATA(clump);
 	numNodes = clumpData->numFrames;
 	AllocateAnimBlendNodeArray(numNodes);
 	for(i = 0; i < numNodes; i++)
@@ -86,24 +83,22 @@ CAnimBlendAssociation::Init(RpClump *clump, CAnimBlendHierarchy *hier)
 }
 
 void
-CAnimBlendAssociation::Init(CAnimBlendAssociation &assoc)
+CAnimBlendAssociation::Init(const CAnimBlendAssociation &assoc)
 {
-	int i;
-
 	hierarchy = assoc.hierarchy;
 	numNodes = assoc.numNodes;
 	flags = assoc.flags;
 	animId = assoc.animId;
 	groupId = assoc.groupId;
 	AllocateAnimBlendNodeArray(numNodes);
-	for(i = 0; i < numNodes; i++){
+	for(int i = 0; i < numNodes; i++){
 		nodes[i] = assoc.nodes[i];
 		nodes[i].association = this;
 	}
 }
 
 void
-CAnimBlendAssociation::SetBlend(float amount, float delta)
+CAnimBlendAssociation::SetBlend(const float amount, const float delta)
 {
 	blendAmount = amount;
 	blendDelta = delta;
@@ -126,7 +121,7 @@ CAnimBlendAssociation::SetDeleteCallback(void (*cb)(CAnimBlendAssociation*, void
 }
 
 void
-CAnimBlendAssociation::SetCurrentTime(float time)
+CAnimBlendAssociation::SetCurrentTime(const float time)
 {
 	int i;
 
@@ -153,27 +148,27 @@ CAnimBlendAssociation::SetCurrentTime(float time)
 }
 
 void
-CAnimBlendAssociation::SyncAnimation(CAnimBlendAssociation *other)
+CAnimBlendAssociation::SyncAnimation(const CAnimBlendAssociation *other)
 {
 	SetCurrentTime(other->currentTime/other->hierarchy->totalLength * hierarchy->totalLength);
 }
 
 void
-CAnimBlendAssociation::Start(float time)
+CAnimBlendAssociation::Start(const float time)
 {
 	flags |= ASSOC_RUNNING;
 	SetCurrentTime(time);
 }
 
 void
-CAnimBlendAssociation::UpdateTimeStep(float timeDelta, float relSpeed)
+CAnimBlendAssociation::UpdateTimeStep(const float timeDelta, const float relSpeed)
 {
 	if(IsRunning())
 		timeStep = (flags & ASSOC_MOVEMENT ? relSpeed*hierarchy->totalLength : speed) * timeDelta;
 }
 
 bool
-CAnimBlendAssociation::UpdateTime(float timeDelta, float relSpeed)
+CAnimBlendAssociation::UpdateTime()
 {
 	if(!IsRunning())
 		return true;
@@ -206,7 +201,7 @@ CAnimBlendAssociation::UpdateTime(float timeDelta, float relSpeed)
 
 // return whether we still exist after this function
 bool
-CAnimBlendAssociation::UpdateBlend(float timeDelta)
+CAnimBlendAssociation::UpdateBlend(const float timeDelta)
 {
 	blendAmount += blendDelta * timeDelta;
 

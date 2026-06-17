@@ -18,19 +18,23 @@ public:
 	CAnimBlendSequence *sequence;
 	CAnimBlendAssociation *association;
 
-	void Init(void);
+	void Init();
 	bool Update(CVector &trans, CQuaternion &rot, float weight);
 	bool UpdateCompressed(CVector &trans, CQuaternion &rot, float weight);
-	bool NextKeyFrame(void);
-	bool NextKeyFrameCompressed(void);
+	bool NextKeyFrame();
+	bool NextKeyFrameCompressed();
 	bool FindKeyFrame(float t);
-	bool SetupKeyFrameCompressed(void);
-	void CalcDeltas(void);
-	void CalcDeltasCompressed(void);
-	void GetCurrentTranslation(CVector &trans, float weight);
-	void GetCurrentTranslationCompressed(CVector &trans, float weight);
-	void GetEndTranslation(CVector &trans, float weight);
-	void GetEndTranslationCompressed(CVector &trans, float weight);
+	bool SetupKeyFrameCompressed();
+	void CalcDeltas();
+	void CalcDeltasCompressed();
+
+	void GetCurrentTranslation(CVector &trans, float weight) const;
+
+	void GetCurrentTranslationCompressed(CVector &trans, float weight) const;
+
+	void GetEndTranslation(CVector &trans, float weight) const;
+
+	void GetEndTranslationCompressed(CVector &trans, float weight) const;
 };
 
 

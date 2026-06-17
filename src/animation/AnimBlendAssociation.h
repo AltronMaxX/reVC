@@ -34,60 +34,62 @@ public:
 		CB_DELETE
 	};
 
-	CAnimBlendLink link;
+	CAnimBlendLink link{};
 
-	int16 numNodes;			// taken from CAnimBlendClumpData::numFrames
-	int16 groupId;		// ID of CAnimBlendAssocGroup this is in
+	int16 numNodes{};			// taken from CAnimBlendClumpData::numFrames
+	int16 groupId{};		// ID of CAnimBlendAssocGroup this is in
 	// NB: Order of these depends on order of nodes in Clump this was built from
 	CAnimBlendNode *nodes;
-	CAnimBlendHierarchy *hierarchy;
+	CAnimBlendHierarchy *hierarchy{};
 	float blendAmount;
 	float blendDelta;	// how much blendAmount changes over time
 	float currentTime;
 	float speed;
 	float timeStep;
-	int16 animId;
-	int16 flags;
+	int16 animId{};
+	int16 flags{};
 	int32 callbackType;
-	void (*callback)(CAnimBlendAssociation*, void*);
-	void *callbackArg;
+	void (*callback)(CAnimBlendAssociation*, void*){};
+	void *callbackArg{};
 
-	bool IsRunning(void) { return !!(flags & ASSOC_RUNNING); }
-	bool IsRepeating(void) { return !!(flags & ASSOC_REPEAT); }
-	bool IsPartial(void) { return !!(flags & ASSOC_PARTIAL); }
-	bool IsMovement(void) { return !!(flags & ASSOC_MOVEMENT); }
-	bool HasTranslation(void) { return !!(flags & ASSOC_HAS_TRANSLATION); }
-	bool HasXTranslation(void) { return !!(flags & ASSOC_HAS_X_TRANSLATION); }
+	[[nodiscard]] bool IsRunning() const { return !!(flags & ASSOC_RUNNING); }
+	[[nodiscard]] bool IsRepeating() const { return !!(flags & ASSOC_REPEAT); }
+	[[nodiscard]] bool IsPartial() const { return !!(flags & ASSOC_PARTIAL); }
+	[[nodiscard]] bool IsMovement() const { return !!(flags & ASSOC_MOVEMENT); }
+	[[nodiscard]] bool HasTranslation() const { return !!(flags & ASSOC_HAS_TRANSLATION); }
+	[[nodiscard]] bool HasXTranslation() const { return !!(flags & ASSOC_HAS_X_TRANSLATION); }
 
-	float GetBlendAmount(float weight) { return IsPartial() ? blendAmount : blendAmount*weight; }
-	CAnimBlendNode *GetNode(int i) { return &nodes[i]; }
+	[[nodiscard]] float GetBlendAmount(const float weight) const { return IsPartial() ? blendAmount : blendAmount*weight; }
+	[[nodiscard]] CAnimBlendNode *GetNode(const int i) const { return &nodes[i]; }
 
-	CAnimBlendAssociation(void);
-	CAnimBlendAssociation(CAnimBlendAssociation &other);
+	CAnimBlendAssociation();
+
+	CAnimBlendAssociation(const CAnimBlendAssociation &other);
 #ifndef FIX_BUGS
 	virtual
 #endif
-	~CAnimBlendAssociation(void);
+	~CAnimBlendAssociation();
 	void AllocateAnimBlendNodeArray(int n);
-	void FreeAnimBlendNodeArray(void);
+
+	void FreeAnimBlendNodeArray() const;
 	void Init(RpClump *clump, CAnimBlendHierarchy *hier);
-	void Init(CAnimBlendAssociation &assoc);
+	void Init(const CAnimBlendAssociation &assoc);
 	void SetBlend(float amount, float delta);
 	void SetFinishCallback(void (*callback)(CAnimBlendAssociation*, void*), void *arg);
 	void SetDeleteCallback(void (*callback)(CAnimBlendAssociation*, void*), void *arg);
 	void SetCurrentTime(float time);
-	void SyncAnimation(CAnimBlendAssociation *other);
+	void SyncAnimation(const CAnimBlendAssociation *other);
 	void Start(float time);
 	void UpdateTimeStep(float timeDelta, float relSpeed);
-	bool UpdateTime(float timeDelta, float relSpeed);
+	bool UpdateTime();
 	bool UpdateBlend(float timeDelta);
 
-	void SetRun(void) { flags |= ASSOC_RUNNING; }
+	void SetRun() { flags |= ASSOC_RUNNING; }
 
-	float GetTimeLeft() { return hierarchy->totalLength - currentTime; }
-	float GetProgress() { return currentTime / hierarchy->totalLength; }
+	[[nodiscard]] float GetTimeLeft() const { return hierarchy->totalLength - currentTime; }
+	[[nodiscard]] float GetProgress() const { return currentTime / hierarchy->totalLength; }
 
 	static CAnimBlendAssociation *FromLink(CAnimBlendLink *l) {
-		return (CAnimBlendAssociation*)((uint8*)l - offsetof(CAnimBlendAssociation, link));
+		return reinterpret_cast<CAnimBlendAssociation *>(reinterpret_cast<uint8 *>(l) - offsetof(CAnimBlendAssociation, link));
 	}
 };
