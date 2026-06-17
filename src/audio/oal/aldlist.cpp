@@ -25,8 +25,10 @@
 #include "aldlist.h"
 
 #include <cstring>
+#ifdef AUDIO_OAL
 #include <AL/al.h>
 #include <AL/alc.h>
+#endif
 
 #ifndef _WIN32
 #define _stricmp strcasecmp
