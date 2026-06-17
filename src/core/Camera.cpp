@@ -4,6 +4,7 @@
 #include "Draw.h"
 #include "World.h"
 #include "Vehicle.h"
+#include "Train.h"
 #include "Automobile.h"
 #include "Ped.h"
 #include "PlayerPed.h"
@@ -727,6 +728,15 @@ CCamera::CamControl(void)
 
 		// Vehicle target
 		if(pTargetEntity->IsVehicle()){
+#ifdef GTA_TRAIN
+			if(((CVehicle*)pTargetEntity)->IsTrain()){
+				if(!m_bTargetJustBeenOnTrain){
+					m_bInitialNodeFound = false;
+					m_bInitialNoNodeStaticsSet = false;
+				}
+				Process_Train_Camera_Control();
+			}else
+#endif
 			{
 				if(((CVehicle*)pTargetEntity)->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 					boatTarget = true;
@@ -3384,6 +3394,193 @@ CCamera::DontProcessObbeCinemaCamera(void)
 {
 	bDidWeProcessAnyCinemaCam = false;
 }
+
+#ifdef GTA_TRAIN
+void
+CCamera::LoadTrainCamNodes(char const *name)
+{
+	CFileMgr::SetDir("data");
+
+	char token[16] = { 0 };
+	char filename[16] = { 0 };
+	uint8 *buf;
+	ssize_t bufpos = 0;
+	int field = 0;
+	int tokpos = 0;
+	char c;
+	int i;
+	ssize_t len;
+
+	strcpy(filename, name);
+	len = (int)strlen(filename);
+	filename[len] = '.';
+	filename[len+1] = 'd';
+	filename[len+2] = 'a';
+	filename[len+3] = 't';
+
+	m_uiNumberOfTrainCamNodes = 0;
+
+	buf = new uint8[20000];
+	len = CFileMgr::LoadFile(filename, buf, 20000, "r");
+
+	for(i = 0; i < MAX_NUM_OF_NODES; i++){
+		m_arrTrainCamNode[i].m_cvecPointToLookAt = CVector(0.0f, 0.0f, 0.0f);
+		m_arrTrainCamNode[i].m_cvecMinPointInRange = CVector(0.0f, 0.0f, 0.0f);
+		m_arrTrainCamNode[i].m_cvecMaxPointInRange = CVector(0.0f, 0.0f, 0.0f);
+		m_arrTrainCamNode[i].m_fDesiredFOV = 0.0f;
+		m_arrTrainCamNode[i].m_fNearClip = 0.0f;
+	}
+
+	while(bufpos <= len){
+		c = buf[bufpos];
+		switch(c){
+		case '-':
+		case '.':
+		case '0': case '1': case '2': case '3': case '4':
+		case '5': case '6': case '7': case '8': case '9':
+//		case '10': case '11': case '12': case '13':	// ahem...
+			token[tokpos++] = c;
+			bufpos++;
+			break;
+
+		case ',':
+		case ';':	// game has the code for this duplicated but we handle both under the same case
+			switch((field+14)%14){
+			case 0:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecCamPosition.x = atof(token);
+				break;
+			case 1:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecCamPosition.y = atof(token);
+				break;
+			case 2:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecCamPosition.z = atof(token);
+				break;
+			case 3:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecPointToLookAt.x = atof(token);
+				break;
+			case 4:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecPointToLookAt.y = atof(token);
+				break;
+			case 5:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecPointToLookAt.z = atof(token);
+				break;
+			case 6:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMinPointInRange.x = atof(token);
+				break;
+			case 7:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMinPointInRange.y = atof(token);
+				break;
+			case 8:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMinPointInRange.z = atof(token);
+				break;
+			case 9:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMaxPointInRange.x = atof(token);
+				break;
+			case 10:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMaxPointInRange.y = atof(token);
+				break;
+			case 11:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_cvecMaxPointInRange.z = atof(token);
+				break;
+			case 12:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_fDesiredFOV = atof(token);
+				break;
+			case 13:
+				m_arrTrainCamNode[m_uiNumberOfTrainCamNodes].m_fNearClip = atof(token);
+				m_uiNumberOfTrainCamNodes++;
+				break;
+			}
+			field++;
+			bufpos++;
+			memset(token, 0, sizeof(token));
+			tokpos = 0;
+			break;
+
+		default:
+			bufpos++;
+			break;
+		}
+	}
+
+	delete[] buf;
+	CFileMgr::SetDir("");
+}
+
+void
+CCamera::Process_Train_Camera_Control(void)
+{
+	bool found = false;
+	CTrain *target = (CTrain*)pTargetEntity;
+	m_bUseSpecialFovTrain = true;
+	static bool OKtoGoBackToNodeCam = true;	// only ever set to true
+	uint32 i;
+
+	if(target->m_nTrackId == TRACK_ELTRAIN && !m_bAboveGroundTrainNodesLoaded){
+		m_bAboveGroundTrainNodesLoaded = true;
+		m_bBelowGroundTrainNodesLoaded = false;
+		LoadTrainCamNodes("Train");
+		m_uiTimeLastChange = CTimer::GetTimeInMilliseconds();
+		OKtoGoBackToNodeCam = true;
+		m_iCurrentTrainCamNode = 0;
+	}
+	if(target->m_nTrackId == TRACK_SUBWAY && !m_bBelowGroundTrainNodesLoaded){
+		m_bBelowGroundTrainNodesLoaded = true;
+		m_bAboveGroundTrainNodesLoaded = false;
+		LoadTrainCamNodes("Train2");
+		m_uiTimeLastChange = CTimer::GetTimeInMilliseconds();
+		OKtoGoBackToNodeCam = true;
+		m_iCurrentTrainCamNode = 0;
+	}
+
+	m_bTargetJustBeenOnTrain = true;
+	uint32 node = m_iCurrentTrainCamNode;
+	for(i = 0; i < m_uiNumberOfTrainCamNodes && !found; i++){
+		if(target->IsWithinArea(m_arrTrainCamNode[node].m_cvecMinPointInRange.x,
+		                        m_arrTrainCamNode[node].m_cvecMinPointInRange.y,
+		                        m_arrTrainCamNode[node].m_cvecMinPointInRange.z,
+		                        m_arrTrainCamNode[node].m_cvecMaxPointInRange.x,
+		                        m_arrTrainCamNode[node].m_cvecMaxPointInRange.y,
+		                        m_arrTrainCamNode[node].m_cvecMaxPointInRange.z)){
+			m_iCurrentTrainCamNode = node;
+			found = true;
+		}
+		node++;
+		if(node >= m_uiNumberOfTrainCamNodes)
+			node = 0;
+	}
+#ifdef FIX_BUGS
+	// Not really a bug but be nice and respect the debug mode
+	if(DebugCamMode){
+		TakeControl(target, DebugCamMode, JUMP_CUT, CAMCONTROL_SCRIPT);
+		return;
+	}
+#endif
+
+	if(found){
+		SetWideScreenOn();
+		if(DotProduct(((CTrain*)pTargetEntity)->GetMoveSpeed(), pTargetEntity->GetForward()) < 0.001f){
+			TakeControl(FindPlayerPed(), CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
+			if(target->Doors[0].IsFullyOpen())
+				SetWideScreenOff();
+		}else{
+			SetCamPositionForFixedMode(m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecCamPosition, CVector(0.0f, 0.0f, 0.0f));
+			if(m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecPointToLookAt.x == 999.0f &&
+			   m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecPointToLookAt.y == 999.0f &&
+			   m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecPointToLookAt.z == 999.0f)
+				TakeControl(target, CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_SCRIPT);
+			else
+				TakeControlNoEntity(m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecPointToLookAt, JUMP_CUT, CAMCONTROL_SCRIPT);
+			RwCameraSetNearClipPlane(Scene.camera, m_arrTrainCamNode[m_iCurrentTrainCamNode].m_fNearClip);
+		}
+	}else{
+		if(DotProduct(((CTrain*)pTargetEntity)->GetMoveSpeed(), pTargetEntity->GetForward()) < 0.001f){
+			TakeControl(FindPlayerPed(), CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
+			if(target->Doors[0].IsFullyOpen())
+				SetWideScreenOff();
+		}
+	}
+}
+#endif
 
 
 void

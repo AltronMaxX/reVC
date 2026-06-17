@@ -898,6 +898,9 @@ public:
 	static void PedSetDraggedOutCarCB(CAnimBlendAssociation *assoc, void *arg);
 	static void PedAnimStepOutCarCB(CAnimBlendAssociation *assoc, void *arg);
 	static void PedSetInTrainCB(CAnimBlendAssociation *assoc, void *arg);
+#ifdef GTA_TRAIN
+	static void PedSetOutTrainCB(CAnimBlendAssociation *assoc, void *arg);
+#endif
 	static void FinishedAttackCB(CAnimBlendAssociation *assoc, void *arg);
 	static void FinishedReloadCB(CAnimBlendAssociation *assoc, void *arg);
 	static void FinishFightMoveCB(CAnimBlendAssociation *assoc, void *arg);
@@ -934,6 +937,14 @@ public:
 	void SetPedStats(ePedStats);
 	bool IsGangMember(void) const;
 	void Die(void);
+#ifdef GTA_TRAIN
+	void EnterTrain(void);
+	void ExitTrain(void);
+	void SetExitTrain(CVehicle*);
+	void SetPedPositionInTrain(void);
+	void LineUpPedWithTrain(void);
+	void SetEnterTrain(CVehicle*, uint32);
+#endif
 	void Fall(void);
 	bool IsPedShootable(void);
 	void Look(void);

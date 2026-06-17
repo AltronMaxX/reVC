@@ -2055,6 +2055,11 @@ CWorld::Process(void)
 				   movingPed->EnteringCar()) {
 					CVehicle *movingCar = movingPed->m_pMyVehicle;
 					if(movingCar) {
+#ifdef GTA_TRAIN
+						if(movingCar->IsTrain()) {
+							movingPed->SetPedPositionInTrain();
+						} else
+#endif
 						{
 							switch(movingPed->m_nPedState) {
 							case PED_ENTER_CAR:

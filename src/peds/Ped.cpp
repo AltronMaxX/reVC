@@ -2707,6 +2707,14 @@ CPed::ProcessControl(void)
 				case PED_GETUP:
 					SetGetUp();
 					break;
+#ifdef GTA_TRAIN
+				case PED_ENTER_TRAIN:
+					EnterTrain();
+					break;
+				case PED_EXIT_TRAIN:
+					ExitTrain();
+					break;
+#endif
 				case PED_DRIVING:
 				{
 					if (!m_pMyVehicle) {
@@ -7455,6 +7463,11 @@ CPed::SeekCar(void)
 	if (Seek()) {
 		if (!foundBetterPosToSeek) {
 			if (1.6f + GetPosition().z > dest.z && GetPosition().z - 0.5f < dest.z) {
+#ifdef GTA_TRAIN
+				if (vehToSeek->IsTrain()) {
+					SetEnterTrain(vehToSeek, m_vehDoor);
+				} else
+#endif
 				{
 					m_fRotationCur = m_fRotationDest;
 					if (!bVehEnterDoorIsBlocked) {

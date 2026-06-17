@@ -1092,6 +1092,20 @@ CPathFind::RemoveBadStartNode(CVector pos, CPathNode **nodes, int16 *n)
 	}
 }
 
+#ifdef GTA_BRIDGE
+void
+CPathFind::SetLinksBridgeLights(float x1, float x2, float y1, float y2, bool enable)
+{
+	int i;
+	for(i = 0; i < m_numCarPathLinks; i++){
+		CVector2D pos = m_carPathLinks[i].GetPosition();
+		if(x1 < pos.x && pos.x < x2 &&
+		   y1 < pos.y && pos.y < y2)
+			m_carPathLinks[i].bBridgeLights = enable;
+	}
+}
+#endif
+
 void
 CPathFind::SwitchOffNodeAndNeighbours(int32 nodeId, bool disable)
 {

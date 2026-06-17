@@ -13,6 +13,7 @@
 #include "Vehicle.h"
 #include "Automobile.h"
 #include "Boat.h"
+#include "Train.h"
 #include "Plane.h"
 #include "Heli.h"
 #include "Bike.h"
@@ -98,6 +99,17 @@ RwObjectNameIdAssocation boatIds[] = {
 	{ nil, 0, 0 }
 };
 
+RwObjectNameIdAssocation trainIds[] = {
+	{ "door_lhs_dummy",	TRAIN_DOOR_LHS,	VEHICLE_FLAG_LEFT | VEHICLE_FLAG_COLLAPSE },
+	{ "door_rhs_dummy",	TRAIN_DOOR_RHS,	VEHICLE_FLAG_LEFT | VEHICLE_FLAG_COLLAPSE },
+	{ "light_front",	TRAIN_POS_LIGHT_FRONT,	VEHICLE_FLAG_POS | CLUMP_FLAG_NO_HIERID },
+	{ "light_rear",		TRAIN_POS_LIGHT_REAR,	VEHICLE_FLAG_POS | CLUMP_FLAG_NO_HIERID },
+	{ "ped_left_entry",	TRAIN_POS_LEFT_ENTRY,	VEHICLE_FLAG_DOOR | VEHICLE_FLAG_POS | CLUMP_FLAG_NO_HIERID },
+	{ "ped_mid_entry",	TRAIN_POS_MID_ENTRY,	VEHICLE_FLAG_DOOR | VEHICLE_FLAG_POS | CLUMP_FLAG_NO_HIERID },
+	{ "ped_right_entry",	TRAIN_POS_RIGHT_ENTRY,	VEHICLE_FLAG_DOOR | VEHICLE_FLAG_POS | CLUMP_FLAG_NO_HIERID },
+	{ nil, 0, 0 }
+};
+
 RwObjectNameIdAssocation heliIds[] = {
 	{ "chassis_dummy",	HELI_CHASSIS,	VEHICLE_FLAG_COLLAPSE },
 	{ "toprotor",		HELI_TOPROTOR,	0 },
@@ -143,6 +155,7 @@ RwObjectNameIdAssocation bikeIds[] = {
 RwObjectNameIdAssocation *CVehicleModelInfo::ms_vehicleDescs[] = {
 	carIds,
 	boatIds,
+	trainIds,
 	heliIds,
 	planeIds,
 	bikeIds
@@ -464,6 +477,11 @@ CVehicleModelInfo::SetAtomicRendererCB_RealHeli(RpAtomic *atomic, void *data)
 void
 CVehicleModelInfo::SetAtomicRenderCallbacks(void)
 {
+#ifdef GTA_TRAIN
+	if(m_vehicleType == VEHICLE_TYPE_TRAIN)
+		RpClumpForAllAtomics(m_clump, SetAtomicRendererCB_Train, nil);
+	else
+#endif
 	if(m_vehicleType == VEHICLE_TYPE_HELI)
 		RpClumpForAllAtomics(m_clump, SetAtomicRendererCB_Heli, nil);
 	else if(m_vehicleType == VEHICLE_TYPE_PLANE)

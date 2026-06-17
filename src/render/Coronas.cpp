@@ -16,6 +16,7 @@
 #include "PointLights.h"
 #include "Shadows.h"
 #include "Clock.h"
+#include "Bridge.h"
 
 struct FlareDef
 {
@@ -832,12 +833,12 @@ CEntity::ProcessLightsForEntity(void)
 				}
 				break;
 			case LIGHT_BRIDGE_FLASH1:
-				/*if(CBridge::ShouldLightsBeFlashing() && CTimer::GetTimeInMilliseconds() & 0x200)
-					lightOn = true;*/
+				if(CBridge::ShouldLightsBeFlashing() && CTimer::GetTimeInMilliseconds() & 0x200)
+					lightOn = true;
 				break;
 			case LIGHT_BRIDGE_FLASH2:
-				/*if(CBridge::ShouldLightsBeFlashing() && (CTimer::GetTimeInMilliseconds() & 0x1FF) < 60)
-					lightOn = true;*/
+				if(CBridge::ShouldLightsBeFlashing() && (CTimer::GetTimeInMilliseconds() & 0x1FF) < 60)
+					lightOn = true;
 				break;
 			}
 

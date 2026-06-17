@@ -871,7 +871,7 @@ CFileLoader::LoadVehicleObject(const char *line)
 	}else if(strcmp(type, "boat") == 0){
 		mi->m_vehicleType = VEHICLE_TYPE_BOAT;
 	}else if(strcmp(type, "train") == 0){
-		//mi->m_vehicleType = VEHICLE_TYPE_TRAIN;
+		mi->m_vehicleType = VEHICLE_TYPE_TRAIN;
 	}else if(strcmp(type, "heli") == 0){
 		mi->m_vehicleType = VEHICLE_TYPE_HELI;
 	}else if(strcmp(type, "plane") == 0){

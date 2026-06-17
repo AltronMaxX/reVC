@@ -1,6 +1,7 @@
 #include "common.h"
 
 #include "Automobile.h"
+#include "Bridge.h"
 #include "Camera.h"
 #include "CarCtrl.h"
 #include "Cranes.h"
@@ -311,7 +312,7 @@ CPlayerInfo::Process(void)
 		if (m_pPed->bInVehicle) {
 			if (!m_pRemoteVehicle) {
 				CEntity *surfaceBelowVeh = m_pPed->m_pMyVehicle->m_pCurGroundEntity;
-				if (!surfaceBelowVeh) {
+				if (!surfaceBelowVeh || !CBridge::ThisIsABridgeObjectMovingUp(surfaceBelowVeh->GetModelIndex())) {
 					CVehicle *veh = m_pPed->m_pMyVehicle;
 					if (!veh->IsBoat() || veh->m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE) {
 						if (veh->GetStatus() != STATUS_WRECKED && veh->GetStatus() != STATUS_TRAIN_MOVING && veh->m_nDoorLock != CARLOCK_LOCKED_PLAYER_INSIDE) {

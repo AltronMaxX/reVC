@@ -249,6 +249,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CCarAI::TellCarToBlockOtherCar(pVehicle, pTarget);
 		return 0;
 	}
+	case COMMAND_SET_CHAR_OBJ_CATCH_TRAIN:
+	{
+		CollectParameters(&m_nIp, 1);
+		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		script_assert(pPed);
+		pPed->bScriptObjectiveCompleted = false;
+		pPed->SetObjective(OBJECTIVE_CATCH_TRAIN);
+		return 0;
+	}
 	*/
 #ifdef GTA_SCRIPT_COLLECTIVE
 	case COMMAND_SET_COLL_OBJ_CATCH_TRAIN:

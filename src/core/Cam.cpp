@@ -246,6 +246,8 @@ CCam::Process(void)
 	case MODE_PLAYER_FALLEN_WATER:
 		Process_Player_Fallen_Water(CameraTarget, TargetOrientation, SpeedVar, TargetSpeedVar);
 		break;
+//	case MODE_CAM_ON_TRAIN_ROOF:
+//	case MODE_CAM_RUNNING_SIDE_TRAIN:
 //	case MODE_BLOOD_ON_THE_TRACKS:
 //	case MODE_IM_THE_PASSENGER_WOOWOO:
 	case MODE_SYPHON_CRIM_IN_FRONT:
@@ -905,7 +907,7 @@ CCam::PrintMode(void)
 			"Syphon", "Circle", "Cheesy Zoom", "Wheel", "Fixed",
 			"1st Person", "Fly by", "on a String", "Reaction",
 			"Follow Ped with Bind", "Chris", "Behind Boat",
-			"Player fallen in Water",
+			"Player fallen in Water", "Train Roof", "Train Side",
 			"Blood on the tracks", "Passenger", "Syphon Crim in Front",
 			"Dead Baby", "Pillow Paps", "Look at Cars", "Arrest One",
 			"Arrest Two", "M16", "Special fixed for Syphon", "Fight",
@@ -1064,6 +1066,10 @@ CCam::Process_FollowPed(const CVector &CameraTarget, float TargetOrientation, fl
 		 m_bCollisionChecksOn = true;
 		 Beta = TargetOrientation + PI;
 	}
+
+	if(FindPlayerVehicle())
+		if(FindPlayerVehicle()->m_vehType == VEHICLE_TYPE_TRAIN)
+			StandingInTrain = true;
 
 	if(TheCamera.m_bCamDirectlyInFront){
 		 m_bCollisionChecksOn = true;

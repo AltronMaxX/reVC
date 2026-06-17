@@ -3358,12 +3358,22 @@ void CCarCtrl::UpdateCarCount(CVehicle* pVehicle, bool remove)
 
 bool CCarCtrl::ThisRoadObjectCouldMove(int16 mi)
 {
+#ifdef GTA_BRIDGE
+	return mi == MI_BRIDGELIFT || mi == MI_BRIDGEROADSEGMENT;
+#else
 	return false;
+#endif
 }
 
 bool CCarCtrl::MapCouldMoveInThisArea(float x, float y)
 {
+#ifdef GTA_BRIDGE	// actually they forgot that in VC...
+	// bridge moves up and down
+	return x > -342.0f && x < -219.0f &&
+		y > -677.0f && y < -580.0f;
+#else
 	return false;
+#endif
 }
 
 float CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(int8 type)

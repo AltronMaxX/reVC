@@ -27,6 +27,7 @@ enum {
 enum eVehicleType {
 	VEHICLE_TYPE_CAR,
 	VEHICLE_TYPE_BOAT,
+	VEHICLE_TYPE_TRAIN,
 	VEHICLE_TYPE_HELI,
 	VEHICLE_TYPE_PLANE,
 	VEHICLE_TYPE_BIKE,
@@ -45,6 +46,15 @@ enum eCarPositions
 enum eBoatPositions
 {
 	BOAT_POS_FRONTSEAT
+};
+
+enum eTrainPositions
+{
+	TRAIN_POS_LIGHT_FRONT,
+	TRAIN_POS_LIGHT_REAR,
+	TRAIN_POS_LEFT_ENTRY,
+	TRAIN_POS_MID_ENTRY,
+	TRAIN_POS_RIGHT_ENTRY
 };
 
 enum ePlanePositions
