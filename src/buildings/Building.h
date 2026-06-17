@@ -5,16 +5,18 @@
 class CBuilding : public CEntity
 {
 public:
-	CBuilding(void) {
+	CBuilding() {
 		m_type = ENTITY_TYPE_BUILDING;
 		bUsesCollision = true;
 	}
-	static void *operator new(size_t);
-	static void operator delete(void*, size_t);
+
+	void *operator new(size_t);
+
+	void operator delete(void*, size_t);
 
 	void ReplaceWithNewModel(int32 id);
 
-	virtual bool GetIsATreadable(void) { return false; }
+	virtual bool GetIsATreadable() { return false; }
 };
 
 bool IsBuildingPointerValid(CBuilding*);

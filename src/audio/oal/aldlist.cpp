@@ -24,6 +24,10 @@
 
 #include "aldlist.h"
 
+#include <cstring>
+#include <AL/al.h>
+#include <AL/alc.h>
+
 #ifndef _WIN32
 #define _stricmp strcasecmp
 #define _strnicmp strncasecmp
@@ -36,40 +40,33 @@
  */
 ALDeviceList::ALDeviceList()
 {
-	char *devices;
-	int index;
-	const char *defaultDeviceName;
-	const char *actualDeviceName;
-
 	// DeviceInfo vector stores, for each enumerated device, it's device name, selection status, spec version #, and extension support
 	nNumOfDevices = 0;
 
 	defaultDeviceIndex = 0;
 
-	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT")) {
-		devices = (char *)alcGetString(NULL, ALC_DEVICE_SPECIFIER);
-		defaultDeviceName = (char *)alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+	if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT")) {
+		auto devices = const_cast<char *>(alcGetString(nullptr, ALC_DEVICE_SPECIFIER));
+		const char *defaultDeviceName = const_cast<char *>(alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER));
 		
-		index = 0;
+		int index = 0;
 		// go through device list (each device terminated with a single NULL, list terminated with double NULL)
 		while (*devices != '\0') {
 			if (strcmp(defaultDeviceName, devices) == 0) {
 				defaultDeviceIndex = index;
 			}
-			ALCdevice *device = alcOpenDevice(devices);
-			if (device) {
-				ALCcontext *context = alcCreateContext(device, NULL);
-				if (context) {
+			if (ALCdevice *device = alcOpenDevice(devices)) {
+				if (ALCcontext *context = alcCreateContext(device, nullptr)) {
 					alcMakeContextCurrent(context);
 					// if new actual device name isn't already in the list, then add it...
-					actualDeviceName = alcGetString(device, ALC_DEVICE_SPECIFIER);
+					const char *actualDeviceName = alcGetString(device, ALC_DEVICE_SPECIFIER);
 					bool bNewName = true;
 					for (unsigned int i = 0; i < GetNumDevices(); i++) {
 						if (strcmp(GetDeviceName(i), actualDeviceName) == 0) {
 							bNewName = false;
 						}
 					}
-					if ((bNewName) && (actualDeviceName != NULL) && (strlen(actualDeviceName) > 0)) {
+					if ((bNewName) && (actualDeviceName != nullptr) && (strlen(actualDeviceName) > 0)) {
 						ALDEVICEINFO ALDeviceInfo;
 						ALDeviceInfo.bSelected = true;
 						ALDeviceInfo.strDeviceName = _strdup(actualDeviceName);
@@ -108,7 +105,7 @@ ALDeviceList::ALDeviceList()
 
 						aDeviceInfo[nNumOfDevices++] = ALDeviceInfo;
 					}
-					alcMakeContextCurrent(NULL);
+					alcMakeContextCurrent(nullptr);
 					alcDestroyContext(context);
 				}
 				alcCloseDevice(device);
@@ -125,13 +122,12 @@ ALDeviceList::ALDeviceList()
  * Exit call
  */
 ALDeviceList::~ALDeviceList()
-{
-}
+= default;
 
 /*
  * Returns the number of devices in the complete device list
  */
-unsigned int ALDeviceList::GetNumDevices()
+unsigned int ALDeviceList::GetNumDevices() const
 {
 	return nNumOfDevices;
 }
@@ -139,51 +135,44 @@ unsigned int ALDeviceList::GetNumDevices()
 /* 
  * Returns the device name at an index in the complete device list
  */
-const char * ALDeviceList::GetDeviceName(unsigned int index)
-{
+const char * ALDeviceList::GetDeviceName(const unsigned int index) const {
 	if (index < GetNumDevices())
 		return aDeviceInfo[index].strDeviceName;
-	else
-		return NULL;
+	return nullptr;
 }
 
 /*
  * Returns the major and minor version numbers for a device at a specified index in the complete list
  */
-void ALDeviceList::GetDeviceVersion(unsigned int index, int *major, int *minor)
-{
+void ALDeviceList::GetDeviceVersion(const unsigned int index, int *major, int *minor) const {
 	if (index < GetNumDevices()) {
 		if (major)
 			*major = aDeviceInfo[index].iMajorVersion;
 		if (minor)
 			*minor = aDeviceInfo[index].iMinorVersion;
 	}
-	return;
 }
 
 /*
- * Returns the maximum number of Sources that can be generate on the given device
+ * Returns the maximum number of Sources that can be generated on the given device
  */
-unsigned int ALDeviceList::GetMaxNumSources(unsigned int index)
-{
+unsigned int ALDeviceList::GetMaxNumSources(const unsigned int index) const {
 	if (index < GetNumDevices())
 		return aDeviceInfo[index].uiSourceCount;
-	else
-		return 0;
+	return 0;
 }
 
 /*
  * Checks if the extension is supported on the given device
  */
-bool ALDeviceList::IsExtensionSupported(int index, unsigned short ext)
-{
+bool ALDeviceList::IsExtensionSupported(const int index, const unsigned short ext) const {
 	return !!(aDeviceInfo[index].Extensions & ext);
 }
 
 /*
  * returns the index of the default device in the complete device list
  */
-int ALDeviceList::GetDefaultDevice()
+int ALDeviceList::GetDefaultDevice() const
 {
 	return defaultDeviceIndex;
 }
@@ -191,12 +180,12 @@ int ALDeviceList::GetDefaultDevice()
 /* 
  * Deselects devices which don't have the specified minimum version
  */
-void ALDeviceList::FilterDevicesMinVer(int major, int minor)
+void ALDeviceList::FilterDevicesMinVer(const int major, const int minor)
 {
 	int dMajor, dMinor;
 	for (unsigned int i = 0; i < nNumOfDevices; i++) {
 		GetDeviceVersion(i, &dMajor, &dMinor);
-		if ((dMajor < major) || ((dMajor == major) && (dMinor < minor))) {
+		if (dMajor < major || dMajor == major && dMinor < minor) {
 			aDeviceInfo[i].bSelected = false;
 		}
 	}
@@ -205,12 +194,12 @@ void ALDeviceList::FilterDevicesMinVer(int major, int minor)
 /* 
  * Deselects devices which don't have the specified maximum version
  */
-void ALDeviceList::FilterDevicesMaxVer(int major, int minor)
+void ALDeviceList::FilterDevicesMaxVer(const int major, const int minor)
 {
 	int dMajor, dMinor;
 	for (unsigned int i = 0; i < nNumOfDevices; i++) {
 		GetDeviceVersion(i, &dMajor, &dMinor);
-		if ((dMajor > major) || ((dMajor == major) && (dMinor > minor))) {
+		if (dMajor > major || dMajor == major && dMinor > minor) {
 			aDeviceInfo[i].bSelected = false;
 		}
 	}
@@ -220,7 +209,7 @@ void ALDeviceList::FilterDevicesMaxVer(int major, int minor)
  * Deselects device which don't support the given extension name
  */
 void
-ALDeviceList::FilterDevicesExtension(unsigned short ext)
+ALDeviceList::FilterDevicesExtension(const unsigned short ext)
 {
 	for (unsigned int i = 0; i < nNumOfDevices; i++) {
 		if (!IsExtensionSupported(i, ext))
@@ -294,9 +283,9 @@ unsigned int ALDeviceList::GetMaxNumSources()
 	alDeleteSources(iSourceCount, uiSources);
 	if (alGetError() != AL_NO_ERROR)
 	{
-		for (unsigned int i = 0; i < 256; i++)
+		for (unsigned int & uiSource : uiSources)
 		{
-			alDeleteSources(1, &uiSources[i]);
+			alDeleteSources(1, &uiSource);
 		}
 	}
 

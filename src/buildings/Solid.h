@@ -5,7 +5,7 @@
 class CSolid : public CEntity
 {
 public:
-	CSolid(void) {
+	CSolid() {
 		m_type = ENTITY_TYPE_BUILDING;
 		bUsesCollision = true;
 	}

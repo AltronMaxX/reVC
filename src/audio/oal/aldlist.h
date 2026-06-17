@@ -1,8 +1,6 @@
 #ifndef ALDEVICELIST_H
 #define ALDEVICELIST_H
 
-#include "oal_utils.h"
-
 #ifdef AUDIO_OAL
 #pragma warning(disable: 4786)  //disable warning "identifier was truncated to '255' characters in the browser information"
 
@@ -30,7 +28,7 @@ struct ALDEVICEINFO {
 
 	ALDEVICEINFO() : iMajorVersion(0), iMinorVersion(0), uiSourceCount(0), bSelected(false)
 	{
-		strDeviceName = NULL;
+		strDeviceName = nullptr;
 		Extensions = 0;
 	}
 };
@@ -43,17 +41,19 @@ private:
 	ALDEVICEINFO aDeviceInfo[64];
 	unsigned int nNumOfDevices;
 	int defaultDeviceIndex;
-	int filterIndex;
+	int filterIndex{};
 
 public:
 	ALDeviceList ();
 	~ALDeviceList ();
-	unsigned int GetNumDevices();
-	const char *GetDeviceName(unsigned int index);
-	void GetDeviceVersion(unsigned int index, int *major, int *minor);
-	unsigned int GetMaxNumSources(unsigned int index);
-	bool IsExtensionSupported(int index, unsigned short ext);
-	int GetDefaultDevice();
+
+	[[nodiscard]] unsigned int GetNumDevices() const;
+	[[nodiscard]] const char *GetDeviceName(unsigned int index) const;
+	void GetDeviceVersion(unsigned int index, int *major, int *minor) const;
+	[[nodiscard]] unsigned int GetMaxNumSources(unsigned int index) const;
+	[[nodiscard]] bool IsExtensionSupported(int index, unsigned short ext) const;
+
+	[[nodiscard]] int GetDefaultDevice() const;
 	void FilterDevicesMinVer(int major, int minor);
 	void FilterDevicesMaxVer(int major, int minor);
 	void FilterDevicesExtension(unsigned short ext);
@@ -62,7 +62,7 @@ public:
 	int GetNextFilteredDevice();
 
 private:
-	unsigned int GetMaxNumSources();
+	static unsigned int GetMaxNumSources();
 };
 #endif
 

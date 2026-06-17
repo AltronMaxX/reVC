@@ -5,8 +5,9 @@
 class CTreadable : public CBuilding
 {
 public:
-	static void *operator new(size_t);
-	static void operator delete(void*, size_t);
+	void *operator new(size_t);
 
-	bool GetIsATreadable(void) { return true; }
+	void operator delete(void*, size_t);
+
+	bool GetIsATreadable() override { return true; }
 };

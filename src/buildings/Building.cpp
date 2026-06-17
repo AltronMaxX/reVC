@@ -4,11 +4,11 @@
 #include "Streaming.h"
 #include "Pools.h"
 
-void *CBuilding::operator new(size_t sz) { return CPools::GetBuildingPool()->New();  }
-void CBuilding::operator delete(void *p, size_t sz) { CPools::GetBuildingPool()->Delete((CBuilding*)p); }
+void *CBuilding::operator new(size_t) { return CPools::GetBuildingPool()->New();  }
+void CBuilding::operator delete(void *p, size_t) { CPools::GetBuildingPool()->Delete(static_cast<CBuilding *>(p)); }
 
 void
-CBuilding::ReplaceWithNewModel(int32 id)
+CBuilding::ReplaceWithNewModel(const int32 id)
 {
 	DeleteRwObject();
 
@@ -27,18 +27,17 @@ IsBuildingPointerValid(CBuilding* pBuilding)
 	if (!pBuilding)
 		return false;
 	if (pBuilding->GetIsATreadable()) {
-		int index = CPools::GetTreadablePool()->GetJustIndex_NoFreeAssert((CTreadable*)pBuilding);
+		const int index = CPools::GetTreadablePool()->GetJustIndex_NoFreeAssert(dynamic_cast<CTreadable *>(pBuilding));
 #ifdef FIX_BUGS
 		return index >= 0 && index < CPools::GetTreadablePool()->GetSize();
 #else
 		return index >= 0 && index <= CPools::GetTreadablePool()->GetSize();
 #endif
-	} else {
-		int index = CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pBuilding);
-#ifdef FIX_BUGS
-		return index >= 0 && index < CPools::GetBuildingPool()->GetSize();
-#else
-		return index >= 0 && index <= CPools::GetBuildingPool()->GetSize();
-#endif
 	}
+	const int index = CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pBuilding);
+#ifdef FIX_BUGS
+	return index >= 0 && index < CPools::GetBuildingPool()->GetSize();
+#else
+	return index >= 0 && index <= CPools::GetBuildingPool()->GetSize();
+#endif
 }
