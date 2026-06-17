@@ -150,9 +150,6 @@ static void(*CBArray[])(CAnimBlendAssociation*, void*) =
 	&CPed::FinishedWaitCB, &CPed::FinishLaunchCB, &CPed::FinishHitHeadCB, &CPed::PedAnimGetInCB, &CPed::PedAnimDoorOpenCB,
 	&CPed::PedAnimPullPedOutCB, &CPed::PedAnimDoorCloseCB, &CPed::PedSetInCarCB, &CPed::PedSetOutCarCB, &CPed::PedAnimAlignCB,
 	&CPed::PedSetDraggedOutCarCB, &CPed::PedAnimStepOutCarCB, &CPed::PedSetInTrainCB,
-#ifdef GTA_TRAIN
-	&CPed::PedSetOutTrainCB,
-#endif
 	&CPed::FinishedAttackCB,
 	&CPed::FinishFightMoveCB, &PhonePutDownCB, &PhonePickUpCB, &CPed::PedAnimDoorCloseRollingCB, &CPed::FinishJumpCB,
 	&CPed::PedLandCB, &CPed::RestoreHeadingRateCB, &CPed::PedSetQuickDraggedOutCarPositionCB, &CPed::PedSetDraggedOutCarPositionCB,

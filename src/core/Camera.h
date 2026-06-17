@@ -498,9 +498,6 @@ public:
 	RwCamera *m_pRwCamera;
 	CEntity *pTargetEntity;
 	CCamPathSplines m_arrPathArray[MAX_NUM_OF_SPLINETYPES];
-#ifdef GTA_TRAIN
-	CTrainCamNode m_arrTrainCamNode[MAX_NUM_OF_NODES];
-#endif
 	CMatrix m_cameraMatrix;
 	bool m_bGarageFixedCamPositionSet;
 	bool m_vecDoingSpecialInterPolation;
