@@ -3,7 +3,7 @@
 #include "General.h"
 
 void
-CColSphere::Set(float radius, const CVector &center, uint8 surf, uint8 piece)
+CColSphere::Set(const float radius, const CVector &center, const uint8 surf, uint8 piece)
 {
 	this->radius = radius;
 	this->center = center;
@@ -12,10 +12,9 @@ CColSphere::Set(float radius, const CVector &center, uint8 surf, uint8 piece)
 }
 
 bool
-CColSphere::IntersectRay(CVector const& from, CVector const& dir, CVector &entry, CVector &exit)
-{
-	CVector distToCenter = from - center;
-	float distToTouchSqr = distToCenter.MagnitudeSqr() - sq(radius);
+CColSphere::IntersectRay(CVector const& from, CVector const& dir, CVector &entry, CVector &exit) const {
+	const CVector distToCenter = from - center;
+	const float distToTouchSqr = distToCenter.MagnitudeSqr() - sq(radius);
 	float root1, root2;
 
 	if (!CGeneral::SolveQuadratic(1.0f, DotProduct(distToCenter, dir) * 2.f, distToTouchSqr, root1, root2))

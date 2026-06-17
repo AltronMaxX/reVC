@@ -13,11 +13,11 @@ struct ColDef {	// made up name
 
 class CColStore
 {
-	static CPool<ColDef,ColDef> *ms_pColPool;
+	static CPool<ColDef> *ms_pColPool;
 
 public:
-	static void Initialise(void);
-	static void Shutdown(void);
+	static void Initialise();
+	static void Shutdown();
 	static int AddColSlot(const char *name);
 	static void RemoveColSlot(int32 slot);
 	static int FindColSlot(const char *name);
@@ -27,14 +27,14 @@ public:
 	static bool LoadCol(int32 storeID, uint8 *buffer, int32 bufsize);
 	static void RemoveCol(int32 slot);
 	static void AddCollisionNeededAtPosn(const CVector2D &pos);
-	static void LoadAllCollision(void);
-	static void RemoveAllCollision(void);
+	static void LoadAllCollision();
+	static void RemoveAllCollision();
 	static void LoadCollision(const CVector2D &pos);
 	static void RequestCollision(const CVector2D &pos);
 	static void EnsureCollisionIsInMemory(const CVector2D &pos);
 	static bool HasCollisionLoaded(const CVector2D &pos);
 
-	static ColDef *GetSlot(int slot) {
+	static ColDef *GetSlot(const int slot) {
 		assert(slot >= 0);
 		assert(ms_pColPool);
 		assert(slot < ms_pColPool->GetSize());

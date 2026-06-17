@@ -14,16 +14,16 @@
 #include "VarConsole.h"
 #include "Pools.h"
 
-CPool<ColDef,ColDef> *CColStore::ms_pColPool;
+CPool<ColDef> *CColStore::ms_pColPool;
 #ifndef MASTER
 bool bDispColInMem;
 #endif
 
 void
-CColStore::Initialise(void)
+CColStore::Initialise()
 {
-	if(ms_pColPool == nil)
-		ms_pColPool = new CPool<ColDef,ColDef>(COLSTORESIZE, "CollisionFiles");
+	if(ms_pColPool == nullptr)
+		ms_pColPool = new CPool<ColDef>(COLSTORESIZE, "CollisionFiles");
 	AddColSlot("generic");	// slot 0. not streamed
 #ifndef MASTER
 	VarConsole.Add("Display collision in memory", &bDispColInMem, true);
@@ -31,14 +31,13 @@ CColStore::Initialise(void)
 }
 
 void
-CColStore::Shutdown(void)
+CColStore::Shutdown()
 {
-	int i;
-	for(i = 0; i < COLSTORESIZE; i++)
+	for(int i = 0; i < COLSTORESIZE; i++)
 		RemoveColSlot(i);
-	if(ms_pColPool)
-		delete ms_pColPool;
-	ms_pColPool = nil;
+
+	delete ms_pColPool;
+	ms_pColPool = nullptr;
 }
 
 int
@@ -59,7 +58,7 @@ CColStore::AddColSlot(const char *name)
 }
 
 void
-CColStore::RemoveColSlot(int slot)
+CColStore::RemoveColSlot(const int slot)
 {
 	if(GetSlot(slot)){
 		if(GetSlot(slot)->isLoaded)
@@ -71,10 +70,9 @@ CColStore::RemoveColSlot(int slot)
 int
 CColStore::FindColSlot(const char *name)
 {
-	ColDef *def;
-	int size = ms_pColPool->GetSize();
+	const int size = ms_pColPool->GetSize();
 	for(int i = 0; i < size; i++){
-		def = GetSlot(i);
+		const ColDef *def = GetSlot(i);
 		if(def && !CGeneral::faststricmp(def->name, name))
 			return i;
 	}
@@ -82,19 +80,19 @@ CColStore::FindColSlot(const char *name)
 }
 
 char*
-CColStore::GetColName(int32 slot)
+CColStore::GetColName(const int32 slot)
 {
 	return GetSlot(slot)->name;
 }
 
 CRect&
-CColStore::GetBoundingBox(int32 slot)
+CColStore::GetBoundingBox(const int32 slot)
 {
 	return GetSlot(slot)->bounds;
 }
 
 void
-CColStore::IncludeModelIndex(int32 slot, int32 modelIndex)
+CColStore::IncludeModelIndex(const int32 slot, const int32 modelIndex)
 {
 	ColDef *def = GetSlot(slot);
 	if(modelIndex < def->minIndex)
@@ -104,7 +102,7 @@ CColStore::IncludeModelIndex(int32 slot, int32 modelIndex)
 }
 
 bool
-CColStore::LoadCol(int32 slot, uint8 *buffer, int32 bufsize)
+CColStore::LoadCol(const int32 slot, uint8 *buffer, const int32 bufsize)
 {
 	bool success;
 	ColDef *def = GetSlot(slot);
@@ -120,25 +118,21 @@ CColStore::LoadCol(int32 slot, uint8 *buffer, int32 bufsize)
 }
 
 void
-CColStore::RemoveCol(int32 slot)
+CColStore::RemoveCol(const int32 slot)
 {
-	int id;
 	GetSlot(slot)->isLoaded = false;
-	for(id = 0; id < MODELINFOSIZE; id++){
-		CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
-		if(mi){
-			CColModel *col = mi->GetColModel();
-			if(col && col->level == slot)
+	for(int id = 0; id < MODELINFOSIZE; id++){
+		if(CBaseModelInfo *mi = CModelInfo::GetModelInfo(id)){
+			if(CColModel *col = mi->GetColModel(); col && col->level == slot)
 				col->RemoveCollisionVolumes();
 		}
 	}
 }
 
 void
-CColStore::LoadAllCollision(void)
+CColStore::LoadAllCollision()
 {
-	int i;
-	for(i = 1; i < COLSTORESIZE; i++)
+	for(int i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i))
 			CStreaming::RequestCol(i, 0);
 
@@ -146,10 +140,9 @@ CColStore::LoadAllCollision(void)
 }
 
 void
-CColStore::RemoveAllCollision(void)
+CColStore::RemoveAllCollision()
 {
-	int i;
-	for(i = 1; i < COLSTORESIZE; i++)
+	for(int i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i))
 			if(CStreaming::CanRemoveCol(i))
 				CStreaming::RemoveCol(i);
@@ -168,13 +161,11 @@ CColStore::AddCollisionNeededAtPosn(const CVector2D &pos)
 void
 CColStore::LoadCollision(const CVector2D &pos)
 {
-	int i;
-
 	if(CStreaming::ms_disableStreaming)
 		return;
 
-	for(i = 1; i < COLSTORESIZE; i++){
-		if(GetSlot(i) == nil)
+	for(int i = 1; i < COLSTORESIZE; i++){
+		if(GetSlot(i) == nullptr)
 			continue;
 
 		bool wantThisOne = false;
@@ -185,16 +176,15 @@ CColStore::LoadCollision(const CVector2D &pos)
 			wantThisOne = true;
 		}else{
 			for (int j = 0; j < MAX_CLEANUP; j++) {
-				CPhysical* pEntity = nil;
-				cleanup_entity_struct* pCleanup = &CTheScripts::MissionCleanUp.m_sEntities[i];
-				if (pCleanup->type == CLEANUP_CAR) {
+				CPhysical* pEntity = nullptr;
+				if (const cleanup_entity_struct* pCleanup = &CTheScripts::MissionCleanUp.m_sEntities[i]; pCleanup->type == CLEANUP_CAR) {
 					pEntity = CPools::GetVehiclePool()->GetAt(pCleanup->id);
 					if (!pEntity || pEntity->GetStatus() == STATUS_WRECKED)
 						continue;
 				}
 				else if (pCleanup->type == CLEANUP_CHAR) {
 					pEntity = CPools::GetPedPool()->GetAt(pCleanup->id);
-					if (!pEntity || ((CPed*)pEntity)->DyingOrDead())
+					if (!pEntity || dynamic_cast<CPed *>(pEntity)->DyingOrDead())
 						continue;
 				}
 				if (pEntity && !pEntity->bDontLoadCollision && !pEntity->bIsFrozen) {
@@ -215,9 +205,7 @@ CColStore::LoadCollision(const CVector2D &pos)
 void
 CColStore::RequestCollision(const CVector2D &pos)
 {
-	int i;
-
-	for(i = 1; i < COLSTORESIZE; i++)
+	for(int i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -115.0f))
 			CStreaming::RequestCol(i, STREAMFLAGS_PRIORITY);
 }
@@ -225,12 +213,10 @@ CColStore::RequestCollision(const CVector2D &pos)
 void
 CColStore::EnsureCollisionIsInMemory(const CVector2D &pos)
 {
-	int i;
-
 	if(CStreaming::ms_disableStreaming)
 		return;
 
-	for(i = 1; i < COLSTORESIZE; i++)
+	for(int i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -110.0f) &&
 		   !CStreaming::HasColLoaded(i)){
 			CStreaming::RequestCol(i, 0);
@@ -245,9 +231,7 @@ CColStore::EnsureCollisionIsInMemory(const CVector2D &pos)
 bool
 CColStore::HasCollisionLoaded(const CVector2D &pos)
 {
-	int i;
-
-	for(i = 1; i < COLSTORESIZE; i++)
+	for(int i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -115.0f) &&
 		   !GetSlot(i)->isLoaded)
 			return false;

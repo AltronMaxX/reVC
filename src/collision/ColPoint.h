@@ -13,16 +13,16 @@ struct CColPoint
 	uint8 pieceB;
 	float depth;
 
-	const CVector &GetNormal() { return normal; }
-	float GetDepth() { return depth; }
-	void Set(float depth, uint8 surfA, uint8 pieceA, uint8 surfB, uint8 pieceB) {
+	[[nodiscard]] const CVector &GetNormal() const { return normal; }
+	[[nodiscard]] float GetDepth() const { return depth; }
+	void Set(float depth, const uint8 surfA, uint8 pieceA, const uint8 surfB, const uint8 pieceB) {
 		this->depth = depth;
 		this->surfaceA = surfA;
 		this->pieceA = pieceA;
 		this->surfaceB = surfB;
 		this->pieceB = pieceB;
 	}
-	void Set(uint8 surfA, uint8 pieceA, uint8 surfB, uint8 pieceB) {
+	void Set(const uint8 surfA, const uint8 pieceA, const uint8 surfB, const uint8 pieceB) {
 		this->surfaceA = surfA;
 		this->pieceA = pieceA;
 		this->surfaceB = surfB;

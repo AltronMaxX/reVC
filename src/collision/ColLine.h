@@ -8,7 +8,7 @@ struct CColLine
 	CVector p1;
 	int pad1;
 
-	CColLine(void) { };
+	CColLine() { };
 	CColLine(const CVector &p0, const CVector &p1) { this->p0 = p0; this->p1 = p1; };
 	void Set(const CVector &p0, const CVector &p1);
 };

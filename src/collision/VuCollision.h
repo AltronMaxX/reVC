@@ -17,6 +17,7 @@ extern CVuVector vf02;
 extern CVuVector vf03;
 #endif
 
+
 extern "C" {
 void LineToTriangleCollision(const CVuVector &p0, const CVuVector &p1, const CVuVector &v0, const CVuVector &v1, const CVuVector &v2, const CVuVector &plane);
 void LineToTriangleCollisionCompressed(const CVuVector &p0, const CVuVector &p1, VuTriangle &tri);

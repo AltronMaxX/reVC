@@ -29,11 +29,11 @@ public:
 	static eLevelName ms_collisionInMemory;
 	static CLinkList<CColModel*> ms_colModelCache;
 
-	static void Init(void);
-	static void Shutdown(void);
-	static void Update(void);
-	static void LoadCollisionWhenINeedIt(bool changeLevel);
-	static void SortOutCollisionAfterLoad(void);
+	static void Init();
+	static void Shutdown();
+	static void Update();
+	static void LoadCollisionWhenINeedIt();
+	static void SortOutCollisionAfterLoad();
 	static void LoadCollisionScreen(eLevelName level);
 	static void DrawColModel(const CMatrix &mat, const CColModel &colModel);
 	static void DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id);
@@ -55,12 +55,12 @@ public:
 	static bool ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoint &point, float &mindistsq);
 	static bool ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist);
 	static bool ProcessVerticalLineTriangle(const CColLine &line, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly);
-	static bool ProcessLineTriangle(const CColLine &line , const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly = nil);
+	static bool ProcessLineTriangle(const CColLine &line , const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindist, CStoredCollPoly *poly = nullptr);
 	static bool ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist);
 	static bool ProcessSphereTriangle(const CColSphere &sph, const CompressedVector *verts, const CColTriangle &tri, const CColTrianglePlane &plane, CColPoint &point, float &mindistsq);
 	static bool ProcessLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough);
 	static bool ProcessVerticalLine(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CStoredCollPoly *poly);
-	static int32 ProcessColModels(const CMatrix &matrixA, CColModel &modelA, const CMatrix &matrixB, CColModel &modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists);
+	static int32 ProcessColModels(const CMatrix &matrixA, const CColModel &modelA, const CMatrix &matrixB, CColModel &modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists);
 	static bool IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CColPoint &point, CStoredCollPoly *poly);
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);

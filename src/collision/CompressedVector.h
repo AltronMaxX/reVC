@@ -14,7 +14,7 @@ struct CompressedVector
 	}
 #else
 	float x, y, z;
-	CVector Get(void) const { return CVector(x, y, z); };
-	void Set(float x, float y, float z) { this->x = x; this->y = y; this->z = z; };
+	[[nodiscard]] CVector Get() const { return {x, y, z}; };
+	void Set(const float x, const float y, const float z) { this->x = x; this->y = y; this->z = z; };
 #endif
 };

@@ -6,11 +6,11 @@ struct CBox
 {
 	CVector min;
 	CVector max;
-	CVector GetSize(void) { return max - min; }
+	[[nodiscard]] CVector GetSize() const { return max - min; }
 	void Set(const CVector &min, const CVector &max) {  this->min = min; this->max = max; }
 };
 
-struct CColBox : public CBox
+struct CColBox : CBox
 {
 	uint8 surface;
 	uint8 piece;

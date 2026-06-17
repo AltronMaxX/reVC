@@ -36,7 +36,7 @@ CColSphere s_aBodyPartSpheres1[2];
 CColSphere s_aBodyPartSpheres2[2];
 
 void
-CTempColModels::Initialise(void)
+CTempColModels::Initialise()
 {
 #define SET_COLMODEL_SPHERES(colmodel, sphrs)\
 	colmodel.numSpheres = ARRAY_SIZE(sphrs);\

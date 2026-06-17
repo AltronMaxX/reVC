@@ -24,13 +24,13 @@ struct CColModel
 	CColTriangle *triangles;
 	CColTrianglePlane *trianglePlanes;
 
-	CColModel(void);
-	~CColModel(void);
-	void RemoveCollisionVolumes(void);
-	void CalculateTrianglePlanes(void);
-	void RemoveTrianglePlanes(void);
-	CLink<CColModel*> *GetLinkPtr(void);
-	void SetLinkPtr(CLink<CColModel*>*);
+	CColModel();
+	~CColModel();
+	void RemoveCollisionVolumes();
+	void CalculateTrianglePlanes();
+	void RemoveTrianglePlanes();
+	[[nodiscard]] CLink<CColModel*> *GetLinkPtr() const;
+	void SetLinkPtr(CLink<CColModel*>*) const;
 	void GetTrianglePoint(CVector &v, int i) const;
 
 	void *operator new(size_t);

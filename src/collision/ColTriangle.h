@@ -18,7 +18,7 @@ struct CColTriangle
 	uint16 c;
 	uint8 surface;
 
-	void Set(int a, int b, int c, uint8 surf)
+	void Set(const int a, const int b, const int c, const uint8 surf)
 	{
 		this->a = a;
 		this->b = b;
@@ -49,11 +49,11 @@ struct CColTrianglePlane
 	uint8 dir;
 
 	void Set(const CVector &va, const CVector &vb, const CVector &vc);
-	void Set(const CompressedVector *v, CColTriangle &tri) { Set(v[tri.a].Get(), v[tri.b].Get(), v[tri.c].Get()); }
+	void Set(const CompressedVector *v, const CColTriangle &tri) { Set(v[tri.a].Get(), v[tri.b].Get(), v[tri.c].Get()); }
 	void GetNormal(CVector &n) const { n = normal; }
-	float GetNormalX() const { return normal.x; }
-	float GetNormalY() const { return normal.y; }
-	float GetNormalZ() const { return normal.z; }
-	float CalcPoint(const CVector &v) const { return DotProduct(normal, v) - dist; };
+	[[nodiscard]] float GetNormalX() const { return normal.x; }
+	[[nodiscard]] float GetNormalY() const { return normal.y; }
+	[[nodiscard]] float GetNormalZ() const { return normal.z; }
+	[[nodiscard]] float CalcPoint(const CVector &v) const { return DotProduct(normal, v) - dist; };
 #endif
 };

@@ -4,19 +4,11 @@
 #include "main.h"
 #include "Lists.h"
 #include "Game.h"
-#include "Zones.h"
 #include "General.h"
-#include "ZoneCull.h"
 #include "World.h"
 #include "Entity.h"
 #include "Train.h"
 #include "Streaming.h"
-#include "Pad.h"
-#include "DMAudio.h"
-#include "Population.h"
-#include "FileLoader.h"
-#include "Replay.h"
-#include "CutsceneMgr.h"
 #include "RenderBuffer.h"
 #include "SurfaceTable.h"
 #include "Lines.h"
@@ -48,7 +40,7 @@ eLevelName CCollision::ms_collisionInMemory;
 CLinkList<CColModel*> CCollision::ms_colModelCache;
 
 void
-CCollision::Init(void)
+CCollision::Init()
 {
 	ms_colModelCache.Init(NUMCOLCACHELINKS);
 	ms_collisionInMemory = LEVEL_GENERIC;
@@ -56,30 +48,25 @@ CCollision::Init(void)
 }
 
 void
-CCollision::Shutdown(void)
+CCollision::Shutdown()
 {
 	ms_colModelCache.Shutdown();
 	CColStore::Shutdown();
 }
 
 void
-CCollision::Update(void)
+CCollision::Update()
 {
 }
 
 // unused
 eLevelName
-GetCollisionInSectorList(CPtrList &list)
+GetCollisionInSectorList(const CPtrList &list)
 {
-	CPtrNode *node;
-	CEntity *e;
-	int level;
-
-	for(node = list.first; node; node = node->next){
-		e = (CEntity*)node->item;
-		level = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel()->level;
-		if(level != LEVEL_GENERIC)
-			return (eLevelName)level;
+	for(const CPtrNode *node = list.first; node; node = node->next){
+		const CEntity *e = static_cast<CEntity *>(node->item);
+		if(int level = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel()->level; level != LEVEL_GENERIC)
+			return static_cast<eLevelName>(level);
 	}
 	return LEVEL_GENERIC;
 }
@@ -87,11 +74,9 @@ GetCollisionInSectorList(CPtrList &list)
 // unused
 // Get a level this sector is in based on collision models
 eLevelName
-GetCollisionInSector(CSector &sect)
+GetCollisionInSector(const CSector &sect)
 {
-	int level;
-
-	level = GetCollisionInSectorList(sect.m_lists[ENTITYLIST_BUILDINGS]);
+	int level = GetCollisionInSectorList(sect.m_lists[ENTITYLIST_BUILDINGS]);
 	if(level == LEVEL_GENERIC)
 		level = GetCollisionInSectorList(sect.m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
 	if(level == LEVEL_GENERIC)
@@ -102,23 +87,23 @@ GetCollisionInSector(CSector &sect)
 		level = GetCollisionInSectorList(sect.m_lists[ENTITYLIST_DUMMIES]);
 	if(level == LEVEL_GENERIC)
 		level = GetCollisionInSectorList(sect.m_lists[ENTITYLIST_DUMMIES_OVERLAP]);
-	return (eLevelName)level;
+	return static_cast<eLevelName>(level);
 }
 
 void
-CCollision::LoadCollisionWhenINeedIt(bool forceChange)
+CCollision::LoadCollisionWhenINeedIt()
 {
 }
 
 void
-CCollision::SortOutCollisionAfterLoad(void)
+CCollision::SortOutCollisionAfterLoad()
 {
 	CColStore::LoadCollision(TheCamera.GetPosition());
 	CStreaming::LoadAllRequestedModels(false);
 }
 
 void
-CCollision::LoadCollisionScreen(eLevelName level)
+CCollision::LoadCollisionScreen(const eLevelName level)
 {
 	static Const char *levelNames[4] = {
 		"",
@@ -283,7 +268,7 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
 		return false;
 
-	float p0dist = DotProduct(line.p1 - line.p0, normal);
+	const float p0dist = DotProduct(line.p1 - line.p0, normal);
 
 #ifdef FIX_BUGS
 	// line lines in the plane, assume no collision
@@ -294,7 +279,7 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 	// intersection parameter on line
 	t = -plane.CalcPoint(line.p0) / p0dist;
 	// find point of intersection
-	CVector p = line.p0 + (line.p1-line.p0)*t;
+	const CVector p = line.p0 + (line.p1-line.p0)*t;
 
 	const CVector &va = verts[tri.a].Get();
 	const CVector &vb = verts[tri.b].Get();
@@ -366,17 +351,17 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 bool
 CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 {
-	CVector v01 = line.p1 - line.p0;	// vector from p0 to p1
-	CVector v0c = sph.center - line.p0;	// vector from p0 to center
-	float linesq = v01.MagnitudeSqr();
+	const CVector v01 = line.p1 - line.p0;	// vector from p0 to p1
+	const CVector v0c = sph.center - line.p0;	// vector from p0 to center
+	const float linesq = v01.MagnitudeSqr();
 	// I leave in the strange -2 factors even though they serve no real purpose
-	float projline = -2.0f * DotProduct(v01, v0c);	// project v0c onto line
+	const float projline = -2.0f * DotProduct(v01, v0c);	// project v0c onto line
 	// Square of tangent from p0 multiplied by line length so we can compare with projline.
 	// The length of the tangent would be this: Sqrt((c-p0)^2 - r^2).
 	// Negative if p0 is inside the sphere! This breaks the test!
-	float tansq = 4.0f * linesq *
+	const float tansq = 4.0f * linesq *
 		(sph.center.MagnitudeSqr() - 2.0f*DotProduct(sph.center, line.p0) + line.p0.MagnitudeSqr() - sph.radius*sph.radius);
-	float diffsq = projline*projline - tansq;
+	const float diffsq = projline*projline - tansq;
 	// if diffsq < 0 that means the line is a passant, so no intersection
 	if(diffsq < 0.0f)
 		return false;
@@ -385,7 +370,7 @@ CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 	// Sqrt(diffsq) somehow works out to be the distance from that
 	// midpoint to the intersection points.
 	// So subtract that and get rid of the awkward scaling:
-	float f = (-projline - Sqrt(diffsq)) / (2.0f*linesq);
+	const float f = (-projline - Sqrt(diffsq)) / (2.0f*linesq);
 	// f should now be in range [0, 1] for [p0, p1]
 	return f >= 0.0f && f <= 1.0f;
 }
@@ -409,7 +394,7 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 	return false;
 #else
 	// If sphere and plane don't intersect, no collision
-	float planedist = plane.CalcPoint(sphere.center);
+	const float planedist = plane.CalcPoint(sphere.center);
 	if(Abs(planedist) > sphere.radius)
 		return false;
 
@@ -419,27 +404,27 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 
 	// calculate two orthogonal basis vectors for the triangle
 	CVector vec2 = vb - va;
-	float len = vec2.Magnitude();
+	const float len = vec2.Magnitude();
 	vec2 = vec2 * (1.0f/len);
 	CVector normal;
 	plane.GetNormal(normal);
-	CVector vec1 = CrossProduct(vec2, normal);
+	const CVector vec1 = CrossProduct(vec2, normal);
 
 	// We know A has local coordinate [0,0] and B has [0,len].
 	// Now calculate coordinates on triangle for these two vectors:
-	CVector vac = vc - va;
-	CVector vas = sphere.center - va;
-	CVector2D b(0.0f, len);
-	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
-	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
+	const CVector vac = vc - va;
+	const CVector vas = sphere.center - va;
+	const CVector2D b(0.0f, len);
+	const CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
+	const CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
 
 	// The three triangle lines partition the space into 6 sectors,
 	// find out in which the center lies.
-	int insideAB = CrossProduct2D(s, b) >= 0.0f;
-	int insideAC = CrossProduct2D(c, s) >= 0.0f;
-	int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
+	const int insideAB = CrossProduct2D(s, b) >= 0.0f;
+	const int insideAC = CrossProduct2D(c, s) >= 0.0f;
+	const int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
 
-	int testcase = insideAB + insideAC + insideBC;
+	const int testcase = insideAB + insideAC + insideBC;
 	float dist = 0.0f;
 	switch(testcase){
 	case 0:
@@ -549,7 +534,7 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 
 	// transform line to model space
 	Invert(matrix, matTransform);
-	CColLine newline(matTransform * line.p0, matTransform * line.p1);
+	const CColLine newline(matTransform * line.p0, matTransform * line.p1);
 
 	// If we don't intersect with the bounding box, no chance on the rest
 	if(!TestLineBox(newline, model.boundingBox))
@@ -595,7 +580,7 @@ CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CCol
 {
 	CVector dist = s1.center - s2.center;
 	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
-	float depth = s1.radius - d;	// sphere overlap
+	const float depth = s1.radius - d;	// sphere overlap
 	if(d < 0.0f) d = 0.0f;		// CLAMP to zero, i.e. if s1's center is inside s2
 	// no collision if sphere is not close enough
 	if(d*d < mindistsq && d < s1.radius){
@@ -633,13 +618,13 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 	if(sph.center.z - sph.radius > box.max.z) return false;
 
 	// Now find out where the sphere center lies in relation to all the sides
-	int xpos = sph.center.x < box.min.x ? 1 :
+	const int xpos = sph.center.x < box.min.x ? 1 :
 	           sph.center.x > box.max.x ? 2 :
 	           0;
-	int ypos = sph.center.y < box.min.y ? 1 :
+	const int ypos = sph.center.y < box.min.y ? 1 :
 	           sph.center.y > box.max.y ? 2 :
 	           0;
-	int zpos = sph.center.z < box.min.z ? 1 :
+	const int zpos = sph.center.z < box.min.z ? 1 :
 	           sph.center.z > box.max.z ? 2 :
 	           0;
 
@@ -648,8 +633,7 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 		p = (box.min + box.max)*0.5f;
 
 		dist = sph.center - p;
-		float lensq = dist.MagnitudeSqr();
-		if(lensq < mindistsq){
+		if(const float lensq = dist.MagnitudeSqr(); lensq < mindistsq){
 			point.normal = dist * (1.0f/Sqrt(lensq));
 			point.point = sph.center - point.normal;
 #ifndef VU_COLLISION
@@ -660,13 +644,13 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 #endif
 
 			// find absolute distance to the closer side in each dimension
-			float dx = dist.x > 0.0f ?
+			const float dx = dist.x > 0.0f ?
 				box.max.x - sph.center.x :
 				sph.center.x - box.min.x;
-			float dy = dist.y > 0.0f ?
+			const float dy = dist.y > 0.0f ?
 				box.max.y - sph.center.y :
 				sph.center.y - box.min.y;
-			float dz = dist.z > 0.0f ?
+			const float dz = dist.z > 0.0f ?
 				box.max.z - sph.center.z :
 				sph.center.z - box.min.z;
 			// collision depth is maximum of that:
@@ -692,9 +676,8 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 		      sph.center.z;
 
 		dist = sph.center - p;
-		float lensq = dist.MagnitudeSqr();
-		if(lensq < mindistsq){
-			float len = Sqrt(lensq);
+		if(const float lensq = dist.MagnitudeSqr(); lensq < mindistsq){
+			const float len = Sqrt(lensq);
 			point.point = p;
 			point.normal = dist * (1.0f/len);
 #ifndef VU_COLLISION
@@ -714,11 +697,11 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 bool
 CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &point, float &mindist)
 {
-	float mint, t, x, y, z;
+	float t, x, y, z;
 	CVector normal;
 	CVector p;
 
-	mint = 1.0f;
+	float mint = 1.0f;
 	// check if points are on opposite sides of min x plane
 	if((box.min.x - line.p1.x) * (box.min.x - line.p0.x) < 0.0f){
 		// parameter along line where we intersect
@@ -832,20 +815,20 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 bool
 CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist)
 {
-	CVector v01 = line.p1 - line.p0;
-	CVector v0c = sphere.center - line.p0;
-	float linesq = v01.MagnitudeSqr();
+	const CVector v01 = line.p1 - line.p0;
+	const CVector v0c = sphere.center - line.p0;
+	const float linesq = v01.MagnitudeSqr();
 	// project v0c onto v01, scaled by |v01| this is the midpoint of the two intersections
-	float projline = DotProduct(v01, v0c);
+	const float projline = DotProduct(v01, v0c);
 	// tangent of p0 to sphere, scaled by linesq just like projline^2
-	float tansq = (v0c.MagnitudeSqr() - sphere.radius*sphere.radius) * linesq;
+	const float tansq = (v0c.MagnitudeSqr() - sphere.radius*sphere.radius) * linesq;
 	// this works out to be the square of the distance between the midpoint and the intersections
-	float diffsq = projline*projline - tansq;
+	const float diffsq = projline*projline - tansq;
 	// no intersection
 	if(diffsq < 0.0f)
 		return false;
 	// point of first intersection, in range [0,1] between p0 and p1
-	float t = (projline - Sqrt(diffsq)) / linesq;
+	const float t = (projline - Sqrt(diffsq)) / linesq;
 	// if not on line or beyond mindist, no intersection
 	if(t < 0.0f || t > 1.0f || t >= mindist)
 		return false;
@@ -879,7 +862,6 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	}
 	return res;
 #else
-	float t;
 	CVector normal;
 
 	const CVector &p0 = line.p0;
@@ -899,12 +881,12 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 		return false;
 
 	// intersection parameter on line
-	float h = (line.p1 - p0).z;
-	t = -plane.CalcPoint(p0) / (h * normal.z);
+	const float h = (line.p1 - p0).z;
+	const float t = -plane.CalcPoint(p0) / (h * normal.z);
 	// early out if we're beyond the mindist
 	if(t >= mindist)
 		return false;
-	CVector p(p0.x, p0.y, p0.z + h*t);
+	const CVector p(p0.x, p0.y, p0.z + h*t);
 
 	CVector2D vec1, vec2, vec3, vect;
 	switch(plane.dir){
@@ -969,7 +951,7 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 }
 
 bool
-CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CColPoint &point, CStoredCollPoly *poly)
+CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, const float z, CColPoint &point, CStoredCollPoly *poly)
 {
 #ifdef VU_COLLISION
 	if(!poly->valid)
@@ -999,7 +981,6 @@ CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CCol
 	point.point = pnt;
 	return true;
 #else
-	float t;
 
 	if(!poly->valid)
 		return false;
@@ -1011,8 +992,8 @@ CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CCol
 	const CVector &va = poly->verts[0];
 	const CVector &vb = poly->verts[1];
 	const CVector &vc = poly->verts[2];
-	CVector p0 = pos;
-	CVector p1(pos.x, pos.y, z);
+	const CVector p0 = pos;
+	const CVector p1(pos.x, pos.y, z);
 
 	// The rest is pretty much CCollision::ProcessLineTriangle
 
@@ -1023,9 +1004,9 @@ CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CCol
 	// intersection parameter on line
 	CVector normal;
 	plane.GetNormal(normal);
-	t = -plane.CalcPoint(p0) / DotProduct(p1 - p0, normal);
+	const float t = -plane.CalcPoint(p0) / DotProduct(p1 - p0, normal);
 	// find point of intersection
-	CVector p = p0 + (p1-p0)*t;
+	const CVector p = p0 + (p1-p0)*t;
 
 	CVector2D vec1, vec2, vec3, vect;
 	switch(plane.dir){
@@ -1111,7 +1092,7 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
 		return false;
 
-	float p0dist = DotProduct(line.p1 - line.p0, normal);
+	const float p0dist = DotProduct(line.p1 - line.p0, normal);
 
 #ifdef FIX_BUGS
 	// line lines in the plane, assume no collision
@@ -1126,7 +1107,7 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 	if(t >= mindist)
 		return false;
 	// find point of intersection
-	CVector p = line.p0 + (line.p1-line.p0)*t;
+	const CVector p = line.p0 + (line.p1-line.p0)*t;
 
 	const CVector &va = verts[tri.a].Get();
 	const CVector &vb = verts[tri.b].Get();
@@ -1224,9 +1205,8 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	return false;
 #else
 	// If sphere and plane don't intersect, no collision
-	float planedist = plane.CalcPoint(sphere.center);
-	float distsq = planedist*planedist;
-	if(Abs(planedist) > sphere.radius || distsq > mindistsq)
+	const float planedist = plane.CalcPoint(sphere.center);
+	if(const float distsq = planedist*planedist; Abs(planedist) > sphere.radius || distsq > mindistsq)
 		return false;
 
 	const CVector &va = verts[tri.a].Get();
@@ -1237,25 +1217,25 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	CVector normal;
 	plane.GetNormal(normal);
 	CVector vec2 = vb - va;
-	float len = vec2.Magnitude();
+	const float len = vec2.Magnitude();
 	vec2 = vec2 * (1.0f/len);
-	CVector vec1 = CrossProduct(vec2, normal);
+	const CVector vec1 = CrossProduct(vec2, normal);
 
 	// We know A has local coordinate [0,0] and B has [0,len].
 	// Now calculate coordinates on triangle for these two vectors:
-	CVector vac = vc - va;
-	CVector vas = sphere.center - va;
-	CVector2D b(0.0f, len);
-	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
-	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
+	const CVector vac = vc - va;
+	const CVector vas = sphere.center - va;
+	const CVector2D b(0.0f, len);
+	const CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
+	const CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
 
 	// The three triangle lines partition the space into 6 sectors,
 	// find out in which the center lies.
-	int insideAB = CrossProduct2D(s, b) >= 0.0f;
-	int insideAC = CrossProduct2D(c, s) >= 0.0f;
-	int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
+	const int insideAB = CrossProduct2D(s, b) >= 0.0f;
+	const int insideAC = CrossProduct2D(c, s) >= 0.0f;
+	const int insideBC = CrossProduct2D(s-b, c-b) >= 0.0f;
 
-	int testcase = insideAB + insideAC + insideBC;
+	const int testcase = insideAB + insideAC + insideBC;
 	float dist = 0.0f;
 	CVector p;
 	switch(testcase){
@@ -1405,7 +1385,7 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 
 	// transform line to model space
 	Invert(matrix, matTransform);
-	CColLine newline(matTransform * line.p0, matTransform * line.p1);
+	const CColLine newline(matTransform * line.p0, matTransform * line.p1);
 
 	// If we don't intersect with the bounding box, no chance on the rest
 	if(!TestLineBox(newline, model.boundingBox))
@@ -1570,7 +1550,7 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 
 	// transform line to model space
 	// Why does the game seem to do this differently than above?
-	CColLine newline(MultiplyInverse(matrix, line.p0), MultiplyInverse(matrix, line.p1));
+	const CColLine newline(MultiplyInverse(matrix, line.p0), MultiplyInverse(matrix, line.p1));
 
 	if(!TestLineBox(newline, model.boundingBox))
 		return false;
@@ -1627,7 +1607,7 @@ static uint8 fakeSPR[16*1024];
 // Returned ColPoints are in world space.
 // NB: only vehicles can have col models with lines, exactly 4, one for each wheel
 int32
-CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
+CCollision::ProcessColModels(const CMatrix &matrixA, const CColModel &modelA,
 	const CMatrix &matrixB, CColModel &modelB,
 	CColPoint *spherepoints, CColPoint *linepoints, float *linedists)
 {
@@ -2084,14 +2064,14 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point)
 {
-	float lensq = (*l1 - *l0).MagnitudeSqr();
-	float dot = DotProduct(*point - *l0, *l1 - *l0);
+	const float lensq = (*l1 - *l0).MagnitudeSqr();
+	const float dot = DotProduct(*point - *l0, *l1 - *l0);
 	// Between 0 and len we're above the line.
 	// if not, calculate distance to endpoint
 	if(dot <= 0.0f) return (*point - *l0).Magnitude();
 	if(dot >= lensq) return (*point - *l1).Magnitude();
 	// distance to line
-	float distSqr = (*point - *l0).MagnitudeSqr() - dot * dot / lensq;
+	const float distSqr = (*point - *l0).MagnitudeSqr() - dot * dot / lensq;
 	if(distSqr <= 0.f) return 0.f;
 	return Sqrt(distSqr);
 }
@@ -2100,10 +2080,9 @@ CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *poin
 float
 CCollision::DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest)
 {
-	float lensq = (*l1 - *l0).MagnitudeSqr();
-	float dot = DotProduct(*point - *l0, *l1 - *l0);
+	const float lensq = (*l1 - *l0).MagnitudeSqr();
 	// find out which point we're closest to
-	if(dot <= 0.0f)
+	if(const float dot = DotProduct(*point - *l0, *l1 - *l0); dot <= 0.0f)
 		closest = *l0;
 	else if(dot >= lensq)
 		closest = *l1;
@@ -2128,7 +2107,7 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 		ms_colModelCache.head.Insert(lptr);
 	}else{
 		lptr = ms_colModelCache.Insert(model);
-		if(lptr == nil){
+		if(lptr == nullptr){
 			// make room if we have to, remove last in list
 			lptr = ms_colModelCache.tail.prev;
 			assert(lptr);
@@ -2157,19 +2136,16 @@ void
 CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 {
 	int i;
-	CVector min, max;
 	CVector verts[8];
-	CVector c;
-	float r;
 
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void *>(rwBLENDSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void *>(rwBLENDINVSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nullptr);
 
-	min = colModel.boundingBox.min;
-	max = colModel.boundingBox.max;
+	CVector min = colModel.boundingBox.min;
+	CVector max = colModel.boundingBox.max;
 
 	verts[0] = mat * CVector(min.x, min.y, min.z);
 	verts[1] = mat * CVector(min.x, min.y, max.z);
@@ -2232,8 +2208,8 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 		0xFF0000FF, 0xFF0000FF);
 
 	for(i = 0; i < colModel.numSpheres; i++){
-		c = mat * colModel.spheres[i].center;
-		r = colModel.spheres[i].radius;
+		const CVector c = mat * colModel.spheres[i].center;
+		const float r = colModel.spheres[i].radius;
 
 		CLines::RenderLineWithClipping(
 			c.x,   c.y,   c.z-r,
@@ -2368,15 +2344,15 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 			0x00FF00FF, 0x00FF00FF);
 	}
 
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void *>(rwBLENDSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void *>(rwBLENDINVSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 }
 
 static void
-GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
+GetSurfaceColor(const uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 {
 	// game doesn't do this
 	r = 255;
@@ -2422,7 +2398,7 @@ GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 		b = 0;
 	}
 
-	float f = (surf & 0xF)/32.0f + 0.5f;
+	const float f = (surf & 0xF)/32.0f + 0.5f;
 	r *= f;
 	g *= f;
 	b *= f;
@@ -2437,12 +2413,11 @@ GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 }
 
 void
-CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, int32 id)
+CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel, const int32 id)
 {
 	int i;
 	int s;
 	CVector verts[8];
-	CVector min, max;
 	uint8 r, g, b;
 	RwImVertexIndex *iptr;
 	RwIm3DVertex *vptr;
@@ -2450,9 +2425,9 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 	RenderBuffer::ClearRenderBuffer();
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void *>(rwBLENDSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void *>(rwBLENDINVSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nullptr);
 
 	for(i = 0; i < colModel.numTriangles; i++){
 		colModel.GetTrianglePoint(verts[0], colModel.triangles[i].a);
@@ -2491,8 +2466,8 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 	}
 
 	for(i = 0; i < colModel.numBoxes; i++){
-		min = colModel.boxes[i].min;
-		max = colModel.boxes[i].max;
+		const CVector min = colModel.boxes[i].min;
+		const CVector max = colModel.boxes[i].max;
 
 		verts[0] = mat * CVector(min.x, min.y, min.z);
 		verts[1] = mat * CVector(min.x, min.y, max.z);
@@ -2555,9 +2530,9 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 	}
  
 	RenderBuffer::RenderStuffInBuffer();
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, reinterpret_cast<void *>(rwBLENDSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, reinterpret_cast<void *>(rwBLENDINVSRCALPHA));
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 }

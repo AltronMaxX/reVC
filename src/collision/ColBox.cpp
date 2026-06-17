@@ -2,7 +2,7 @@
 #include "ColBox.h"
 
 void
-CColBox::Set(const CVector &min, const CVector &max, uint8 surf, uint8 piece)
+CColBox::Set(const CVector &min, const CVector &max, const uint8 surf, const uint8 piece)
 {
 	this->min = min;
 	this->max = max;

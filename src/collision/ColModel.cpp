@@ -5,23 +5,23 @@
 #include "MemoryHeap.h"
 #include "Pools.h"
 
-CColModel::CColModel(void)
+CColModel::CColModel()
 {
 	numSpheres = 0;
-	spheres = nil;
+	spheres = nullptr;
 	numLines = 0;
-	lines = nil;
+	lines = nullptr;
 	numBoxes = 0;
-	boxes = nil;
+	boxes = nullptr;
 	numTriangles = 0;
-	vertices = nil;
-	triangles = nil;
-	trianglePlanes = nil;
+	vertices = nullptr;
+	triangles = nullptr;
+	trianglePlanes = nullptr;
 	level = LEVEL_GENERIC;	// generic col slot
 	ownsCollisionVolumes = true;
 }
 
-CColModel::~CColModel(void)
+CColModel::~CColModel()
 {
 	RemoveCollisionVolumes();
 }
@@ -37,11 +37,11 @@ CColModel::operator new(size_t)
 void
 CColModel::operator delete(void *p, size_t)
 {
-	CPools::GetColModelPool()->Delete((CColModel*)p);
+	CPools::GetColModelPool()->Delete(static_cast<CColModel *>(p));
 }
 
 void
-CColModel::RemoveCollisionVolumes(void)
+CColModel::RemoveCollisionVolumes()
 {
 	if(ownsCollisionVolumes){
 		RwFree(spheres);
@@ -55,20 +55,20 @@ CColModel::RemoveCollisionVolumes(void)
 	numLines = 0;
 	numBoxes = 0;
 	numTriangles = 0;
-	spheres = nil;
-	lines = nil;
-	boxes = nil;
-	vertices = nil;
-	triangles = nil;
+	spheres = nullptr;
+	lines = nullptr;
+	boxes = nullptr;
+	vertices = nullptr;
+	triangles = nullptr;
 }
 
 void
-CColModel::CalculateTrianglePlanes(void)
+CColModel::CalculateTrianglePlanes()
 {
 	PUSH_MEMID(MEMID_COLLISION);
 
 	// HACK: allocate space for one more element to stuff the link pointer into
-	trianglePlanes = (CColTrianglePlane*)RwMalloc(sizeof(CColTrianglePlane) * (numTriangles+1));
+	trianglePlanes = static_cast<CColTrianglePlane *>(RwMalloc(sizeof(CColTrianglePlane) * (numTriangles + 1)));
 	REGISTER_MEMPTR(&trianglePlanes);
 	for(int i = 0; i < numTriangles; i++)
 		trianglePlanes[i].Set(vertices, triangles[i]);
@@ -77,28 +77,26 @@ CColModel::CalculateTrianglePlanes(void)
 }
 
 void
-CColModel::RemoveTrianglePlanes(void)
+CColModel::RemoveTrianglePlanes()
 {
 	RwFree(trianglePlanes);
-	trianglePlanes = nil;
+	trianglePlanes = nullptr;
 }
 
 void
-CColModel::SetLinkPtr(CLink<CColModel*> *lptr)
-{
+CColModel::SetLinkPtr(CLink<CColModel*> *lptr) const {
 	assert(trianglePlanes);
-	*(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]) = lptr;
+	*static_cast<CLink<CColModel *> **>(ALIGNPTR(&trianglePlanes[numTriangles])) = lptr;
 }
 
 CLink<CColModel*>*
-CColModel::GetLinkPtr(void)
-{
+CColModel::GetLinkPtr() const {
 	assert(trianglePlanes);
-	return *(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]);
+	return *static_cast<CLink<CColModel *> **>(ALIGNPTR(&trianglePlanes[numTriangles]));
 }
 
 void
-CColModel::GetTrianglePoint(CVector &v, int i) const
+CColModel::GetTrianglePoint(CVector &v, const int i) const
 {
 	v = vertices[i].Get();
 }
@@ -107,7 +105,6 @@ CColModel&
 CColModel::operator=(const CColModel &other)
 {
 	int i;
-	int numVerts;
 
 	boundingSphere = other.boundingSphere;
 	boundingBox = other.boundingBox;
@@ -118,7 +115,7 @@ CColModel::operator=(const CColModel &other)
 			numSpheres = other.numSpheres;
 			if(spheres)
 				RwFree(spheres);
-			spheres = (CColSphere*)RwMalloc(numSpheres*sizeof(CColSphere));
+			spheres = static_cast<CColSphere *>(RwMalloc(numSpheres * sizeof(CColSphere)));
 		}
 		for(i = 0; i < numSpheres; i++)
 			spheres[i] = other.spheres[i];
@@ -126,7 +123,7 @@ CColModel::operator=(const CColModel &other)
 		numSpheres = 0;
 		if(spheres)
 			RwFree(spheres);
-		spheres = nil;
+		spheres = nullptr;
 	}
 
 	// copy lines
@@ -135,7 +132,7 @@ CColModel::operator=(const CColModel &other)
 			numLines = other.numLines;
 			if(lines)
 				RwFree(lines);
-			lines = (CColLine*)RwMalloc(numLines*sizeof(CColLine));
+			lines = static_cast<CColLine *>(RwMalloc(numLines * sizeof(CColLine)));
 		}
 		for(i = 0; i < numLines; i++)
 			lines[i] = other.lines[i];
@@ -143,7 +140,7 @@ CColModel::operator=(const CColModel &other)
 		numLines = 0;
 		if(lines)
 			RwFree(lines);
-		lines = nil;
+		lines = nullptr;
 	}
 
 	// copy boxes
@@ -152,7 +149,7 @@ CColModel::operator=(const CColModel &other)
 			numBoxes = other.numBoxes;
 			if(boxes)
 				RwFree(boxes);
-			boxes = (CColBox*)RwMalloc(numBoxes*sizeof(CColBox));
+			boxes = static_cast<CColBox *>(RwMalloc(numBoxes * sizeof(CColBox)));
 		}
 		for(i = 0; i < numBoxes; i++)
 			boxes[i] = other.boxes[i];
@@ -160,13 +157,13 @@ CColModel::operator=(const CColModel &other)
 		numBoxes = 0;
 		if(boxes)
 			RwFree(boxes);
-		boxes = nil;
+		boxes = nullptr;
 	}
 
 	// copy mesh
 	if(other.numTriangles){
 		// copy vertices
-		numVerts = 0;
+		int numVerts = 0;
 		for(i = 0; i < other.numTriangles; i++){
 			if(other.triangles[i].a > numVerts)
 				numVerts = other.triangles[i].a;
@@ -179,7 +176,7 @@ CColModel::operator=(const CColModel &other)
 		if(vertices)
 			RwFree(vertices);
 		if(numVerts){
-			vertices = (CompressedVector*)RwMalloc(numVerts*sizeof(CompressedVector));
+			vertices = static_cast<CompressedVector *>(RwMalloc(numVerts * sizeof(CompressedVector)));
 			for(i = 0; i < numVerts; i++)
 				vertices[i] = other.vertices[i];
 		}
@@ -189,7 +186,7 @@ CColModel::operator=(const CColModel &other)
 			numTriangles = other.numTriangles;
 			if(triangles)
 				RwFree(triangles);
-			triangles = (CColTriangle*)RwMalloc(numTriangles*sizeof(CColTriangle));
+			triangles = static_cast<CColTriangle *>(RwMalloc(numTriangles * sizeof(CColTriangle)));
 		}
 		for(i = 0; i < numTriangles; i++)
 			triangles[i] = other.triangles[i];
@@ -197,10 +194,10 @@ CColModel::operator=(const CColModel &other)
 		numTriangles = 0;
 		if(triangles)
 			RwFree(triangles);
-		triangles = nil;
+		triangles = nullptr;
 		if(vertices)
 			RwFree(vertices);
-		vertices = nil;
+		vertices = nullptr;
 	}
 	return *this;
 }
