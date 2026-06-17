@@ -24,10 +24,10 @@ public:
 	CKeyEntry *entries;
 	int numEntries;	// You can make this size_t if you want to exceed 32-bit boundaries, everything else should be ready.
 
-	CKeyArray(void) : entries(nil), numEntries(0) {}
-	~CKeyArray(void) { Unload(); }
+	CKeyArray() : entries(nullptr), numEntries(0) {}
+	~CKeyArray() { Unload(); }
 	void Load(size_t length, int file, size_t *offset);
-	void Unload(void);
+	void Unload();
 	void Update(wchar *chars);
 	CKeyEntry *BinarySearch(const char *key, CKeyEntry *entries, int16 low, int16 high);
 #if defined (FIX_BUGS) || defined(FIX_BUGS_64)
@@ -43,10 +43,10 @@ public:
 	wchar *chars;
 	int numChars; // You can make this size_t if you want to exceed 32-bit boundaries, everything else should be ready.
 
-	CData(void) : chars(nil), numChars(0) {}
-	~CData(void) { Unload(); }
+	CData() : chars(nullptr), numChars(0) {}
+	~CData() { Unload(); }
 	void Load(size_t length, int file, size_t* offset);
-	void Unload(void);
+	void Unload();
 };
 
 class CMissionTextOffsets
@@ -63,7 +63,7 @@ public:
 	Entry data[MAX_MISSION_TEXTS];
 	uint16 size; // You can make this size_t if you want to exceed 32-bit boundaries, everything else should be ready.
 
-	CMissionTextOffsets(void) : size(0) {}
+	CMissionTextOffsets() : size(0) {}
 	void Load(size_t table_size, int file, size_t* bytes_read, int);
 };
 
@@ -85,13 +85,13 @@ class CText
 	char szMissionTableName[8];
 	CMissionTextOffsets MissionTextOffsets;
 public:
-	CText(void);
-	void Load(void);
-	void Unload(void);
+	CText();
+	void Load();
+	void Unload();
 	wchar *Get(const char *key);
-	wchar GetUpperCase(wchar c);
-	void UpperCase(wchar *s);
-	void GetNameOfLoadedMissionText(char *outName);
+	wchar GetUpperCase(wchar c) const;
+	void UpperCase(wchar *s) const;
+	void GetNameOfLoadedMissionText(char *outName) const;
 	void ReadChunkHeader(ChunkHeader *buf, int32 file, size_t *bytes_read);
 	void LoadMissionText(char *MissionTableName);
 };

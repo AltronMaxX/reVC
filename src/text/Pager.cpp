@@ -16,16 +16,16 @@ CPager::Init()
 void
 CPager::Process()
 {
-	if (m_messages[0].m_pText != nil && m_messages[0].m_nCurrentPosition >= (int32)m_messages[0].m_nStringLength) {
-		m_messages[0].m_pText = nil;
+	if (m_messages[0].m_pText != nullptr && m_messages[0].m_nCurrentPosition >= static_cast<int32>(m_messages[0].m_nStringLength)) {
+		m_messages[0].m_pText = nullptr;
 		uint16 i = 0;
 		while (i < NUMPAGERMESSAGES-1) {
-			if (m_messages[i + 1].m_pText == nil) break;
+			if (m_messages[i + 1].m_pText == nullptr) break;
 			m_messages[i] = m_messages[i + 1];
 			i++;
 		}
-		m_messages[i].m_pText = nil;
-		if (m_messages[0].m_pText != nil)
+		m_messages[i].m_pText = nullptr;
+		if (m_messages[0].m_pText != nullptr)
 			CMessages::AddToPreviousBriefArray(
 				m_messages[0].m_pText,
 				m_messages[0].m_nNumber[0],
@@ -34,10 +34,10 @@ CPager::Process()
 				m_messages[0].m_nNumber[3],
 				m_messages[0].m_nNumber[4],
 				m_messages[0].m_nNumber[5],
-				0);
+				nullptr);
 	}
 	Display();
-	if (m_messages[0].m_pText != nil) {
+	if (m_messages[0].m_pText != nullptr) {
 		if (TheCamera.m_WideScreenOn || !CHud::m_Wants_To_Draw_Hud || CHud::m_BigMessage[0][0] || CHud::m_BigMessage[2][0]) {
 			RestartCurrentMessage();
 		} else {
@@ -50,14 +50,13 @@ CPager::Process()
 }
 
 void
-CPager::Display()
-{
+CPager::Display() const {
 	wchar outstr1[256];
 	wchar outstr2[260];
 
 	wchar *pText = m_messages[0].m_pText;
 	uint16 i = 0;
-	if (pText != nil) {
+	if (pText != nullptr) {
 		CMessages::InsertNumberInString(
 			pText,
 			m_messages[0].m_nNumber[0],
@@ -68,8 +67,7 @@ CPager::Display()
 			m_messages[0].m_nNumber[5],
 			outstr1);
 		for (; i < m_nNumDisplayLetters; i++) {
-			int pos = m_messages[0].m_nCurrentPosition + i;
-			if (pos >= 0) {
+			if (const int pos = m_messages[0].m_nCurrentPosition + i; pos >= 0) {
 				if (!outstr1[pos]) break;
 
 				outstr2[i] = outstr1[pos];
@@ -83,9 +81,9 @@ CPager::Display()
 }
 
 void
-CPager::AddMessage(wchar *str, uint16 speed, uint16 priority, uint16 a5)
+CPager::AddMessage(wchar *str, const uint16 speed, const uint16 priority, const uint16 a5)
 {
-	uint16 size = CMessages::GetWideStringLength(str);
+	const uint16 size = CMessages::GetWideStringLength(str);
 	for (int32 i = 0; i < NUMPAGERMESSAGES; i++) {
 		if (m_messages[i].m_pText) {
 			if (m_messages[i].m_nPriority >= priority)
@@ -118,18 +116,18 @@ CPager::AddMessage(wchar *str, uint16 speed, uint16 priority, uint16 a5)
 				m_messages[0].m_nNumber[3],
 				m_messages[0].m_nNumber[4],
 				m_messages[0].m_nNumber[5],
-				nil);
+			nullptr);
 			return;
 	}
 }
 
 void
-CPager::AddMessageWithNumber(wchar *str, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, uint16 speed, uint16 priority, uint16 a11)
+CPager::AddMessageWithNumber(wchar *str, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6, const uint16 speed, const uint16 priority, const uint16 a11)
 {
 	wchar nstr[520];
 
 	CMessages::InsertNumberInString(str, n1, n2, n3, n4, n5, n6, nstr);
-	uint16 size = CMessages::GetWideStringLength(nstr);
+	const uint16 size = CMessages::GetWideStringLength(nstr);
 	for (int32 i = 0; i < NUMPAGERMESSAGES; i++) {
 		if (m_messages[i].m_pText) {
 			if (m_messages[i].m_nPriority >= priority)
@@ -162,7 +160,7 @@ CPager::AddMessageWithNumber(wchar *str, int32 n1, int32 n2, int32 n3, int32 n4,
 				m_messages[0].m_nNumber[3],
 				m_messages[0].m_nNumber[4],
 				m_messages[0].m_nNumber[5],
-				nil);
+			nullptr);
 		return;
 	}
 }
@@ -170,14 +168,14 @@ CPager::AddMessageWithNumber(wchar *str, int32 n1, int32 n2, int32 n3, int32 n4,
 void
 CPager::ClearMessages()
 {
-	for (int32 i = 0; i < NUMPAGERMESSAGES; i++)
-		m_messages[i].m_pText = nil;
+	for (auto & m_message : m_messages)
+		m_message.m_pText = nullptr;
 }
 
 void
 CPager::RestartCurrentMessage()
 {
-	if (m_messages[0].m_pText != nil) {
+	if (m_messages[0].m_pText != nullptr) {
 		m_messages[0].m_nCurrentPosition = -(m_nNumDisplayLetters + 10);
 		m_messages[0].m_nTimeToChangePosition = CTimer::GetTimeInMilliseconds() + m_messages[0].m_nSpeedMs;
 	}

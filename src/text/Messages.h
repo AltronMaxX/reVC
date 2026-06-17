@@ -34,22 +34,22 @@ public:
 	static tPreviousBrief PreviousBriefs[NUMPREVIOUSBRIEFS];
 	static char PreviousMissionTitle[16]; // unused
 public:
-	static void Init(void);
-	static uint16 GetWideStringLength(wchar *src);
-	static void WideStringCopy(wchar *dst, wchar *src, uint16 size);
-	static bool WideStringCompare(wchar *str1, wchar *str2, uint16 size);
-	static void Process(void);
-	static void Display(void);
+	static void Init();
+	static uint16 GetWideStringLength(const wchar *src);
+	static void WideStringCopy(wchar *dst, const wchar *src, uint16 size);
+	static bool WideStringCompare(const wchar *str1, const wchar *str2, uint16 size);
+	static void Process();
+	static void Display();
 	static void AddMessage(wchar *key, uint32 time, uint16 pos);
 	static void AddMessageJumpQ(wchar *key, uint32 time, uint16 pos);
 	static void AddMessageSoon(wchar *key, uint32 time, uint16 pos);
-	static void ClearMessages(void);
-	static void ClearSmallMessagesOnly(void);
+	static void ClearMessages();
+	static void ClearSmallMessagesOnly();
 	static void AddBigMessage(wchar *key, uint32 time, uint16 pos);
 	static void AddBigMessageQ(wchar *key, uint32 time, uint16 pos);
 	static void AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *string);
 	static void InsertNumberInString(wchar *src, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *dst);
-	static void InsertStringInString(wchar *str1, wchar *str2);
+	static void InsertStringInString(wchar *str1, const wchar *str2);
 	static void InsertPlayerControlKeysInString(wchar *src);
 	static void AddMessageWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
 	static void AddMessageJumpQWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
@@ -58,9 +58,9 @@ public:
 	static void AddBigMessageWithNumberQ(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
 	static void AddMessageWithString(wchar *text, uint32 time, uint16 flag, wchar *str);
 	static void AddMessageJumpQWithString(wchar *text, uint32 time, uint16 flag, wchar *str);
-	static void ClearThisPrint(wchar *str);
-	static void ClearThisBigPrint(wchar *str);
-	static void ClearAllMessagesDisplayedByGame(void);
+	static void ClearThisPrint(const wchar *str);
+	static void ClearThisBigPrint(const wchar *str);
+	static void ClearAllMessagesDisplayedByGame();
 
 	// unused or cut
 	//static void AddMessageSoonWithString(wchar*, uint32, uint16, wchar*);

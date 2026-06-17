@@ -20,7 +20,7 @@ class CPager
 public:
 	void Init();
 	void Process();
-	void Display();
+	void Display() const;
 	void AddMessage(wchar*, uint16, uint16, uint16);
 	void AddMessageWithNumber(wchar *str, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, uint16 speed, uint16 priority, uint16 a11);
 	void ClearMessages();

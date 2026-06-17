@@ -1778,7 +1778,7 @@ CPlayerPed::ProcessControl(void)
 			}
 			if (IsPedInControl() && m_nPedState != PED_ANSWER_MOBILE && padUsed)
 				ProcessPlayerWeapon(padUsed);
-			if (CPad::GetPad(0)->GetExitVehicle() && m_nPedState == PED_ANSWER_MOBILE && !bFastForwardPhoneCall)
+			if (m_nPedState == PED_ANSWER_MOBILE && CPad::GetPad(0)->GetExitVehicle() && !bFastForwardPhoneCall)
 			{
 				bFastForwardPhoneCall = true;
 			}

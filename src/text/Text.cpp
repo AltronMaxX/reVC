@@ -13,7 +13,7 @@ wchar WideErrorString[25];
 
 CText TheText;
 
-CText::CText(void)
+CText::CText()
 {
 	encoding = 'e';
 	bHasMissionTextOffsets = false;
@@ -23,11 +23,10 @@ CText::CText(void)
 }
 
 void
-CText::Load(void)
+CText::Load()
 {
 	char filename[32];
 	size_t offset;
-	int file;
 	bool tkey_loaded = false, tdat_loaded = false;
 	ChunkHeader m_ChunkHeader;
 
@@ -66,7 +65,7 @@ CText::Load(void)
 #endif
 	}
 
-	file = CFileMgr::OpenFile(filename, "rb");
+	const int file = CFileMgr::OpenFile(filename, "rb");
 
 	offset = 0;
 	while (!tkey_loaded || !tdat_loaded) {
@@ -94,7 +93,7 @@ CText::Load(void)
 }
 
 void
-CText::Unload(void)
+CText::Unload()
 {
 	CMessages::ClearAllMessagesDisplayedByGame();
 	keyArray.Unload();
@@ -155,8 +154,7 @@ wchar FrenchUpperCaseTable[128] = {
 };
 
 wchar
-CText::GetUpperCase(wchar c)
-{
+CText::GetUpperCase(const wchar c) const {
 	switch (encoding)
 	{
 	case 'e':
@@ -186,8 +184,7 @@ CText::GetUpperCase(wchar c)
 }
 
 void
-CText::UpperCase(wchar *s)
-{
+CText::UpperCase(wchar *s) const {
 	while(*s){
 		*s = GetUpperCase(*s);
 		s++;
@@ -195,13 +192,12 @@ CText::UpperCase(wchar *s)
 }
 
 void
-CText::GetNameOfLoadedMissionText(char *outName)
-{
+CText::GetNameOfLoadedMissionText(char *outName) const {
 	strcpy(outName, szMissionTableName);
 }
 
 void
-CText::ReadChunkHeader(ChunkHeader *buf, int32 file, size_t *offset)
+CText::ReadChunkHeader(ChunkHeader *buf, const int32 file, size_t *offset)
 {
 #ifdef THIS_IS_STUPID
 	char *_buf = (char*)buf;
@@ -211,7 +207,7 @@ CText::ReadChunkHeader(ChunkHeader *buf, int32 file, size_t *offset)
 	}
 #else
 	// original code loops 8 times to read 1 byte with CFileMgr::Read, that's retarded
-	CFileMgr::Read(file, (char*)buf, sizeof(ChunkHeader));
+	CFileMgr::Read(file, reinterpret_cast<char *>(buf), sizeof(ChunkHeader));
 	*offset += sizeof(ChunkHeader);
 #endif
 }
@@ -270,7 +266,7 @@ CText::LoadMissionText(char *MissionTableName)
 #endif
 	}
 	CTimer::Suspend();
-	int file = CFileMgr::OpenFile(filename, "rb");
+	const int file = CFileMgr::OpenFile(filename, "rb");
 	CFileMgr::Seek(file, MissionTextOffsets.data[missionTableId].offset, SEEK_SET);
 
 	char TableCheck[8];
@@ -307,14 +303,12 @@ CText::LoadMissionText(char *MissionTableName)
 
 
 void
-CKeyArray::Load(size_t length, int file, size_t* offset)
+CKeyArray::Load(const size_t length, const int file, size_t* offset)
 {
-	char *rawbytes;
-
 	// You can make numEntries size_t if you want to exceed 32-bit boundaries, everything else should be ready.
-	numEntries = (int)(length / sizeof(CKeyEntry));
+	numEntries = static_cast<int>(length / sizeof(CKeyEntry));
 	entries = new CKeyEntry[numEntries];
-	rawbytes = (char*)entries;
+	const auto rawbytes = reinterpret_cast<char *>(entries);
 
 #ifdef THIS_IS_STUPID
 	for (uint32 i = 0; i < length; i++) {
@@ -328,10 +322,10 @@ CKeyArray::Load(size_t length, int file, size_t* offset)
 }
 
 void
-CKeyArray::Unload(void)
+CKeyArray::Unload()
 {
 	delete[] entries;
-	entries = nil;
+	entries = nullptr;
 	numEntries = 0;
 }
 
@@ -346,23 +340,20 @@ CKeyArray::Update(wchar *chars)
 }
 
 CKeyEntry*
-CKeyArray::BinarySearch(const char *key, CKeyEntry *entries, int16 low, int16 high)
+CKeyArray::BinarySearch(const char *key, CKeyEntry *entries, const int16 low, const int16 high)
 {
-	int mid;
-	int diff;
-
 	if(low > high)
-		return nil;
+		return nullptr;
 
-	mid = (low + high)/2;
-	diff = strcmp(key, entries[mid].key);
+	const int mid = (low + high) / 2;
+	const int diff = strcmp(key, entries[mid].key);
 	if(diff == 0)
 		return &entries[mid];
 	if(diff < 0)
 		return BinarySearch(key, entries, low, mid-1);
 	if(diff > 0)
 		return BinarySearch(key, entries, mid+1, high);
-	return nil;
+	return nullptr;
 }
 
 wchar*
@@ -374,13 +365,12 @@ CKeyArray::Search(const char *key, uint8 *result)
 {
 	CKeyEntry *found;
 	char errstr[25];
-	int i;
 
 #if defined (FIX_BUGS) || defined(FIX_BUGS_64)
 	found = BinarySearch(key, entries, 0, numEntries-1);
 	if (found) {
 		*result = true;
-		return (wchar*)((uint8*)data + found->valueOffset);
+		return reinterpret_cast<wchar *>(reinterpret_cast<uint8 *>(data) + found->valueOffset);
 	}
 #else
 	found = BinarySearch(key, entries, 0, numEntries-1);
@@ -395,20 +385,18 @@ CKeyArray::Search(const char *key, uint8 *result)
 #else
 	sprintf(errstr, "%s missing", key);
 #endif // MASTER
-	for(i = 0; i < 25; i++)
+	for(int i = 0; i < 25; i++)
 		WideErrorString[i] = errstr[i];
 	return WideErrorString;
 }
 
 void
-CData::Load(size_t length, int file, size_t * offset)
+CData::Load(const size_t length, const int file, size_t * offset)
 {
-	char *rawbytes;
-
 	// You can make numChars size_t if you want to exceed 32-bit boundaries, everything else should be ready.
-	numChars = (int)(length / sizeof(wchar));
+	numChars = static_cast<int>(length / sizeof(wchar));
 	chars = new wchar[numChars];
-	rawbytes = (char*)chars;
+	const auto rawbytes = reinterpret_cast<char *>(chars);
 
 #ifdef THIS_IS_STUPID
 	for(uint32 i = 0; i < length; i++){
@@ -422,15 +410,15 @@ CData::Load(size_t length, int file, size_t * offset)
 }
 
 void
-CData::Unload(void)
+CData::Unload()
 {
 	delete[] chars;
-	chars = nil;
+	chars = nullptr;
 	numChars = 0;
 }
 
 void
-CMissionTextOffsets::Load(size_t table_size, int file, size_t *offset, int)
+CMissionTextOffsets::Load(const size_t table_size, const int file, size_t *offset, int)
 {
 #ifdef THIS_IS_STUPID
 	size_t num_of_entries = table_size / sizeof(CMissionTextOffsets::Entry);
@@ -450,9 +438,9 @@ CMissionTextOffsets::Load(size_t table_size, int file, size_t *offset, int)
 	// not exact VC code but smaller and better :P
 
 	// You can make this size_t if you want to exceed 32-bit boundaries, everything else should be ready.
-	size = (uint16) (table_size / sizeof(CMissionTextOffsets::Entry));
-	CFileMgr::Read(file, (char*)data, sizeof(CMissionTextOffsets::Entry) * size);
-	*offset += sizeof(CMissionTextOffsets::Entry) * size;
+	size = static_cast<uint16>(table_size / sizeof(Entry));
+	CFileMgr::Read(file, reinterpret_cast<char *>(data), sizeof(Entry) * size);
+	*offset += sizeof(Entry) * size;
 #endif
 }
 
@@ -463,7 +451,7 @@ UnicodeToAscii(wchar *src)
 	int len;
 	for(len = 0; *src != '\0' && len < 256-1; len++, src++)
 #ifdef MORE_LANGUAGES
-		if(*src < 128 || ((/* CGame::russianGame ||*/ CGame::japaneseGame) && *src < 256))
+		if(*src < 128 || (( CGame::russianGame || CGame::japaneseGame) && *src < 256))
 #else
 		if(*src < 128)
 #endif

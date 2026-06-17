@@ -5,7 +5,6 @@
 #include "Hud.h"
 #include "User.h"
 #include "Timer.h"
-#include "Text.h"
 
 #include "ControllerConfig.h"
 
@@ -21,14 +20,14 @@ CMessages::Init()
 {
 	ClearMessages();
 
-	for (int32 i = 0; i < NUMPREVIOUSBRIEFS; i++) {
-		PreviousBriefs[i].m_pText = nil;
-		PreviousBriefs[i].m_pString = nil;
+	for (auto & PreviousBrief : PreviousBriefs) {
+		PreviousBrief.m_pText = nullptr;
+		PreviousBrief.m_pString = nullptr;
 	}
 }
 
 uint16
-CMessages::GetWideStringLength(wchar *src)
+CMessages::GetWideStringLength(const wchar *src)
 {
 	uint16 length = 0;
 	while (*(src++)) length++;
@@ -36,7 +35,7 @@ CMessages::GetWideStringLength(wchar *src)
 }
 
 void
-CMessages::WideStringCopy(wchar *dst, wchar *src, uint16 size)
+CMessages::WideStringCopy(wchar *dst, const wchar *src, const uint16 size)
 {
 	int32 i = 0;
 	if (src) {
@@ -52,7 +51,7 @@ CMessages::WideStringCopy(wchar *dst, wchar *src, uint16 size)
 	dst[i] = '\0';
 }
 
-wchar FixupChar(wchar c)
+wchar FixupChar(const wchar c)
 {
 #ifdef MORE_LANGUAGES
 	if (CFont::IsJapanese())
@@ -62,11 +61,10 @@ wchar FixupChar(wchar c)
 }
 
 bool
-CMessages::WideStringCompare(wchar *str1, wchar *str2, uint16 size)
+CMessages::WideStringCompare(const wchar *str1, const wchar *str2, const uint16 size)
 {
-	uint16 len1 = GetWideStringLength(str1);
-	uint16 len2 = GetWideStringLength(str2);
-	if (len1 != len2 && (len1 < size || len2 < size))
+	const uint16 len1 = GetWideStringLength(str1);
+	if (const uint16 len2 = GetWideStringLength(str2); len1 != len2 && (len1 < size || len2 < size))
 		return false;
 
 	for (int32 i = 0; i < size && FixupChar(str1[i]) != '\0'; i++) {
@@ -79,31 +77,31 @@ CMessages::WideStringCompare(wchar *str1, wchar *str2, uint16 size)
 void
 CMessages::Process()
 {
-	for (int32 style = 0; style < 6; style++) {
-		if (BIGMessages[style].m_Stack[0].m_pText != nil && CTimer::GetTimeInMilliseconds() > BIGMessages[style].m_Stack[0].m_nTime + BIGMessages[style].m_Stack[0].m_nStartTime) {
-			BIGMessages[style].m_Stack[0].m_pText = nil;
+	for (auto &[m_Stack] : BIGMessages) {
+		if (m_Stack[0].m_pText != nullptr && CTimer::GetTimeInMilliseconds() > m_Stack[0].m_nTime + m_Stack[0].m_nStartTime) {
+			m_Stack[0].m_pText = nullptr;
 
 			int32 i = 0;
 			while (i < 3) {
-				if (BIGMessages[style].m_Stack[i + 1].m_pText == nil) break;
-				BIGMessages[style].m_Stack[i] = BIGMessages[style].m_Stack[i + 1];
+				if (m_Stack[i + 1].m_pText == nullptr) break;
+				m_Stack[i] = m_Stack[i + 1];
 				i++;
 			}
 
-			BIGMessages[style].m_Stack[i].m_pText = nil;
-			BIGMessages[style].m_Stack[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
+			m_Stack[i].m_pText = nullptr;
+			m_Stack[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
 		}
 	}
 
-	if (BriefMessages[0].m_pText != nil && CTimer::GetTimeInMilliseconds() > BriefMessages[0].m_nTime + BriefMessages[0].m_nStartTime) {
-		BriefMessages[0].m_pText = nil;
+	if (BriefMessages[0].m_pText != nullptr && CTimer::GetTimeInMilliseconds() > BriefMessages[0].m_nTime + BriefMessages[0].m_nStartTime) {
+		BriefMessages[0].m_pText = nullptr;
 		int32 i;
-		for (i = 0; i < NUMBRIEFMESSAGES-1 && BriefMessages[i + 1].m_pText != nil; i++) {
+		for (i = 0; i < NUMBRIEFMESSAGES-1 && BriefMessages[i + 1].m_pText != nullptr; i++) {
 			BriefMessages[i] = BriefMessages[i + 1];
 		}
-		CMessages::BriefMessages[i].m_pText = nil;
-		CMessages::BriefMessages[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
-		if (BriefMessages[0].m_pText != nil)
+		BriefMessages[i].m_pText = nullptr;
+		BriefMessages[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
+		if (BriefMessages[0].m_pText != nullptr)
 			AddToPreviousBriefArray(
 				BriefMessages[0].m_pText,
 				BriefMessages[0].m_nNumber[0],
@@ -153,7 +151,7 @@ CMessages::Display()
 }
 
 void
-CMessages::AddMessage(wchar *msg, uint32 time, uint16 flag)
+CMessages::AddMessage(wchar *msg, const uint32 time, const uint16 flag)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, msg, 256);
@@ -161,7 +159,7 @@ CMessages::AddMessage(wchar *msg, uint32 time, uint16 flag)
 	GetWideStringLength(outstr);
 
 	int32 i = 0;
-	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nil)
+	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nullptr)
 		i++;
 	if (i >= NUMBRIEFMESSAGES) return;
 
@@ -175,7 +173,7 @@ CMessages::AddMessage(wchar *msg, uint32 time, uint16 flag)
 	BriefMessages[i].m_nNumber[3] = -1;
 	BriefMessages[i].m_nNumber[4] = -1;
 	BriefMessages[i].m_nNumber[5] = -1;
-	BriefMessages[i].m_pString = nil;
+	BriefMessages[i].m_pString = nullptr;
 	if (i == 0)
 		AddToPreviousBriefArray(
 			BriefMessages[0].m_pText,
@@ -189,7 +187,7 @@ CMessages::AddMessage(wchar *msg, uint32 time, uint16 flag)
 }
 
 void
-CMessages::AddMessageJumpQ(wchar *msg, uint32 time, uint16 flag)
+CMessages::AddMessageJumpQ(wchar *msg, const uint32 time, const uint16 flag)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, msg, 256);
@@ -206,19 +204,19 @@ CMessages::AddMessageJumpQ(wchar *msg, uint32 time, uint16 flag)
 	BriefMessages[0].m_nNumber[3] = -1;
 	BriefMessages[0].m_nNumber[4] = -1;
 	BriefMessages[0].m_nNumber[5] = -1;
-	BriefMessages[0].m_pString = nil;
-	AddToPreviousBriefArray(msg, -1, -1, -1, -1, -1, -1, 0);
+	BriefMessages[0].m_pString = nullptr;
+	AddToPreviousBriefArray(msg, -1, -1, -1, -1, -1, -1, nullptr);
 }
 
 void
-CMessages::AddMessageSoon(wchar *msg, uint32 time, uint16 flag)
+CMessages::AddMessageSoon(wchar *msg, const uint32 time, const uint16 flag)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, msg, 256);
 	InsertPlayerControlKeysInString(outstr);
 	GetWideStringLength(outstr);
 
-	if (BriefMessages[0].m_pText != nil) {
+	if (BriefMessages[0].m_pText != nullptr) {
 		for (int i = NUMBRIEFMESSAGES-1; i > 1; i--)
 			BriefMessages[i] = BriefMessages[i-1];
 
@@ -232,7 +230,7 @@ CMessages::AddMessageSoon(wchar *msg, uint32 time, uint16 flag)
 		BriefMessages[1].m_nNumber[3] = -1;
 		BriefMessages[1].m_nNumber[4] = -1;
 		BriefMessages[1].m_nNumber[5] = -1;
-		BriefMessages[1].m_pString = nil;
+		BriefMessages[1].m_pString = nullptr;
 	}else{
 		BriefMessages[0].m_pText = msg;
 		BriefMessages[0].m_nFlag = flag;
@@ -244,18 +242,18 @@ CMessages::AddMessageSoon(wchar *msg, uint32 time, uint16 flag)
 		BriefMessages[0].m_nNumber[3] = -1;
 		BriefMessages[0].m_nNumber[4] = -1;
 		BriefMessages[0].m_nNumber[5] = -1;
-		BriefMessages[0].m_pString = nil;
-		AddToPreviousBriefArray(msg, -1, -1, -1, -1, -1, -1, nil);
+		BriefMessages[0].m_pString = nullptr;
+		AddToPreviousBriefArray(msg, -1, -1, -1, -1, -1, -1, nullptr);
 	}
 }
 
 void
 CMessages::ClearMessages()
 {
-	for (int32 i = 0; i < NUMBIGMESSAGES; i++) {
+	for (auto &[m_Stack] : BIGMessages) {
 		for (int32 j = 0; j < 4; j++) {
-			BIGMessages[i].m_Stack[j].m_pText = nil;
-			BIGMessages[i].m_Stack[j].m_pString = nil;
+			m_Stack[j].m_pText = nullptr;
+			m_Stack[j].m_pString = nullptr;
 		}
 	}
 	ClearSmallMessagesOnly();
@@ -264,14 +262,14 @@ CMessages::ClearMessages()
 void
 CMessages::ClearSmallMessagesOnly()
 {
-	for (int32 i = 0; i < NUMBRIEFMESSAGES; i++) {
-		BriefMessages[i].m_pText = nil;
-		BriefMessages[i].m_pString = nil;
+	for (auto & BriefMessage : BriefMessages) {
+		BriefMessage.m_pText = nullptr;
+		BriefMessage.m_pString = nullptr;
 	}
 }
 
 void
-CMessages::AddBigMessage(wchar *msg, uint32 time, uint16 style)
+CMessages::AddBigMessage(wchar *msg, const uint32 time, const uint16 style)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, msg, 256);
@@ -288,11 +286,11 @@ CMessages::AddBigMessage(wchar *msg, uint32 time, uint16 style)
 	BIGMessages[style].m_Stack[0].m_nNumber[3] = -1;
 	BIGMessages[style].m_Stack[0].m_nNumber[4] = -1;
 	BIGMessages[style].m_Stack[0].m_nNumber[5] = -1;
-	BIGMessages[style].m_Stack[0].m_pString = nil;
+	BIGMessages[style].m_Stack[0].m_pString = nullptr;
 }
 
 void
-CMessages::AddBigMessageQ(wchar *msg, uint32 time, uint16 style)
+CMessages::AddBigMessageQ(wchar *msg, const uint32 time, const uint16 style)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, msg, 256);
@@ -300,7 +298,7 @@ CMessages::AddBigMessageQ(wchar *msg, uint32 time, uint16 style)
 	GetWideStringLength(outstr);
 
 	int32 i = 0;
-	while (i < 4 && BIGMessages[style].m_Stack[i].m_pText != nil)
+	while (i < 4 && BIGMessages[style].m_Stack[i].m_pText != nullptr)
 		i++;
 
 	if (i >= 4) return;
@@ -315,14 +313,14 @@ CMessages::AddBigMessageQ(wchar *msg, uint32 time, uint16 style)
 	BIGMessages[style].m_Stack[i].m_nNumber[3] = -1;
 	BIGMessages[style].m_Stack[i].m_nNumber[4] = -1;
 	BIGMessages[style].m_Stack[i].m_nNumber[5] = -1;
-	BIGMessages[style].m_Stack[i].m_pString = nil;
+	BIGMessages[style].m_Stack[i].m_pString = nullptr;
 }
 
 void
-CMessages::AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *string)
+CMessages::AddToPreviousBriefArray(wchar *text, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6, wchar *string)
 {
 	int32 i;
-	for (i = 0; i < NUMPREVIOUSBRIEFS && PreviousBriefs[i].m_pText != nil; i++) {
+	for (i = 0; i < NUMPREVIOUSBRIEFS && PreviousBriefs[i].m_pText != nullptr; i++) {
 		if (PreviousBriefs[i].m_nNumber[0] == n1
 			&& PreviousBriefs[i].m_nNumber[1] == n2
 			&& PreviousBriefs[i].m_nNumber[2] == n3
@@ -354,12 +352,12 @@ CMessages::AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, in
 }
 
 void
-CMessages::InsertNumberInString(wchar *str, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *outstr)
+CMessages::InsertNumberInString(wchar *str, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6, wchar *outstr)
 {
 	char numStr[10];
 	wchar wNumStr[10];
 
-	if (str == nil) {
+	if (str == nullptr) {
 		*outstr = '\0';
 		return;
 	}
@@ -372,7 +370,7 @@ CMessages::InsertNumberInString(wchar *str, int32 n1, int32 n2, int32 n3, int32 
 		return;
 	}
 
-	int32 size = GetWideStringLength(str);
+	const int32 size = GetWideStringLength(str);
 
 	int32 i = 0;
 
@@ -405,17 +403,17 @@ CMessages::InsertNumberInString(wchar *str, int32 n1, int32 n2, int32 n3, int32 
 }
 
 void
-CMessages::InsertStringInString(wchar *str1, wchar *str2)
+CMessages::InsertStringInString(wchar *str1, const wchar *str2)
 {
 	wchar tempstr[256];
 
 	if (!str1 || !str2) return;
 
-	int32 str1_size = GetWideStringLength(str1);
-	int32 str2_size = GetWideStringLength(str2);
-	int32 total_size = str1_size + str2_size;
-	
-	wchar *_str1 = str1;
+	const int32 str1_size = GetWideStringLength(str1);
+	const int32 str2_size = GetWideStringLength(str2);
+	const int32 total_size = str1_size + str2_size;
+
+	const wchar *_str1 = str1;
 	uint16 i;
 	for (i = 0; i < total_size; ) {
 #ifdef MORE_LANGUAGES
@@ -449,7 +447,7 @@ CMessages::InsertPlayerControlKeysInString(wchar *str)
 	wchar keybuf[256];
 
 	if (!str) return;
-	uint16 strSize = GetWideStringLength(str);
+	const uint16 strSize = GetWideStringLength(str);
 	memset(keybuf, 0, 256*sizeof(wchar));
 
 	wchar *_outstr = outstr;
@@ -463,14 +461,13 @@ CMessages::InsertPlayerControlKeysInString(wchar *str)
 			i += 4;
 			bool done = false;
 			for (int32 cont = 0; cont < MAX_CONTROLLERACTIONS && !done; cont++) {
-				uint16 contSize = GetWideStringLength(ControlsManager.m_aActionNames[cont]);
-				if (contSize != 0) {
+				if (const uint16 contSize = GetWideStringLength(ControlsManager.m_aActionNames[cont]); contSize != 0) {
 					if (WideStringCompare(&str[i], ControlsManager.m_aActionNames[cont], contSize)) {
 						done = true;
 						ControlsManager.GetWideStringOfCommandKeys(cont, keybuf, 256);
-						uint16 keybuf_size = GetWideStringLength(keybuf);
+						const uint16 keybuf_size = GetWideStringLength(keybuf);
 						for (uint16 j = 0; j < keybuf_size; j++) {
-							*(_outstr++) = keybuf[j];
+							*_outstr++ = keybuf[j];
 							keybuf[j] = '\0';
 						}
 						i += contSize + 1;
@@ -478,7 +475,7 @@ CMessages::InsertPlayerControlKeysInString(wchar *str)
 				}
 			}
 		} else {
-			*(_outstr++) = str[i++];
+			*_outstr++ = str[i++];
 		}
 	}
 	*_outstr = '\0';
@@ -491,7 +488,7 @@ CMessages::InsertPlayerControlKeysInString(wchar *str)
 }
 
 void
-CMessages::AddMessageWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
+CMessages::AddMessageWithNumber(wchar *str, const uint32 time, const uint16 flag, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6)
 {
 	wchar outstr[512]; // unused
 	InsertNumberInString(str, n1, n2, n3, n4, n5, n6, outstr);
@@ -499,7 +496,7 @@ CMessages::AddMessageWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, 
 	GetWideStringLength(outstr);
 
 	uint16 i = 0;
-	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nil)
+	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nullptr)
 		i++;
 
 	if (i >= NUMBRIEFMESSAGES) return;
@@ -514,7 +511,7 @@ CMessages::AddMessageWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, 
 	BriefMessages[i].m_nNumber[3] = n4;
 	BriefMessages[i].m_nNumber[4] = n5;
 	BriefMessages[i].m_nNumber[5] = n6;
-	BriefMessages[i].m_pString = nil;
+	BriefMessages[i].m_pString = nullptr;
 	if (i == 0)
 		AddToPreviousBriefArray(
 			BriefMessages[0].m_pText,
@@ -528,7 +525,7 @@ CMessages::AddMessageWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, 
 }
 
 void 
-CMessages::AddMessageJumpQWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
+CMessages::AddMessageJumpQWithNumber(wchar *str, const uint32 time, const uint16 flag, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6)
 {
 	wchar outstr[512]; // unused
 	InsertNumberInString(str, n1, n2, n3, n4, n5, n6, outstr);
@@ -545,19 +542,19 @@ CMessages::AddMessageJumpQWithNumber(wchar *str, uint32 time, uint16 flag, int32
 	BriefMessages[0].m_nNumber[3] = n4;
 	BriefMessages[0].m_nNumber[4] = n5;
 	BriefMessages[0].m_nNumber[5] = n6;
-	BriefMessages[0].m_pString = nil;
-	AddToPreviousBriefArray(str, n1, n2, n3, n4, n5, n6, nil);
+	BriefMessages[0].m_pString = nullptr;
+	AddToPreviousBriefArray(str, n1, n2, n3, n4, n5, n6, nullptr);
 }
 
 void
-CMessages::AddMessageSoonWithNumber(wchar *str, uint32 time, uint16 flag, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
+CMessages::AddMessageSoonWithNumber(wchar *str, const uint32 time, const uint16 flag, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6)
 {
 	wchar outstr[512]; // unused
 	InsertNumberInString(str, n1, n2, n3, n4, n5, n6, outstr);
 	InsertPlayerControlKeysInString(outstr);
 	GetWideStringLength(outstr);
 
-	if (BriefMessages[0].m_pText != nil) {
+	if (BriefMessages[0].m_pText != nullptr) {
 		for (int32 i = NUMBRIEFMESSAGES-1; i > 1; i--)
 			BriefMessages[i] = BriefMessages[i-1];
 
@@ -571,7 +568,7 @@ CMessages::AddMessageSoonWithNumber(wchar *str, uint32 time, uint16 flag, int32 
 		BriefMessages[1].m_nNumber[3] = n4;
 		BriefMessages[1].m_nNumber[4] = n5;
 		BriefMessages[1].m_nNumber[5] = n6;
-		BriefMessages[1].m_pString = nil;
+		BriefMessages[1].m_pString = nullptr;
 	} else {
 		BriefMessages[0].m_pText = str;
 		BriefMessages[0].m_nFlag = flag;
@@ -583,13 +580,13 @@ CMessages::AddMessageSoonWithNumber(wchar *str, uint32 time, uint16 flag, int32 
 		BriefMessages[0].m_nNumber[3] = n4;
 		BriefMessages[0].m_nNumber[4] = n5;
 		BriefMessages[0].m_nNumber[5] = n6;
-		BriefMessages[0].m_pString = nil;
-		AddToPreviousBriefArray(str, n1, n2, n3, n4, n5, n6, nil);
+		BriefMessages[0].m_pString = nullptr;
+		AddToPreviousBriefArray(str, n1, n2, n3, n4, n5, n6, nullptr);
 	}
 }
 
 void
-CMessages::AddBigMessageWithNumber(wchar *str, uint32 time, uint16 style, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
+CMessages::AddBigMessageWithNumber(wchar *str, const uint32 time, const uint16 style, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6)
 {
 	wchar outstr[512]; // unused
 	InsertNumberInString(str, n1, n2, n3, n4, n5, n6, outstr);
@@ -606,11 +603,11 @@ CMessages::AddBigMessageWithNumber(wchar *str, uint32 time, uint16 style, int32 
 	BIGMessages[style].m_Stack[0].m_nNumber[3] = n4;
 	BIGMessages[style].m_Stack[0].m_nNumber[4] = n5;
 	BIGMessages[style].m_Stack[0].m_nNumber[5] = n6;
-	BIGMessages[style].m_Stack[0].m_pString = nil;
+	BIGMessages[style].m_Stack[0].m_pString = nullptr;
 }
 
 void
-CMessages::AddBigMessageWithNumberQ(wchar *str, uint32 time, uint16 style, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
+CMessages::AddBigMessageWithNumberQ(wchar *str, const uint32 time, const uint16 style, const int32 n1, const int32 n2, const int32 n3, const int32 n4, const int32 n5, const int32 n6)
 {
 	wchar outstr[512]; // unused
 	InsertNumberInString(str, n1, n2, n3, n4, n5, n6, outstr);
@@ -619,7 +616,7 @@ CMessages::AddBigMessageWithNumberQ(wchar *str, uint32 time, uint16 style, int32
 
 	int32 i = 0;
 
-	while (i < 4 && BIGMessages[style].m_Stack[i].m_pText != nil)
+	while (i < 4 && BIGMessages[style].m_Stack[i].m_pText != nullptr)
 		i++;
 
 	if (i >= 4) return;
@@ -634,11 +631,11 @@ CMessages::AddBigMessageWithNumberQ(wchar *str, uint32 time, uint16 style, int32
 	BIGMessages[style].m_Stack[i].m_nNumber[3] = n4;
 	BIGMessages[style].m_Stack[i].m_nNumber[4] = n5;
 	BIGMessages[style].m_Stack[i].m_nNumber[5] = n6;
-	BIGMessages[style].m_Stack[i].m_pString = nil;
+	BIGMessages[style].m_Stack[i].m_pString = nullptr;
 }
 
 void
-CMessages::AddMessageWithString(wchar *text, uint32 time, uint16 flag, wchar *str)
+CMessages::AddMessageWithString(wchar *text, const uint32 time, const uint16 flag, wchar *str)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, text, 256);
@@ -647,7 +644,7 @@ CMessages::AddMessageWithString(wchar *text, uint32 time, uint16 flag, wchar *st
 	GetWideStringLength(outstr);
 
 	int32 i = 0;
-	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nil)
+	while (i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nullptr)
 		i++;
 
 	if (i >= NUMBRIEFMESSAGES) return;
@@ -676,7 +673,7 @@ CMessages::AddMessageWithString(wchar *text, uint32 time, uint16 flag, wchar *st
 }
 
 void
-CMessages::AddMessageJumpQWithString(wchar *text, uint32 time, uint16 flag, wchar *str)
+CMessages::AddMessageJumpQWithString(wchar *text, const uint32 time, const uint16 flag, wchar *str)
 {
 	wchar outstr[512]; // unused
 	WideStringCopy(outstr, text, 256);
@@ -699,7 +696,7 @@ CMessages::AddMessageJumpQWithString(wchar *text, uint32 time, uint16 flag, wcha
 }
 
 inline bool
-FastWideStringComparison(wchar *str1, wchar *str2)
+FastWideStringComparison(const wchar *str1, const wchar *str2)
 {
 	while (*str1 == *str2) {
 		++str1;
@@ -710,14 +707,14 @@ FastWideStringComparison(wchar *str1, wchar *str2)
 }
 
 void
-CMessages::ClearThisPrint(wchar *str)
+CMessages::ClearThisPrint(const wchar *str)
 {
 	bool equal;
 
 	do {
 		equal = false;
 		uint16 i;
-		for (i = 0; i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nil; i++) {
+		for (i = 0; i < NUMBRIEFMESSAGES && BriefMessages[i].m_pText != nullptr; i++) {
 			equal = FastWideStringComparison(str, BriefMessages[i].m_pText);
 
 			if (equal) break;
@@ -725,19 +722,19 @@ CMessages::ClearThisPrint(wchar *str)
 
 		if (equal) {
 			if (i != 0) {
-				BriefMessages[i].m_pText = nil;
-				for (; i < NUMBRIEFMESSAGES-1 && BriefMessages[i+1].m_pText != nil; i++) {
+				BriefMessages[i].m_pText = nullptr;
+				for (; i < NUMBRIEFMESSAGES-1 && BriefMessages[i+1].m_pText != nullptr; i++) {
 					BriefMessages[i] = BriefMessages[i + 1];
 				}
-				BriefMessages[i].m_pText = nil;
+				BriefMessages[i].m_pText = nullptr;
 			} else {
-				BriefMessages[0].m_pText = nil;
-				for (; i < NUMBRIEFMESSAGES-1 && BriefMessages[i+1].m_pText != nil; i++) {
+				BriefMessages[0].m_pText = nullptr;
+				for (; i < NUMBRIEFMESSAGES-1 && BriefMessages[i+1].m_pText != nullptr; i++) {
 					BriefMessages[i] = BriefMessages[i + 1];
 				}
-				BriefMessages[i].m_pText = nil;
+				BriefMessages[i].m_pText = nullptr;
 				BriefMessages[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
-				if (BriefMessages[0].m_pText != nil)
+				if (BriefMessages[0].m_pText != nullptr)
 					AddToPreviousBriefArray(
 						BriefMessages[0].m_pText,
 						BriefMessages[0].m_nNumber[0],
@@ -753,7 +750,7 @@ CMessages::ClearThisPrint(wchar *str)
 }
 
 void
-CMessages::ClearThisBigPrint(wchar *str)
+CMessages::ClearThisBigPrint(const wchar *str)
 {
 	bool equal;
 
@@ -766,7 +763,7 @@ CMessages::ClearThisBigPrint(wchar *str)
 			if (i >= 4)
 				break;
 
-			if (CMessages::BIGMessages[style].m_Stack[i].m_pText == nil || equal)
+			if (BIGMessages[style].m_Stack[i].m_pText == nullptr || equal)
 				break;
 
 			equal = FastWideStringComparison(str, BIGMessages[style].m_Stack[i].m_pText);
@@ -778,24 +775,24 @@ CMessages::ClearThisBigPrint(wchar *str)
 		}
 		if (equal) {
 			if (i != 0) {
-				BIGMessages[style].m_Stack[i].m_pText = nil;
+				BIGMessages[style].m_Stack[i].m_pText = nullptr;
 				while (i < 3) {
-					if (BIGMessages[style].m_Stack[i + 1].m_pText == nil)
+					if (BIGMessages[style].m_Stack[i + 1].m_pText == nullptr)
 						break;
 					BIGMessages[style].m_Stack[i] = BIGMessages[style].m_Stack[i + 1];
 					i++;
 				}
-				BIGMessages[style].m_Stack[i].m_pText = nil;
+				BIGMessages[style].m_Stack[i].m_pText = nullptr;
 			} else {
-				BIGMessages[style].m_Stack[0].m_pText = nil;
+				BIGMessages[style].m_Stack[0].m_pText = nullptr;
 				i = 0;
 				while (i < 3) {
-					if (BIGMessages[style].m_Stack[i + 1].m_pText == nil)
+					if (BIGMessages[style].m_Stack[i + 1].m_pText == nullptr)
 						break;
 					BIGMessages[style].m_Stack[i] = BIGMessages[style].m_Stack[i + 1];
 					i++;
 				}
-				BIGMessages[style].m_Stack[i].m_pText = nil;
+				BIGMessages[style].m_Stack[i].m_pText = nullptr;
 				BIGMessages[style].m_Stack[0].m_nStartTime = CTimer::GetTimeInMilliseconds();
 			}
 		}
@@ -806,9 +803,9 @@ void
 CMessages::ClearAllMessagesDisplayedByGame()
 {
 	ClearMessages();
-	for (int32 i = 0; i < NUMPREVIOUSBRIEFS; i++) {
-		PreviousBriefs[i].m_pText = nil;
-		PreviousBriefs[i].m_pString = nil;
+	for (auto & PreviousBrief : PreviousBriefs) {
+		PreviousBrief.m_pText = nullptr;
+		PreviousBrief.m_pString = nullptr;
 	}
 	CHud::GetRidOfAllHudMessages();
 	CUserDisplay::Pager.ClearMessages();
