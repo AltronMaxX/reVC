@@ -47,7 +47,7 @@ void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const RwV3d *in,
 #else
 	while(n--){
 		*out = mat * *in;
-		in = (RwV3d*)((uint8*)in + stride);
+		in = reinterpret_cast<RwV3d *>((uint8 *) in + stride);
 		out++;
 	}
 #endif
