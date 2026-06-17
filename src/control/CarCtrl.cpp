@@ -173,10 +173,14 @@ CCarCtrl::GenerateOneRandomCar()
 	bool invertAngleLimitTest;
 	float requestOnScreenDistance = REQUEST_ONSCREEN_DISTANCE * populationDist;
 	float offscreenSpawnDistance = OFFSCREEN_DESPAWN_RANGE * populationDist;
+	float closePopulationDist = Min(populationDist, 1.5f);
+	float closeOffscreenSpawnDistance = OFFSCREEN_DESPAWN_RANGE * closePopulationDist;
+	float boatSpawnDistance = requestOnScreenDistance;
 	CVector spawnPosition;
 	int32 curNodeId, nextNodeId;
 	float positionBetweenNodes;
 	bool testForCollision;
+	bool ignoreDisabledPaths;
 	CVehicle* pPlayerVehicle = FindPlayerVehicle();
 	CVector2D vecPlayerVehicleSpeed;
 	float fPlayerVehicleSpeed;
@@ -212,7 +216,7 @@ CCarCtrl::GenerateOneRandomCar()
 			/* Kinda not within camera angle. */
 			angleLimit = 0.707f; /* 45 degrees */
 			invertAngleLimitTest = false;
-			preferredDistance = offscreenSpawnDistance;
+			preferredDistance = closeOffscreenSpawnDistance;
 			break;
 		}
 	}else if (fPlayerVehicleSpeed > 0.4f){ /* 72 km/h */
@@ -241,7 +245,7 @@ CCarCtrl::GenerateOneRandomCar()
 			/* Kinda not within camera angle. */
 			angleLimit = 0.707f; /* 45 degrees */
 			invertAngleLimitTest = false;
-			preferredDistance = offscreenSpawnDistance;
+			preferredDistance = closeOffscreenSpawnDistance;
 			break;
 		}
 	}else if (fPlayerVehicleSpeed > 0.1f){ /* 18 km/h */
@@ -270,7 +274,7 @@ CCarCtrl::GenerateOneRandomCar()
 			/* Kinda not within camera angle. */
 			angleLimit = 0.707f; /* 45 degrees */
 			invertAngleLimitTest = false;
-			preferredDistance = offscreenSpawnDistance;
+			preferredDistance = closeOffscreenSpawnDistance;
 			break;
 		}
 	}else{
@@ -292,16 +296,29 @@ CCarCtrl::GenerateOneRandomCar()
 			/* Kinda not within camera angle. */
 			angleLimit = 0.707f; /* 45 degrees */
 			invertAngleLimitTest = false;
-			preferredDistance = offscreenSpawnDistance;
+			preferredDistance = closeOffscreenSpawnDistance;
 			break;
 		}
 	}
+	ignoreDisabledPaths = carClass == COPS && pWanted->GetWantedLevel() >= 1;
 	if (!ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
 		preferredDistance, angleLimit, invertAngleLimitTest, &spawnPosition, &curNodeId, &nextNodeId,
-		&positionBetweenNodes, carClass == COPS && pWanted->GetWantedLevel() >= 1))
+		&positionBetweenNodes, ignoreDisabledPaths))
 		return;
 	CPathNode* pCurNode = &ThePaths.m_pathNodes[curNodeId];
 	CPathNode* pNextNode = &ThePaths.m_pathNodes[nextNodeId];
+	if (pCurNode->bWaterPath && preferredDistance < boatSpawnDistance) {
+		bool foundDistantBoatPath = ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
+			boatSpawnDistance, angleLimit, invertAngleLimitTest, &spawnPosition, &curNodeId, &nextNodeId,
+			&positionBetweenNodes, ignoreDisabledPaths, true);
+		if (!foundDistantBoatPath &&
+			!ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
+			preferredDistance, angleLimit, invertAngleLimitTest, &spawnPosition, &curNodeId, &nextNodeId,
+			&positionBetweenNodes, ignoreDisabledPaths, false))
+			return;
+		pCurNode = &ThePaths.m_pathNodes[curNodeId];
+		pNextNode = &ThePaths.m_pathNodes[nextNodeId];
+	}
 	bool bBoatGenerated = false;
 	if ((CGeneral::GetRandomNumber() & 0xF) > Min(pCurNode->spawnRate, pNextNode->spawnRate))
 		return;
@@ -311,7 +328,7 @@ CCarCtrl::GenerateOneRandomCar()
 			carModel = MI_PREDATOR;
 			carClass = COPS_BOAT;
 			if (!CStreaming::HasModelLoaded(MI_PREDATOR)) {
-				CStreaming::RequestModel(MI_PREDATOR, STREAMFLAGS_DEPENDENCY);
+				CStreaming::RequestModel(MI_PREDATOR, STREAMFLAGS_DEPENDENCY | STREAMFLAGS_PRIORITY);
 				return;
 			}
 		}

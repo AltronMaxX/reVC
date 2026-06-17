@@ -1470,7 +1470,7 @@ CPathFind::FindNodeOrientationForCarPlacementFacingDestination(int32 nodeId, flo
 }
 
 bool
-CPathFind::GenerateCarCreationCoors(float x, float y, float dirX, float dirY, float spawnDist, float angleLimit, bool forward, CVector *pPosition, int32 *pNode1, int32 *pNode2, float *pPositionBetweenNodes, bool ignoreDisabled)
+CPathFind::GenerateCarCreationCoors(float x, float y, float dirX, float dirY, float spawnDist, float angleLimit, bool forward, CVector *pPosition, int32 *pNode1, int32 *pNode2, float *pPositionBetweenNodes, bool ignoreDisabled, int8 waterPath)
 {
 	int i, j;
 	int node1, node2;
@@ -1483,12 +1483,16 @@ CPathFind::GenerateCarCreationCoors(float x, float y, float dirX, float dirY, fl
 		node1 = (CGeneral::GetRandomNumber()>>3) % m_numCarPathNodes;
 		if(m_pathNodes[node1].bDisabled && !ignoreDisabled)
 			continue;
+		if(waterPath != -1 && m_pathNodes[node1].bWaterPath != (waterPath != 0))
+			continue;
 		dist1 = Distance2D(m_pathNodes[node1].GetPosition(), x, y);
 		if(dist1 < Max(spawnDist + 70.0f, spawnDist * 1.7f)){
 			d1 = m_pathNodes[node1].bWaterPath ? (dist1 - spawnDist * 1.5f) : (dist1 - spawnDist);
 			for(j = 0; j < m_pathNodes[node1].numLinks; j++){
 				node2 = ConnectedNode(m_pathNodes[node1].firstLink + j);
 				if(m_pathNodes[node2].bDisabled && !ignoreDisabled)
+					continue;
+				if(waterPath != -1 && m_pathNodes[node2].bWaterPath != (waterPath != 0))
 					continue;
 				dist2 = Distance2D(m_pathNodes[node2].GetPosition(), x, y);
 				d2 = m_pathNodes[node2].bWaterPath ? (dist2 - spawnDist * 1.5f) : (dist2 - spawnDist);
