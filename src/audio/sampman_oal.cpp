@@ -1282,7 +1282,7 @@ cSampleManager::IsPedCommentLoaded(const uint32 nComment)
 		int8 slot = nCurrentPedSlot - i - 1;
 #ifdef FIX_BUGS
 		if (slot < 0)
-			slot += std::size(nPedSlotSfx);
+			slot += sizeof(nPedSlotSfx);
 #endif
 		if ( nComment == nPedSlotSfx[slot] )
 			return true;
@@ -1300,7 +1300,7 @@ cSampleManager::_GetPedCommentSlot(const uint32 nComment)
 		int8 slot = nCurrentPedSlot - i - 1;
 #ifdef FIX_BUGS
 		if (slot < 0)
-			slot += std::size(nPedSlotSfx);
+			slot += sizeof(nPedSlotSfx);
 #endif
 		if (nComment == nPedSlotSfx[slot])
 			return slot;
