@@ -8,12 +8,13 @@ class CDummy : public CEntity
 public:
 	CEntryInfoList m_entryInfoList;
 
-	CDummy(void) { m_type = ENTITY_TYPE_DUMMY; }
-	void Add(void);
-	void Remove(void);
+	CDummy() { m_type = ENTITY_TYPE_DUMMY; }
+	void Add() override;
+	void Remove() override;
 
-	static void *operator new(size_t);
-	static void operator delete(void*, size_t);
+	void *operator new(size_t);
+
+	void operator delete(void*, size_t);
 };
 
 bool IsDummyPointerValid(CDummy* pDummy);

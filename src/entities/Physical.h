@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Lists.h"
-#include "Timer.h"
 #include "Entity.h"
+#include "Timer.h"
 
 enum {
 	PHYSICAL_MAX_COLLISIONRECORDS = 6
@@ -66,41 +66,41 @@ public:
 	uint8 m_nSurfaceTouched;
 	int8 m_nZoneLevel;
 
-	CPhysical(void);
-	~CPhysical(void);
+	CPhysical();
+	~CPhysical() override;
 
 	// from CEntity
-	void Add(void);
-	void Remove(void);
-	CRect GetBoundRect(void);
-	void ProcessControl(void);
-	void ProcessShift(void);
-	void ProcessCollision(void);
+	void Add() override;
+	void Remove() override;
+	CRect GetBoundRect() override;
+	void ProcessControl() override;
+	void ProcessShift() override;
+	void ProcessCollision() override;
 
 	virtual int32 ProcessEntityCollision(CEntity *ent, CColPoint *colpoints);
 
-	void RemoveAndAdd(void);
-	void AddToMovingList(void);
-	void RemoveFromMovingList(void);
-	void SetDamagedPieceRecord(uint16 piece, float impulse, CEntity *entity, CVector dir);
+	void RemoveAndAdd();
+	void AddToMovingList();
+	void RemoveFromMovingList();
+	void SetDamagedPieceRecord(uint16 piece, float impulse, CEntity *entity, const CVector &dir);
 	void AddCollisionRecord(CEntity *ent);
 	void AddCollisionRecord_Treadable(CEntity *ent);
-	bool GetHasCollidedWith(CEntity *ent);
-	void RemoveRefsToEntity(CEntity *ent);
-	static void PlacePhysicalRelativeToOtherPhysical(CPhysical *other, CPhysical *phys, CVector localPos);
+	bool GetHasCollidedWith(const CEntity *ent) const;
+	void RemoveRefsToEntity(const CEntity *ent);
+	static void PlacePhysicalRelativeToOtherPhysical(CPhysical *other, CPhysical *phys, const CVector &localPos);
 
 	// get speed of point p relative to entity center
-	CVector GetSpeed(const CVector &r);
-	CVector GetSpeed(void) { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
-	float GetMass(const CVector &pos, const CVector &dir) {
+	[[nodiscard]] CVector GetSpeed(const CVector &r) const;
+	[[nodiscard]] CVector GetSpeed() const { return GetSpeed(CVector(0.0f, 0.0f, 0.0f)); }
+	[[nodiscard]] float GetMass(const CVector &pos, const CVector &dir) const {
 		return 1.0f / (CrossProduct(pos, dir).MagnitudeSqr()/m_fTurnMass +
 		               1.0f/m_fMass);
 	}
-	float GetMassTweak(const CVector &pos, const CVector &dir, float t) {
+	[[nodiscard]] float GetMassTweak(const CVector &pos, const CVector &dir, float t) const {
 		return 1.0f / (CrossProduct(pos, dir).MagnitudeSqr()/(m_fTurnMass*t) +
 		               1.0f/(m_fMass*t));
 	}
-	void UnsetIsInSafePosition(void) {
+	void UnsetIsInSafePosition() {
 		m_vecMoveSpeed *= -1.0f;
 		m_vecTurnSpeed *= -1.0f;
 		ApplyTurnSpeed();
@@ -110,8 +110,8 @@ public:
 		bIsInSafePosition = false;	
 	}
 
-	const CVector &GetMoveSpeed() { return m_vecMoveSpeed; }
-	void SetMoveSpeed(float x, float y, float z) {
+	[[nodiscard]] const CVector &GetMoveSpeed() const { return m_vecMoveSpeed; }
+	void SetMoveSpeed(const float x, const float y, const float z) {
 		m_vecMoveSpeed.x = x;
 		m_vecMoveSpeed.y = y;
 		m_vecMoveSpeed.z = z;
@@ -119,7 +119,7 @@ public:
 	void SetMoveSpeed(const CVector& speed) {
 		m_vecMoveSpeed = speed;
 	}
-	void AddToMoveSpeed(float x, float y, float z) {
+	void AddToMoveSpeed(const float x, const float y, const float z) {
 		m_vecMoveSpeed.x += x;
 		m_vecMoveSpeed.y += y;
 		m_vecMoveSpeed.z += z;
@@ -130,21 +130,21 @@ public:
 	void AddToMoveSpeed(const CVector2D& addition) {
 		m_vecMoveSpeed += CVector(addition.x, addition.y, 0.0f);
 	}
-	const CVector &GetTurnSpeed() { return m_vecTurnSpeed; }
-	void SetTurnSpeed(float x, float y, float z) {
+	[[nodiscard]] const CVector &GetTurnSpeed() const { return m_vecTurnSpeed; }
+	void SetTurnSpeed(const float x, const float y, const float z) {
 		m_vecTurnSpeed.x = x;
 		m_vecTurnSpeed.y = y;
 		m_vecTurnSpeed.z = z;
 	}
-	const CVector &GetCenterOfMass() { return m_vecCentreOfMass; }
-	void SetCenterOfMass(float x, float y, float z) {
+	[[nodiscard]] const CVector &GetCenterOfMass() const { return m_vecCentreOfMass; }
+	void SetCenterOfMass(const float x, const float y, const float z) {
 		m_vecCentreOfMass.x = x;
 		m_vecCentreOfMass.y = y;
 		m_vecCentreOfMass.z = z;
 	}
 
-	void ApplyMoveSpeed(void);
-	void ApplyTurnSpeed(void);
+	void ApplyMoveSpeed();
+	void ApplyTurnSpeed();
 	// Force actually means Impulse here
 	void ApplyMoveForce(float jx, float jy, float jz);
 	void ApplyMoveForce(const CVector &j) { ApplyMoveForce(j.x, j.y, j.z); }
@@ -157,21 +157,21 @@ public:
 	void ApplyFrictionTurnForce(float jx, float jy, float jz, float rx, float ry, float rz);
 	void ApplyFrictionTurnForce(const CVector &j, const CVector &p) { ApplyFrictionTurnForce(j.x, j.y, j.z, p.x, p.y, p.z); }
 	// springRatio: 1.0 fully extended, 0.0 fully compressed
-	bool ApplySpringCollision(float springConst, CVector &springDir, CVector &point, float springRatio, float bias);
-	bool ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CVector &forceDir);
-	bool ApplySpringDampening(float damping, CVector &springDir, CVector &point, CVector &speed);
-	void ApplyGravity(void);
-	void ApplyFriction(void);
-	void ApplyAirResistance(void);
+	bool ApplySpringCollision(float springConst, const CVector &springDir, const CVector &point, float springRatio, float bias);
+	bool ApplySpringCollisionAlt(float springConst, const CVector &springDir, const CVector &point, float springRatio, float bias, CVector &forceDir);
+	bool ApplySpringDampening(float damping, const CVector &springDir, const CVector &point, const CVector &speed);
+	void ApplyGravity();
+	void ApplyFriction();
+	void ApplyAirResistance();
 	bool ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, float &impulseB);
-	bool ApplyCollision(CColPoint &colpoint, float &impulse);
-	bool ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CVector &moveSpeed, CVector &turnSpeed);
+	bool ApplyCollision(const CColPoint &colpoint, float &impulse);
+	bool ApplyCollisionAlt(CEntity *B, const CColPoint &colpoint, float &impulse, CVector &moveSpeed, CVector &turnSpeed);
 	bool ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint);
-	bool ApplyFriction(float adhesiveLimit, CColPoint &colpoint);
+	bool ApplyFriction(float adhesiveLimit, const CColPoint &colpoint);
 
 	bool ProcessShiftSectorList(CPtrList *ptrlists);
 	bool ProcessCollisionSectorList_SimpleCar(CPtrList *lists);
 	bool ProcessCollisionSectorList(CPtrList *lists);
-	bool CheckCollision(void);
-	bool CheckCollision_SimpleCar(void);
+	bool CheckCollision();
+	bool CheckCollision_SimpleCar();
 };

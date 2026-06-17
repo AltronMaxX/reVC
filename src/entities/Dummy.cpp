@@ -4,32 +4,29 @@
 #include "World.h"
 #include "Dummy.h"
 
-void *CDummy::operator new(size_t sz) { return CPools::GetDummyPool()->New();  }
-void CDummy::operator delete(void *p, size_t sz) { CPools::GetDummyPool()->Delete((CDummy*)p); }
+void *CDummy::operator new(size_t) { return CPools::GetDummyPool()->New();  }
+void CDummy::operator delete(void *p, size_t) { CPools::GetDummyPool()->Delete(static_cast<CDummy *>(p)); }
 
 void
-CDummy::Add(void)
+CDummy::Add()
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
 	CPtrList *list;
 
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
+	const CRect bounds = GetBoundRect();
+	const int xstart = CWorld::GetSectorIndexX(bounds.left);
+	const int xend = CWorld::GetSectorIndexX(bounds.right);
+	const int xmid = CWorld::GetSectorIndexX((bounds.left + bounds.right) / 2.0f);
+	const int ystart = CWorld::GetSectorIndexY(bounds.top);
+	const int yend = CWorld::GetSectorIndexY(bounds.bottom);
+	const int ymid = CWorld::GetSectorIndexY((bounds.top + bounds.bottom) / 2.0f);
 	assert(xstart >= 0);
 	assert(xend < NUMSECTORS_X);
 	assert(ystart >= 0);
 	assert(yend < NUMSECTORS_Y);
 
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
+	for(int y = ystart; y <= yend; y++)
+		for(int x = xstart; x <= xend; x++){
+			CSector *s = CWorld::GetSector(x, y);
 			if(x == xmid && y == ymid)
 				list = &s->m_lists[ENTITYLIST_DUMMIES];
 			else
@@ -41,10 +38,10 @@ CDummy::Add(void)
 }
 
 void
-CDummy::Remove(void)
+CDummy::Remove()
 {
-	CEntryInfoNode *node, *next;
-	for(node = m_entryInfoList.first; node; node = next){
+	CEntryInfoNode *next;
+	for(CEntryInfoNode *node = m_entryInfoList.first; node; node = next){
 		next = node->next;
 		node->list->DeleteNode(node->listnode);
 		m_entryInfoList.DeleteNode(node);
@@ -56,7 +53,7 @@ IsDummyPointerValid(CDummy* pDummy)
 {
 	if (!pDummy)
 		return false;
-	int index = CPools::GetDummyPool()->GetJustIndex_NoFreeAssert(pDummy);
+	const int index = CPools::GetDummyPool()->GetJustIndex_NoFreeAssert(pDummy);
 #ifdef FIX_BUGS
 	if (index < 0 || index >= CPools::GetDummyPool()->GetSize())
 #else

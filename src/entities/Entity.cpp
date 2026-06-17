@@ -17,7 +17,6 @@
 #include "Shadows.h"
 #include "Pickups.h"
 #include "SpecialFX.h"
-#include "TxdStore.h"
 #include "Zones.h"
 #include "MemoryHeap.h"
 #include "Bones.h"
@@ -28,7 +27,7 @@
 
 int gBuildings;
 
-CEntity::CEntity(void)
+CEntity::CEntity()
 {
 	m_type = ENTITY_TYPE_NOTHING;
 	m_status = STATUS_ABANDONED;
@@ -79,20 +78,20 @@ CEntity::CEntity(void)
 
 	m_scanCode = 0;
 	m_modelIndex = -1;
-	m_rwObject = nil;
+	m_rwObject = nullptr;
 	m_area = AREA_MAIN_MAP;
 	m_randomSeed = CGeneral::GetRandomNumber();
-	m_pFirstReference = nil;
+	m_pFirstReference = nullptr;
 }
 
-CEntity::~CEntity(void)
+CEntity::~CEntity()
 {
-	DeleteRwObject();
+	CEntity::DeleteRwObject();
 	ResolveReferences();
 }
 
 void
-CEntity::SetModelIndex(uint32 id)
+CEntity::SetModelIndex(const uint32 id)
 {
 	m_modelIndex = id;
 	bHasPreRenderEffects = HasPreRenderEffects();
@@ -100,18 +99,16 @@ CEntity::SetModelIndex(uint32 id)
 }
 
 void
-CEntity::SetModelIndexNoCreate(uint32 id)
+CEntity::SetModelIndexNoCreate(const uint32 id)
 {
 	m_modelIndex = id;
 	bHasPreRenderEffects = HasPreRenderEffects();
 }
 
 void
-CEntity::CreateRwObject(void)
+CEntity::CreateRwObject()
 {
-	CBaseModelInfo *mi;
-
-	mi = CModelInfo::GetModelInfo(m_modelIndex);
+	CBaseModelInfo *mi = CModelInfo::GetModelInfo(m_modelIndex);
 
 	PUSH_MEMID(MEMID_WORLD);
 	m_rwObject = mi->CreateInstance();
@@ -121,9 +118,9 @@ CEntity::CreateRwObject(void)
 		if(IsBuilding())
 			gBuildings++;
 		if(RwObjectGetType(m_rwObject) == rpATOMIC)
-			m_matrix.AttachRW(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic*)m_rwObject)), false);
+			m_matrix.AttachRW(RwFrameGetMatrix(RpAtomicGetFrame(reinterpret_cast<RpAtomic *>(m_rwObject))), false);
 		else if(RwObjectGetType(m_rwObject) == rpCLUMP)
-			m_matrix.AttachRW(RwFrameGetMatrix(RpClumpGetFrame((RpClump*)m_rwObject)), false);
+			m_matrix.AttachRW(RwFrameGetMatrix(RpClumpGetFrame(reinterpret_cast<RpClump *>(m_rwObject))), false);
 
 		mi->AddRef();
 	}
@@ -135,20 +132,20 @@ CEntity::AttachToRwObject(RwObject *obj)
 	m_rwObject = obj;
 	if(m_rwObject){
 		if(RwObjectGetType(m_rwObject) == rpATOMIC)
-			m_matrix.Attach(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic*)m_rwObject)), false);
+			m_matrix.Attach(RwFrameGetMatrix(RpAtomicGetFrame(reinterpret_cast<RpAtomic *>(m_rwObject))), false);
 		else if(RwObjectGetType(m_rwObject) == rpCLUMP)
-			m_matrix.Attach(RwFrameGetMatrix(RpClumpGetFrame((RpClump*)m_rwObject)), false);
+			m_matrix.Attach(RwFrameGetMatrix(RpClumpGetFrame(reinterpret_cast<RpClump *>(m_rwObject))), false);
 
 		CModelInfo::GetModelInfo(m_modelIndex)->AddRef();
 	}
 }
 
 void
-CEntity::DetachFromRwObject(void)
+CEntity::DetachFromRwObject()
 {
 	if(m_rwObject)
 		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
-	m_rwObject = nil;
+	m_rwObject = nullptr;
 	m_matrix.Detach();
 }
 
@@ -160,7 +157,7 @@ AtomicRemoveAnimFromSkinCB(RpAtomic *atomic, void *data)
 #ifdef LIBRW
 		if(hier && hier->interpolator->currentAnim){
 			RpHAnimAnimationDestroy(hier->interpolator->currentAnim);
-			hier->interpolator->currentAnim = nil;
+			hier->interpolator->currentAnim = nullptr;
 		}
 #else
 		if(hier && hier->currentAnim){
@@ -173,22 +170,20 @@ AtomicRemoveAnimFromSkinCB(RpAtomic *atomic, void *data)
 }
 
 void
-CEntity::DeleteRwObject(void)
+CEntity::DeleteRwObject()
 {
-	RwFrame *f;
-
 	m_matrix.Detach();
 	if(m_rwObject){
 		if(RwObjectGetType(m_rwObject) == rpATOMIC){
-			f = RpAtomicGetFrame((RpAtomic*)m_rwObject);
-			RpAtomicDestroy((RpAtomic*)m_rwObject);
+			RwFrame *f = RpAtomicGetFrame(reinterpret_cast<RpAtomic *>(m_rwObject));
+			RpAtomicDestroy(reinterpret_cast<RpAtomic *>(m_rwObject));
 			RwFrameDestroy(f);
 		}else if(RwObjectGetType(m_rwObject) == rpCLUMP){
-			if(IsClumpSkinned((RpClump*)m_rwObject))
-				RpClumpForAllAtomics((RpClump*)m_rwObject, AtomicRemoveAnimFromSkinCB, nil);
-			RpClumpDestroy((RpClump*)m_rwObject);
+			if(IsClumpSkinned(reinterpret_cast<RpClump *>(m_rwObject)))
+				RpClumpForAllAtomics(reinterpret_cast<RpClump *>(m_rwObject), AtomicRemoveAnimFromSkinCB, nullptr);
+			RpClumpDestroy(reinterpret_cast<RpClump *>(m_rwObject));
 		}
-		m_rwObject = nil;
+		m_rwObject = nullptr;
 		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
 		if(IsBuilding())
 			gBuildings--;
@@ -196,16 +191,15 @@ CEntity::DeleteRwObject(void)
 }
 
 CRect
-CEntity::GetBoundRect(void)
+CEntity::GetBoundRect()
 {
 	CRect rect;
-	CVector v;
-	CColModel *col = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
+	const CColModel *col = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
 
 	rect.ContainPoint(m_matrix * col->boundingBox.min);
 	rect.ContainPoint(m_matrix * col->boundingBox.max);
 
-	v = col->boundingBox.min;
+	CVector v = col->boundingBox.min;
 	v.x = col->boundingBox.max.x;
 	rect.ContainPoint(m_matrix * v);
 
@@ -217,7 +211,7 @@ CEntity::GetBoundRect(void)
 }
 
 CVector
-CEntity::GetBoundCentre(void)
+CEntity::GetBoundCentre()
 {
 	CVector v;
 	GetBoundCentre(v);
@@ -225,63 +219,32 @@ CEntity::GetBoundCentre(void)
 }
 
 void
-CEntity::GetBoundCentre(CVector &out)
-{
+CEntity::GetBoundCentre(CVector &out) const {
 	out = m_matrix * CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.center;
 }
 
 float
-CEntity::GetBoundRadius(void)
-{
+CEntity::GetBoundRadius() const {
 	return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.radius;
 }
 
 void
-CEntity::UpdateRwFrame(void)
-{
+CEntity::UpdateRwFrame() const {
 	if(m_rwObject)
-		RwFrameUpdateObjects((RwFrame*)rwObjectGetParent(m_rwObject));
+		RwFrameUpdateObjects(rwObjectGetParent(m_rwObject));
 }
 
 void
-CEntity::UpdateRpHAnim(void)
+CEntity::UpdateRpHAnim()
 {
 	if(IsClumpSkinned(GetClump())){
 		RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(GetClump());
 		RpHAnimHierarchyUpdateMatrices(hier);
-#if 0
-	int i;
-	char buf[256];
-	if(this == (CEntity*)FindPlayerPed())
-	for(i = 0; i < hier->numNodes; i++){
-		RpHAnimStdInterpFrame *kf = (RpHAnimStdInterpFrame*)rpHANIMHIERARCHYGETINTERPFRAME(hier, i);
-		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f  %6.3f %6.3f %6.3f  %d %s",
-			kf->q.imag.x, kf->q.imag.y, kf->q.imag.z, kf->q.real,
-			kf->t.x, kf->t.y, kf->t.z,
-			HIERNODEID(hier, i),
-			ConvertBoneTag2BoneName(HIERNODEID(hier, i)));
-		CDebug::PrintAt(buf, 10, 1+i*3);
-
-		RwMatrix *m = &RpHAnimHierarchyGetMatrixArray(hier)[i];
-		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
-			m->right.x, m->up.x, m->at.x, m->pos.x);
-		CDebug::PrintAt(buf, 80, 1+i*3+0);
-		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
-			m->right.y, m->up.y, m->at.y, m->pos.y);
-		CDebug::PrintAt(buf, 80, 1+i*3+1);
-		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
-			m->right.z, m->up.z, m->at.z, m->pos.z);
-		CDebug::PrintAt(buf, 80, 1+i*3+2);
-	}
-
-	void RenderSkeleton(RpHAnimHierarchy *hier);
-	RenderSkeleton(hier);
-#endif
 	}
 }
 
 bool
-CEntity::HasPreRenderEffects(void)
+CEntity::HasPreRenderEffects()
 {
 	return IsTreeModel(GetModelIndex()) ||
 	   GetModelIndex() == MI_COLLECTABLE1 ||
@@ -294,12 +257,12 @@ CEntity::HasPreRenderEffects(void)
 	   GetModelIndex() == MI_MISSILE ||
 	   GetModelIndex() == MI_BEACHBALL ||
 	   IsGlass(GetModelIndex()) ||
-	   IsObject() && ((CObject*)this)->bIsPickup ||
+	   IsObject() && dynamic_cast<CObject *>(this)->bIsPickup ||
 	   IsLightWithPreRenderEffects(GetModelIndex());
 }
 
 void
-CEntity::PreRender(void)
+CEntity::PreRender()
 {
 	if (CModelInfo::GetModelInfo(GetModelIndex())->GetNum2dEffects() != 0)
 		ProcessLightsForEntity();
@@ -310,7 +273,7 @@ CEntity::PreRender(void)
 	switch(m_type){
 	case ENTITY_TYPE_BUILDING:
 		if(IsTreeModel(GetModelIndex())){
-			float dist = (TheCamera.GetPosition() - GetPosition()).Magnitude2D();
+			const float dist = (TheCamera.GetPosition() - GetPosition()).Magnitude2D();
 			CObject::fDistToNearestTree = Min(CObject::fDistToNearestTree, dist);
 			ModifyMatrixForTreeInWind();
 		}
@@ -327,19 +290,19 @@ CEntity::PreRender(void)
 		}else if(GetModelIndex() == MI_NAUTICALMINE ||
 		         GetModelIndex() == MI_CARMINE ||
 		         GetModelIndex() == MI_BRIEFCASE){
-			if(((CObject*)this)->bIsPickup){
+			if(dynamic_cast<CObject *>(this)->bIsPickup){
 				CPickups::DoMineEffects(this);
 				GetMatrix().UpdateRW();
 				UpdateRwFrame();
 			}
 		}else if(GetModelIndex() == MI_MISSILE){
 			CVector pos = GetPosition();
-			float flicker = (CGeneral::GetRandomNumber() & 0xF)/(float)0x10;
+			const float flicker = (CGeneral::GetRandomNumber() & 0xF)/static_cast<float>(0x10);
 			CShadows::StoreShadowToBeRendered(SHADOWTYPE_ADDITIVE,
 				gpShadowExplosionTex, &pos,
 				8.0f, 0.0f, 0.0f, -8.0f,
 				255, 200.0f*flicker, 160.0f*flicker, 120.0f*flicker,
-				20.0f, false, 1.0f, nil, false);
+				20.0f, false, 1.0f, nullptr, false);
 			CPointLights::AddLight(CPointLights::LIGHT_POINT,
 				pos, CVector(0.0f, 0.0f, 0.0f),
 				8.0f,
@@ -347,24 +310,24 @@ CEntity::PreRender(void)
 				0.8f*flicker,
 				0.6f*flicker,
 				CPointLights::FOG_NONE, true);
-			CCoronas::RegisterCorona((uintptr)this,
+			CCoronas::RegisterCorona(reinterpret_cast<uintptr>(this),
 				255.0f*flicker, 220.0f*flicker, 190.0f*flicker, 255,
 				pos, 6.0f*flicker, 80.0f, gpCoronaTexture[CCoronas::TYPE_STAR],
 				CCoronas::FLARE_NONE, CCoronas::REFLECTION_ON,
 				CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 		}else if(IsGlass(GetModelIndex())){
 			PreRenderForGlassWindow();
-		}else if (((CObject*)this)->bIsPickup) {
+		}else if (dynamic_cast<CObject *>(this)->bIsPickup) {
 			CPickups::DoPickUpEffects(this);
 			GetMatrix().UpdateRW();
 			UpdateRwFrame();
 		} else if (GetModelIndex() == MI_GRENADE) {
-			CMotionBlurStreaks::RegisterStreak((uintptr)this,
+			CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uintptr>(this),
 				100, 100, 100,
 				GetPosition() - 0.07f * TheCamera.GetRight(),
 				GetPosition() + 0.07f * TheCamera.GetRight());
 		} else if (GetModelIndex() == MI_MOLOTOV) {
-			CMotionBlurStreaks::RegisterStreak((uintptr)this,
+			CMotionBlurStreaks::RegisterStreak(reinterpret_cast<uintptr>(this),
 				0, 100, 0,
 				GetPosition() - 0.07f * TheCamera.GetRight(),
 				GetPosition() + 0.07f * TheCamera.GetRight());
@@ -377,7 +340,7 @@ CEntity::PreRender(void)
 				CTimeCycle::GetShadowStrength(),
 				CTimeCycle::GetShadowStrength(),
 				CTimeCycle::GetShadowStrength(),
-				20.0f, false, 1.0f, nil, false);
+				20.0f, false, 1.0f, nullptr, false);
 		}
 		// fall through
 	case ENTITY_TYPE_DUMMY:
@@ -405,56 +368,56 @@ CEntity::PreRender(void)
 }
 
 void
-CEntity::Render(void)
+CEntity::Render()
 {
 	if(m_rwObject){
 		bImBeingRendered = true;
 		if(RwObjectGetType(m_rwObject) == rpATOMIC)
-			RpAtomicRender((RpAtomic*)m_rwObject);
+			RpAtomicRender(reinterpret_cast<RpAtomic *>(m_rwObject));
 		else
-			RpClumpRender((RpClump*)m_rwObject);
+			RpClumpRender(reinterpret_cast<RpClump *>(m_rwObject));
 		bImBeingRendered = false;
 	}
 }
 
 bool
-CEntity::GetIsTouching(CVector const &center, float radius)
+CEntity::GetIsTouching(CVector const &center, const float radius)
 {
 	return sq(GetBoundRadius()+radius) > (GetBoundCentre()-center).MagnitudeSqr();
 }
 
 bool
-CEntity::IsVisible(void)
+CEntity::IsVisible()
 {
 	return m_rwObject && bIsVisible && GetIsOnScreen();
 }
 
 bool
-CEntity::IsVisibleComplex(void)
+CEntity::IsVisibleComplex()
 {
 	return m_rwObject && bIsVisible && GetIsOnScreenComplex();
 }
 
 bool
-CEntity::GetIsOnScreen(void)
+CEntity::GetIsOnScreen()
 {
 	return TheCamera.IsSphereVisible(GetBoundCentre(), GetBoundRadius(),
 		&TheCamera.GetCameraMatrix());
 }
 
 bool
-CEntity::GetIsOnScreenComplex(void)
+CEntity::GetIsOnScreenComplex()
 {
 	CVector boundBox[8];
 
 	if(TheCamera.IsPointVisible(GetBoundCentre(), &TheCamera.GetCameraMatrix()))
 		return true;
 
-	CRect rect = GetBoundRect();
-	CColModel *colmodel = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
-	float z = GetPosition().z;
-	float minz = z + colmodel->boundingBox.min.z;
-	float maxz = z + colmodel->boundingBox.max.z;
+	const CRect rect = GetBoundRect();
+	const CColModel *colmodel = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
+	const float z = GetPosition().z;
+	const float minz = z + colmodel->boundingBox.min.z;
+	const float maxz = z + colmodel->boundingBox.max.z;
 	boundBox[0].x = rect.left;
 	boundBox[0].y = rect.bottom;
 	boundBox[0].z = minz;
@@ -484,28 +447,25 @@ CEntity::GetIsOnScreenComplex(void)
 }
 
 void
-CEntity::Add(void)
+CEntity::Add()
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
 	CPtrList *list;
 
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
+	const CRect bounds = GetBoundRect();
+	const int xstart = CWorld::GetSectorIndexX(bounds.left);
+	const int xend = CWorld::GetSectorIndexX(bounds.right);
+	const int xmid = CWorld::GetSectorIndexX((bounds.left + bounds.right) / 2.0f);
+	const int ystart = CWorld::GetSectorIndexY(bounds.top);
+	const int yend = CWorld::GetSectorIndexY(bounds.bottom);
+	const int ymid = CWorld::GetSectorIndexY((bounds.top + bounds.bottom) / 2.0f);
 	assert(xstart >= 0);
 	assert(xend < NUMSECTORS_X);
 	assert(ystart >= 0);
 	assert(yend < NUMSECTORS_Y);
 
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
+	for(int y = ystart; y <= yend; y++)
+		for(int x = xstart; x <= xend; x++){
+			CSector *s = CWorld::GetSector(x, y);
 			if(x == xmid && y == ymid) switch(m_type){
 			case ENTITY_TYPE_BUILDING:
 				list = &s->m_lists[ENTITYLIST_BUILDINGS];
@@ -544,28 +504,25 @@ CEntity::Add(void)
 }
 
 void
-CEntity::Remove(void)
+CEntity::Remove()
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
 	CPtrList *list;
 
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
+	const CRect bounds = GetBoundRect();
+	const int xstart = CWorld::GetSectorIndexX(bounds.left);
+	const int xend = CWorld::GetSectorIndexX(bounds.right);
+	const int xmid = CWorld::GetSectorIndexX((bounds.left + bounds.right) / 2.0f);
+	const int ystart = CWorld::GetSectorIndexY(bounds.top);
+	const int yend = CWorld::GetSectorIndexY(bounds.bottom);
+	const int ymid = CWorld::GetSectorIndexY((bounds.top + bounds.bottom) / 2.0f);
 	assert(xstart >= 0);
 	assert(xend < NUMSECTORS_X);
 	assert(ystart >= 0);
 	assert(yend < NUMSECTORS_Y);
 
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
+	for(int y = ystart; y <= yend; y++)
+		for(int x = xstart; x <= xend; x++){
+			CSector *s = CWorld::GetSector(x, y);
 			if(x == xmid && y == ymid) switch(m_type){
 			case ENTITY_TYPE_BUILDING:
 				list = &s->m_lists[ENTITYLIST_BUILDINGS];
@@ -604,17 +561,14 @@ CEntity::Remove(void)
 }
 
 float
-CEntity::GetDistanceFromCentreOfMassToBaseOfModel(void)
-{
+CEntity::GetDistanceFromCentreOfMassToBaseOfModel() const {
 	return -CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingBox.min.z;
 }
 
 void
-CEntity::SetupBigBuilding(void)
+CEntity::SetupBigBuilding()
 {
-	CSimpleModelInfo *mi;
-
-	mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_modelIndex);
+	auto *mi = dynamic_cast<CSimpleModelInfo *>(CModelInfo::GetModelInfo(m_modelIndex));
 	bIsBIGBuilding = true;
 	bStreamingDontDelete = true;
 	bUsesCollision = false;
@@ -633,7 +587,7 @@ float WindTabel[] = {
 };
 
 void
-CEntity::ModifyMatrixForTreeInWind(void)
+CEntity::ModifyMatrixForTreeInWind()
 {
 	uint16 t;
 	float f;
@@ -646,19 +600,19 @@ CEntity::ModifyMatrixForTreeInWind(void)
 
 	if(CWeather::Wind >= 0.5){
 		t = m_randomSeed + 8*CTimer::GetTimeInMilliseconds();
-		f = (t & 0xFFF)/(float)0x1000;
+		f = (t & 0xFFF)/static_cast<float>(0x1000);
 		flutter = f * WindTabel[(t>>12)+1 & 0xF] +
 			(1.0f - f) * WindTabel[(t>>12) & 0xF] +
 			1.0f;
 		strength = -0.015f*CWeather::Wind;
 	}else if(CWeather::Wind >= 0.2){
-		t = (uintptr)this + CTimer::GetTimeInMilliseconds();
-		f = (t & 0xFFF)/(float)0x1000;
+		t = reinterpret_cast<uintptr>(this) + CTimer::GetTimeInMilliseconds();
+		f = (t & 0xFFF)/static_cast<float>(0x1000);
 		flutter = Sin(f * 6.28f);
 		strength = -0.008f;
 	}else{
-		t = (uintptr)this + CTimer::GetTimeInMilliseconds();
-		f = (t & 0xFFF)/(float)0x1000;
+		t = reinterpret_cast<uintptr>(this) + CTimer::GetTimeInMilliseconds();
+		f = (t & 0xFFF)/static_cast<float>(0x1000);
 		flutter = Sin(f * 6.28f);
 		strength = -0.005f;
 	}
@@ -683,12 +637,9 @@ float BannerWindTabel[] = {
 
 // unused
 void
-CEntity::ModifyMatrixForBannerInWind(void)
+CEntity::ModifyMatrixForBannerInWind()
 {
-	uint16 t;
-	float f;
-	float strength, flutter;
-	CVector right, up;
+	float strength;
 
 	if(CTimer::GetIsPaused())
 		return;
@@ -700,16 +651,17 @@ CEntity::ModifyMatrixForBannerInWind(void)
 	else
 		strength = 0.66f;
 
-	t = ((int)(GetMatrix().GetPosition().x + GetMatrix().GetPosition().y) << 10) + 16*CTimer::GetTimeInMilliseconds();
-	f = (t & 0x7FF)/(float)0x800;
-	flutter = f * BannerWindTabel[(t>>11)+1 & 0x1F] +
-		(1.0f - f) * BannerWindTabel[(t>>11) & 0x1F];
+	const uint16 t = (static_cast<int>(GetMatrix().GetPosition().x + GetMatrix().GetPosition().y) << 10) + 16 *
+	           CTimer::GetTimeInMilliseconds();
+	const float f = (t & 0x7FF) / static_cast<float>(0x800);
+	float flutter = f * BannerWindTabel[(t >> 11) + 1 & 0x1F] +
+	                (1.0f - f) * BannerWindTabel[(t >> 11) & 0x1F];
 	flutter *= strength;
 
-	right = CrossProduct(GetForward(), GetUp());
+	CVector right = CrossProduct(GetForward(), GetUp());
 	right.z = 0.0f;
 	right.Normalise();
-	up = right * flutter;
+	CVector up = right * flutter;
 	up.z = Sqrt(sq(1.0f) - sq(flutter));
 	GetRight() = CrossProduct(GetForward(), up);
 	GetUp() = up;
@@ -719,9 +671,9 @@ CEntity::ModifyMatrixForBannerInWind(void)
 }
 
 void
-CEntity::PreRenderForGlassWindow(void)
+CEntity::PreRenderForGlassWindow()
 {
-	if(((CSimpleModelInfo*)CModelInfo::GetModelInfo(m_modelIndex))->m_isArtistGlass)
+	if(static_cast<CSimpleModelInfo *>(CModelInfo::GetModelInfo(m_modelIndex))->m_isArtistGlass)
 		return;
 	CGlass::AskForObjectToBeRenderedInGlass(this);
 	bIsVisible = false;
@@ -735,7 +687,7 @@ CEntity::PreRenderForGlassWindow(void)
 RpMaterial*
 SetAtomicAlphaCB(RpMaterial *material, void *data)
 {
-	((RwRGBA*)RpMaterialGetColor(material))->alpha = (uint8)(uintptr)data;
+	const_cast<RwRGBA *>(RpMaterialGetColor(material))->alpha = static_cast<uint8>(reinterpret_cast<uintptr>(data));
 	return material;
 }
 
@@ -749,18 +701,17 @@ SetClumpAlphaCB(RpAtomic *atomic, void *data)
 }
 
 void
-CEntity::SetRwObjectAlpha(int32 alpha)
-{
-	if (m_rwObject != nil) {
+CEntity::SetRwObjectAlpha(const int32 alpha) const {
+	if (m_rwObject != nullptr) {
 		switch (RwObjectGetType(m_rwObject)) {
 		case rpATOMIC: {
-			RpGeometry *geometry = RpAtomicGetGeometry((RpAtomic*)m_rwObject);
+			RpGeometry *geometry = RpAtomicGetGeometry(reinterpret_cast<RpAtomic *>(m_rwObject));
 			RpGeometrySetFlags(geometry, RpGeometryGetFlags(geometry) | rpGEOMETRYMODULATEMATERIALCOLOR);
-			RpGeometryForAllMaterials(geometry, SetAtomicAlphaCB, (void*)alpha);
+			RpGeometryForAllMaterials(geometry, SetAtomicAlphaCB, reinterpret_cast<void *>(alpha));
 			break;
 		}
 		case rpCLUMP:
-			RpClumpForAllAtomics((RpClump*)m_rwObject, SetClumpAlphaCB, (void*)alpha);
+			RpClumpForAllAtomics(reinterpret_cast<RpClump *>(m_rwObject), SetClumpAlphaCB, reinterpret_cast<void *>(alpha));
 			break;
 		}
 	}
@@ -772,22 +723,21 @@ bool IsEntityPointerValid(CEntity* pEntity)
 		return false;
 	switch (pEntity->GetType()) {
 	case ENTITY_TYPE_NOTHING: return false;
-	case ENTITY_TYPE_BUILDING: return IsBuildingPointerValid((CBuilding*)pEntity);
-	case ENTITY_TYPE_VEHICLE: return IsVehiclePointerValid((CVehicle*)pEntity);
-	case ENTITY_TYPE_PED: return IsPedPointerValid((CPed*)pEntity);
-	case ENTITY_TYPE_OBJECT: return IsObjectPointerValid((CObject*)pEntity);
-	case ENTITY_TYPE_DUMMY: return IsDummyPointerValid((CDummy*)pEntity);
+	case ENTITY_TYPE_BUILDING: return IsBuildingPointerValid(dynamic_cast<CBuilding *>(pEntity));
+	case ENTITY_TYPE_VEHICLE: return IsVehiclePointerValid(dynamic_cast<CVehicle *>(pEntity));
+	case ENTITY_TYPE_PED: return IsPedPointerValid(dynamic_cast<CPed *>(pEntity));
+	case ENTITY_TYPE_OBJECT: return IsObjectPointerValid(dynamic_cast<CObject *>(pEntity));
+	case ENTITY_TYPE_DUMMY: return IsDummyPointerValid(dynamic_cast<CDummy *>(pEntity));
 	}
 	return false;
 }
 
 #ifdef COMPATIBLE_SAVES
 void
-CEntity::SaveEntityFlags(uint8*& buf)
-{
+CEntity::SaveEntityFlags(uint8*& buf) const {
 	uint32 tmp = 0;
-	tmp |= (m_type & (BIT(3) - 1));
-	tmp |= (m_status & (BIT(5) - 1)) << 3;
+	tmp |= m_type & BIT(3) - 1;
+	tmp |= (m_status & BIT(5) - 1) << 3;
 
 	if (bUsesCollision) tmp |= BIT(8);
 	if (bCollisionProcessed) tmp |= BIT(9);
@@ -845,8 +795,8 @@ CEntity::LoadEntityFlags(uint8*& buf)
 {
 	uint32 tmp;
 	ReadSaveBuf(&tmp, buf);
-	m_type = (tmp & ((BIT(3) - 1)));
-	m_status = ((tmp >> 3) & (BIT(5) - 1));
+	m_type = tmp & BIT(3) - 1;
+	m_status = tmp >> 3 & BIT(5) - 1;
 
 	bUsesCollision = !!(tmp & BIT(8));
 	bCollisionProcessed = !!(tmp & BIT(9));

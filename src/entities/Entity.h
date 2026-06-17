@@ -99,86 +99,86 @@ public:
 	CReference *m_pFirstReference;
 
 public:
-	uint8 GetType() const { return m_type; }
-	void SetType(uint8 type) { m_type = type; }
-	uint8 GetStatus() const { return m_status; }
-	void SetStatus(uint8 status) { m_status = status; }
-	CColModel *GetColModel(void) { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel(); }
-	bool GetIsStatic(void) const { return bIsStatic || bIsStaticWaitingForCollision; }
-	void SetIsStatic(bool state) { bIsStatic = state; }
+	[[nodiscard]] uint8 GetType() const { return m_type; }
+	void SetType(const uint8 type) { m_type = type; }
+	[[nodiscard]] uint8 GetStatus() const { return m_status; }
+	void SetStatus(const uint8 status) { m_status = status; }
+	[[nodiscard]] CColModel *GetColModel() const { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel(); }
+	[[nodiscard]] bool GetIsStatic() const { return bIsStatic || bIsStaticWaitingForCollision; }
+	void SetIsStatic(const bool state) { bIsStatic = state; }
 #ifdef COMPATIBLE_SAVES
-	void SaveEntityFlags(uint8*& buf);
+	void SaveEntityFlags(uint8*& buf) const;
 	void LoadEntityFlags(uint8*& buf);
 #else
 	uint32* GetAddressOfEntityProperties() { /* AWFUL */ return (uint32*)((char*)&m_rwObject + sizeof(m_rwObject)); }
 #endif
 
-	CEntity(void);
-	virtual ~CEntity(void);
+	CEntity();
+	virtual ~CEntity();
 
-	virtual void Add(void);
-	virtual void Remove(void);
+	virtual void Add();
+	virtual void Remove();
 	virtual void SetModelIndex(uint32 id);
 	virtual void SetModelIndexNoCreate(uint32 id);
-	virtual void CreateRwObject(void);
-	virtual void DeleteRwObject(void);
-	virtual CRect GetBoundRect(void);
-	virtual void ProcessControl(void) {}
-	virtual void ProcessCollision(void) {}
-	virtual void ProcessShift(void) {}
+	virtual void CreateRwObject();
+	virtual void DeleteRwObject();
+	virtual CRect GetBoundRect();
+	virtual void ProcessControl() {}
+	virtual void ProcessCollision() {}
+	virtual void ProcessShift() {}
 	virtual void Teleport(CVector v) {}
-	virtual void PreRender(void);
-	virtual void Render(void);
-	virtual bool SetupLighting(void);
+	virtual void PreRender();
+	virtual void Render();
+	virtual bool SetupLighting();
 	virtual void RemoveLighting(bool);
-	virtual void FlagToDestroyWhenNextProcessed(void) {}
+	virtual void FlagToDestroyWhenNextProcessed() {}
 
-	bool IsBuilding(void) { return m_type == ENTITY_TYPE_BUILDING; }
-	bool IsVehicle(void) { return m_type == ENTITY_TYPE_VEHICLE; }
-	bool IsPed(void) { return m_type == ENTITY_TYPE_PED; }
-	bool IsObject(void) { return m_type == ENTITY_TYPE_OBJECT; }
-	bool IsDummy(void) { return m_type == ENTITY_TYPE_DUMMY; }
+	[[nodiscard]] bool IsBuilding() const { return m_type == ENTITY_TYPE_BUILDING; }
+	[[nodiscard]] bool IsVehicle() const { return m_type == ENTITY_TYPE_VEHICLE; }
+	[[nodiscard]] bool IsPed() const { return m_type == ENTITY_TYPE_PED; }
+	[[nodiscard]] bool IsObject() const { return m_type == ENTITY_TYPE_OBJECT; }
+	[[nodiscard]] bool IsDummy() const { return m_type == ENTITY_TYPE_DUMMY; }
 
-	RpAtomic *GetAtomic(void) {
+	[[nodiscard]] RpAtomic *GetAtomic() const {
 		assert(RwObjectGetType(m_rwObject) == rpATOMIC);
-		return (RpAtomic*)m_rwObject;
+		return reinterpret_cast<RpAtomic *>(m_rwObject);
 	}
-	RpClump *GetClump(void) {
+	[[nodiscard]] RpClump *GetClump() const {
 		assert(RwObjectGetType(m_rwObject) == rpCLUMP);
-		return (RpClump*)m_rwObject;
+		return reinterpret_cast<RpClump *>(m_rwObject);
 	}
 
-	void GetBoundCentre(CVector &out);
-	CVector GetBoundCentre(void);
-	float GetBoundRadius(void);
-	float GetDistanceFromCentreOfMassToBaseOfModel(void);
+	void GetBoundCentre(CVector &out) const;
+	CVector GetBoundCentre();
+	[[nodiscard]] float GetBoundRadius() const;
+	[[nodiscard]] float GetDistanceFromCentreOfMassToBaseOfModel() const;
 	bool GetIsTouching(CVector const &center, float r);
-	bool GetIsOnScreen(void);
-	bool GetIsOnScreenComplex(void);
-	bool IsVisible(void);
-	bool IsVisibleComplex(void);
-	bool IsEntityOccluded(void);
-	int16 GetModelIndex(void) const { return m_modelIndex; }
-	void UpdateRwFrame(void);
-	void SetupBigBuilding(void);
-	bool HasPreRenderEffects(void);
+	bool GetIsOnScreen();
+	bool GetIsOnScreenComplex();
+	bool IsVisible();
+	bool IsVisibleComplex();
+	bool IsEntityOccluded();
+	[[nodiscard]] int16 GetModelIndex() const { return m_modelIndex; }
+	void UpdateRwFrame() const;
+	void SetupBigBuilding();
+	bool HasPreRenderEffects();
 
 	void AttachToRwObject(RwObject *obj);
-	void DetachFromRwObject(void);
+	void DetachFromRwObject();
 
 	void RegisterReference(CEntity **pent);
-	void ResolveReferences(void);
-	void PruneReferences(void);
+	void ResolveReferences();
+	void PruneReferences();
 	void CleanUpOldReference(CEntity **pent);
 
-	void UpdateRpHAnim(void);
+	void UpdateRpHAnim();
 
-	void PreRenderForGlassWindow(void);
+	void PreRenderForGlassWindow();
 	void AddSteamsFromGround(CVector *unused);
-	void ModifyMatrixForTreeInWind(void);
-	void ModifyMatrixForBannerInWind(void);
-	void ProcessLightsForEntity(void);
-	void SetRwObjectAlpha(int32 alpha);
+	void ModifyMatrixForTreeInWind();
+	void ModifyMatrixForBannerInWind();
+	void ProcessLightsForEntity();
+	void SetRwObjectAlpha(int32 alpha) const;
 };
 
 bool IsEntityPointerValid(CEntity*);
