@@ -26,7 +26,6 @@
 #include "ProjectileInfo.h"
 #include "Replay.h"
 #include "SurfaceTable.h"
-#include "Train.h"
 #include "Transmission.h"
 #include "Vehicle.h"
 #include "WaterCannon.h"
@@ -79,11 +78,6 @@ cAudioManager::PostInitialiseGameSpecificSetup()
 	m_nPoliceChannelEntity = CreateEntity(AUDIOTYPE_POLICERADIO, reinterpret_cast<void *>(1));
 	if (m_nPoliceChannelEntity >= 0)
 		SetEntityStatus(m_nPoliceChannelEntity, true);
-#ifdef GTA_BRIDGE
-	m_nBridgeEntity = CreateEntity(AUDIOTYPE_BRIDGE, (void*)1);
-	if (m_nBridgeEntity >= 0)
-		SetEntityStatus(m_nBridgeEntity, true);
-#endif // GTA_BRIDGE
 	m_nEscalatorEntity = CreateEntity(AUDIOTYPE_ESCALATOR, reinterpret_cast<void *>(1));
 	if (m_nEscalatorEntity >= 0)
 		SetEntityStatus(m_nEscalatorEntity, true);
@@ -121,12 +115,6 @@ cAudioManager::PostInitialiseGameSpecificSetup()
 void
 cAudioManager::PreTerminateGameSpecificShutdown()
 {
-#ifdef GTA_BRIDGE
-	if (m_nBridgeEntity >= 0) {
-		DestroyEntity(m_nBridgeEntity);
-		m_nBridgeEntity = AEHANDLE_NONE;
-	}
-#endif
 	if (m_nEscalatorEntity >= 0) {
 		DestroyEntity(m_nEscalatorEntity);
 		m_nEscalatorEntity = AEHANDLE_NONE;
@@ -323,14 +311,6 @@ cAudioManager::ProcessEntity(int32 id)
 				ProcessScriptObject(id);
 			}
 			break;
-#ifdef GTA_BRIDGE
-		case AUDIOTYPE_BRIDGE:
-			if (!m_nUserPause) {
-				m_sQueueSample.m_bReverbFlag = true;
-				ProcessBridge();
-			}
-			break;
-#endif
 		case AUDIOTYPE_FRONTEND:
 			m_sQueueSample.m_bReverbFlag = false;
 			ProcessFrontEnd();
@@ -2328,22 +2308,6 @@ cAudioManager::ProcessVehicleOneShots(cVehicleParams& params)
 			maxDist = SQR(SOUND_INTENSITY);
 			break;
 		}*/
-#ifdef GTA_TRAIN
-			case SOUND_TRAIN_DOOR_CLOSE:
-			case SOUND_TRAIN_DOOR_OPEN: {
-				const float SOUND_INTENSITY = 35.0f;
-				m_sQueueSample.m_nSampleIndex = SFX_AIR_BRAKES;
-				m_sQueueSample.m_nBankIndex = SFX_BANK_0;
-				m_sQueueSample.m_nCounter = 59;
-				m_sQueueSample.m_nFrequency = RandomDisplacement(1000) + 11025;
-				m_sQueueSample.m_nReleasingVolumeModificator = 5;
-				m_sQueueSample.m_fSpeedMultiplier = 5.0f;
-				m_sQueueSample.m_fSoundIntensity = SOUND_INTENSITY;
-				maxDist = SQR(SOUND_INTENSITY);
-				emittingVol = m_anRandomTable[1] % 20 + 70;
-				break;
-			}
-#endif
 			case SOUND_CAR_TANK_TURRET_ROTATE: {
 				constexpr float SOUND_INTENSITY = 40.0f;
 				vol = m_asAudioEntities[m_sQueueSample.m_nEntityIndex].m_afVolume[i];
@@ -3053,73 +3017,6 @@ cAudioManager::UsesSirenSwitching(const cVehicleParams& params) const
 	return UsesSiren(params);
 }
 
-#ifdef GTA_TRAIN
-bool
-cAudioManager::ProcessTrainNoise(cVehicleParams& params)
-{
-	const float SOUND_INTENSITY = 300.0f;
-
-	CTrain *train;
-	uint8 emittingVol;
-	float speedMultipler;
-
-	if (params.m_fDistance >= SQR(SOUND_INTENSITY))
-		return false;
-
-	if (params.m_fVelocityChange > 0.0f) {
-		CalculateDistance(params.m_bDistanceCalculated, params.m_fDistance);
-		train = (CTrain *)params.m_pVehicle;
-		speedMultipler = Min(1.0f, train->m_fSpeed * 250.f / 51.f);
-		emittingVol = (75.f * speedMultipler);
-		if (train->m_fWagonPosition == 0.0f) {
-			m_sQueueSample.m_nVolume = ComputeVolume(emittingVol, SOUND_INTENSITY, m_sQueueSample.m_fDistance);
-			if (m_sQueueSample.m_nVolume != 0) {
-				m_sQueueSample.m_nCounter = 32;
-				m_sQueueSample.m_nSampleIndex = SFX_TRAIN_FAR;
-				m_sQueueSample.m_nBankIndex = SFX_BANK_0;
-				m_sQueueSample.m_bIs2D = false;
-				m_sQueueSample.m_nReleasingVolumeModificator = 2;
-				m_sQueueSample.m_nFrequency = SampleManager.GetSampleBaseFrequency(SFX_TRAIN_FAR);
-				m_sQueueSample.m_nLoopCount = 0;
-				m_sQueueSample.m_nEmittingVolume = emittingVol;
-				m_sQueueSample.m_nLoopStart = SampleManager.GetSampleLoopStartOffset(m_sQueueSample.m_nSampleIndex);
-				m_sQueueSample.m_nLoopEnd = SampleManager.GetSampleLoopEndOffset(m_sQueueSample.m_nSampleIndex);
-				m_sQueueSample.m_fSpeedMultiplier = 3.0f;
-				m_sQueueSample.m_fSoundIntensity = SOUND_INTENSITY;
-				m_sQueueSample.m_bReleasingSoundFlag = false;
-				m_sQueueSample.m_nReleasingVolumeDivider = 3;
-				m_sQueueSample.m_bReverbFlag = true;
-				m_sQueueSample.m_bRequireReflection = false;
-				AddSampleToRequestedQueue();
-			}
-		}
-		const float SOUND_INTENSITY = 70.0f;
-		if (params.m_fDistance < SQR(SOUND_INTENSITY)) {
-			m_sQueueSample.m_nVolume = ComputeVolume(emittingVol, SOUND_INTENSITY, m_sQueueSample.m_fDistance);
-			if (m_sQueueSample.m_nVolume != 0) {
-				m_sQueueSample.m_nCounter = 33;
-				m_sQueueSample.m_nSampleIndex = SFX_TRAIN_NEAR;
-				m_sQueueSample.m_nBankIndex = SFX_BANK_0;
-				m_sQueueSample.m_bIs2D = false;
-				m_sQueueSample.m_nReleasingVolumeModificator = 5;
-				m_sQueueSample.m_nFrequency = SampleManager.GetSampleBaseFrequency(SFX_TRAIN_NEAR) + 100 * m_sQueueSample.m_nEntityIndex % 987;
-				m_sQueueSample.m_nLoopCount = 0;
-				m_sQueueSample.m_nEmittingVolume = emittingVol;
-				m_sQueueSample.m_nLoopStart = SampleManager.GetSampleLoopStartOffset(m_sQueueSample.m_nSampleIndex);
-				m_sQueueSample.m_nLoopEnd = SampleManager.GetSampleLoopEndOffset(m_sQueueSample.m_nSampleIndex);
-				m_sQueueSample.m_fSpeedMultiplier = 6.0f;
-				m_sQueueSample.m_fSoundIntensity = SOUND_INTENSITY;
-				m_sQueueSample.m_bReleasingSoundFlag = false;
-				m_sQueueSample.m_nReleasingVolumeDivider = 3;
-				m_sQueueSample.m_bReverbFlag = true;
-				m_sQueueSample.m_bRequireReflection = false;
-				AddSampleToRequestedQueue();
-			}
-		}
-	}
-	return true;
-}
-#endif
 bool
 cAudioManager::ProcessBoatEngine(cVehicleParams& params)
 {

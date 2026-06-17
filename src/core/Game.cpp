@@ -6,7 +6,6 @@
 #include "RwHelper.h"
 #include "Accident.h"
 #include "Antennas.h"
-#include "Bridge.h"
 #include "CarCtrl.h"
 #include "CarGen.h"
 #include "CdStream.h"
@@ -71,7 +70,6 @@
 #include "TempColModels.h"
 #include "Timecycle.h"
 #include "TrafficLights.h"
-#include "Train.h"
 #include "TxdStore.h"
 #include "User.h"
 #include "VisibilityPlugins.h"
@@ -518,13 +516,11 @@ bool CGame::Initialise(const char* datFile)
 	CSpecialFX::Init();
 	CRopes::Init();
 	CWaterCannons::Init();
-	CBridge::Init();
 	CGarages::Init();
 
 	LoadingScreen("Loading the Game", "Position dynamic objects", nil);
 	LoadingScreen("Loading the Game", "Initialise vehicle paths", nil);
 
-	CTrain::InitTrains();
 	CPlane::InitPlanes();
 	CCredits::Init();
 	CRecordDataForChase::Init();
@@ -570,7 +566,6 @@ bool CGame::ShutDown(void)
 	CReplay::FinishPlayback();
 	CReplay::EmptyReplayBuffer();
 	CPlane::Shutdown();
-	CTrain::Shutdown();
 	CScriptPaths::Shutdown();
 	CWaterCreatures::RemoveAll();
 	CSpecialFX::Shutdown();
@@ -697,7 +692,6 @@ void CGame::ReInitGameObjectVariables(void)
 		CTheScripts::StartTestScript();
 		CTheScripts::Process();
 		TheCamera.Process();
-		CTrain::InitTrains();
 		CPlane::InitPlanes();
 	}
 	
@@ -782,7 +776,6 @@ void CGame::InitialiseWhenRestarting(void)
 		if ( GenericLoad() == true )
 		{
 			DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
-			CTrain::InitTrains();
 			CPlane::InitPlanes();
 		}
 		else
@@ -865,7 +858,6 @@ void CGame::Process(void)
 
 		CCollision::Update();
 		CScriptPaths::Update();
-		CTrain::UpdateTrains();
 		CPlane::UpdatePlanes();
 		CHeli::UpdateHelis();
 		CDarkel::Update();
@@ -914,7 +906,6 @@ void CGame::Process(void)
 		CCullZones::Update();
 		if (!CReplay::IsPlayingBack())
 			CGameLogic::Update();
-		CBridge::Update();
 		CCoronas::DoSunAndMoon();
 		CCoronas::Update();
 		CShadows::UpdateStaticShadows();

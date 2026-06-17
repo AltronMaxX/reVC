@@ -940,8 +940,7 @@ CVisibilityPlugins::SetClumpModelInfo(RpClump *clump, CClumpModelInfo *modelInfo
 	// ignore MLO
 	case MITYPE_VEHICLE:
 		vmi = (CVehicleModelInfo*)modelInfo;
-		if(vmi->m_vehicleType == VEHICLE_TYPE_TRAIN ||
-		   vmi->m_vehicleType == VEHICLE_TYPE_HELI ||
+		if(vmi->m_vehicleType == VEHICLE_TYPE_HELI ||
 		   vmi->m_vehicleType == VEHICLE_TYPE_PLANE)
 			CLUMPEXT(clump)->visibilityCB = VehicleVisibilityCB_BigVehicle;
 		else

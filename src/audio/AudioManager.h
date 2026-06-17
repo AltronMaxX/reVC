@@ -231,9 +231,6 @@ public:
 	int32 m_nCollisionEntity;
 	cAudioCollisionManager m_sCollisionManager;
 	int32 m_nProjectileEntity;
-#ifdef GTA_BRIDGE
-	int32 m_nBridgeEntity;
-#endif
 	int32 m_nEscalatorEntity;
 	int32 m_nExtraSoundsEntity;
 	cMissionAudio m_sMissionAudio;
@@ -425,13 +422,7 @@ public:
 	void ProcessActiveQueues();                              // done
 	bool ProcessAirBrakes(cVehicleParams& params);           // done
 	bool ProcessBoatEngine(cVehicleParams& params);          
-	bool ProcessBoatMovingOverWater(cVehicleParams& params); //done 
-#ifdef GTA_BRIDGE
-	void ProcessBridge();         // done(bcs not exists in VC)
-	void ProcessBridgeMotor();    // done(bcs not exists in VC)
-	void ProcessBridgeOneShots(); // done(bcs not exists in VC)
-	void ProcessBridgeWarning();  // done(bcs not exists in VC)
-#endif
+	bool ProcessBoatMovingOverWater(cVehicleParams& params); //done
 	bool ProcessCarBombTick(cVehicleParams& params);                         // done
 	void ProcessCarHeli(cVehicleParams& params);                             // done
 	void ProcessCesna(cVehicleParams& params);                               // done
@@ -468,9 +459,6 @@ public:
 	bool ProcessReverseGear(cVehicleParams& params);                         // done
 	void ProcessScriptObject(int32 id);                                      // done
 	void ProcessSpecial();                                                   // done
-#ifdef GTA_TRAIN
-	bool ProcessTrainNoise(cVehicleParams *params); //done(bcs not exists in VC)
-#endif
 	void ProcessVehicle(CVehicle *vehicle);                    // done
 	bool ProcessVehicleDoors(cVehicleParams &params);          // done
 	void ProcessVehicleEngine(cVehicleParams &params);         // done

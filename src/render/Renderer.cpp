@@ -1076,18 +1076,6 @@ CRenderer::ScanWorld(void)
 			for(int y = y1; y <= y2; y++)
 				ScanSectorList(CWorld::GetSector(x1, y)->m_lists);
 	}else{
-#ifdef GTA_TRAIN
-		CVehicle *train = FindPlayerTrain();
-		if(train && train->GetPosition().z < 0.0f){
-			poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-			poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-			poly[1].x = CWorld::GetSectorX(vectors[CORNER_LOD_LEFT].x);
-			poly[1].y = CWorld::GetSectorY(vectors[CORNER_LOD_LEFT].y);
-			poly[2].x = CWorld::GetSectorX(vectors[CORNER_LOD_RIGHT].x);
-			poly[2].y = CWorld::GetSectorY(vectors[CORNER_LOD_RIGHT].y);
-			ScanSectorPoly(poly, 3, ScanSectorList_Subway);
-		}else
-#endif
 		{
 			if(f > LOD_DISTANCE){
 				// priority
@@ -1559,43 +1547,6 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 		}
 	}
 }
-
-#ifdef GTA_TRAIN
-void
-CRenderer::ScanSectorList_Subway(CPtrList *lists)
-{
-	CPtrNode *node;
-	CPtrList *list;
-	CEntity *ent;
-	int i;
-	float dx, dy;
-
-	for(i = 0; i < NUMSECTORENTITYLISTS; i++){
-		list = &lists[i];
-		for(node = list->first; node; node = node->next){
-			ent = (CEntity*)node->item;
-			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
-				continue;	// already seen
-			ent->m_scanCode = CWorld::GetCurrentScanCode();
-			ent->bOffscreen = false;
-			switch(SetupEntityVisibility(ent)){
-			case VIS_VISIBLE:
-				InsertEntityIntoList(ent);
-				break;
-			case VIS_OFFSCREEN:
-				ent->bOffscreen = true;
-				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
-				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
-				if(dx > -30.0f && dx < 30.0f &&
-				   dy > -30.0f && dy < 30.0f &&
-				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
-					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
-				break;
-			}
-		}
-	}
-}
-#endif
 
 void
 CRenderer::ScanSectorList_RequestModels(CPtrList *lists)

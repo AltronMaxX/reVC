@@ -2,7 +2,6 @@
 
 #include "Building.h"
 #include "Treadable.h"
-#include "Train.h"
 #include "Pools.h"
 #include "Timer.h"
 #include "Camera.h"
@@ -123,32 +122,7 @@ CCullZones::FindZoneWithStairsAttributeForPlayer(void)
 
 void
 CCullZones::MarkSubwayAsInvisible(bool visible)
-{
-	int i, n;
-	CEntity *e;
-	CVehicle *v;
-
-	n = CPools::GetBuildingPool()->GetSize()-1;
-	for(i = n; i >= 0; i--){
-		e = CPools::GetBuildingPool()->GetSlot(i);
-		if(e && e->bIsSubway)
-			e->bIsVisible = visible;
-	}
-
-	n = CPools::GetTreadablePool()->GetSize()-1;
-	for(i = n; i >= 0; i--){
-		e = CPools::GetTreadablePool()->GetSlot(i);
-		if(e && e->bIsSubway)
-			e->bIsVisible = visible;
-	}
-
-	n = CPools::GetVehiclePool()->GetSize()-1;
-	for(i = n; i >= 0; i--){
-		v = CPools::GetVehiclePool()->GetSlot(i);
-		if(v && v->IsTrain() && ((CTrain*)v)->m_nTrackId != TRACK_ELTRAIN)
-			v->bIsVisible = visible;
-	}
-}
+{}
 
 void
 CCullZones::AddCullZone(CVector const &position,

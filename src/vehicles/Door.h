@@ -41,29 +41,3 @@ public:
 	bool IsFullyOpen(void);
 	bool IsClosed(void);	// dead
 };
-
-class CTrainDoor
-{
-public:
-	float m_fClosedPosn;
-	float m_fOpenPosn;
-	int8 m_nDirn;
-	int8 m_nDoorState;	// same enum as above?
-	int8 m_nAxis;
-	float m_fPosn;
-	float m_fPrevPosn;
-	int field_14;	// unused?
-
-	CTrainDoor(void);
-	void Init(float open, float closed, int8 dir, int8 axis) {
-		m_fOpenPosn = open;
-		m_fClosedPosn = closed;
-		m_nDirn = dir;
-		m_nAxis = axis;
-	}
-	bool IsClosed(void);
-	bool IsFullyOpen(void);
-	float RetTranslationWhenClosed(void);
-	float RetTranslationWhenOpen(void);
-	void Open(float ratio);
-};

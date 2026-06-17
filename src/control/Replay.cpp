@@ -43,7 +43,6 @@
 #include "Stinger.h"
 #include "Streaming.h"
 #include "Timer.h"
-#include "Train.h"
 #include "Weather.h"
 #include "Zones.h"
 #include "Font.h"
@@ -150,9 +149,6 @@ static void(*CBArray[])(CAnimBlendAssociation*, void*) =
 	&CPed::FinishedWaitCB, &CPed::FinishLaunchCB, &CPed::FinishHitHeadCB, &CPed::PedAnimGetInCB, &CPed::PedAnimDoorOpenCB,
 	&CPed::PedAnimPullPedOutCB, &CPed::PedAnimDoorCloseCB, &CPed::PedSetInCarCB, &CPed::PedSetOutCarCB, &CPed::PedAnimAlignCB,
 	&CPed::PedSetDraggedOutCarCB, &CPed::PedAnimStepOutCarCB, &CPed::PedSetInTrainCB,
-#ifdef GTA_TRAIN
-	&CPed::PedSetOutTrainCB,
-#endif
 	&CPed::FinishedAttackCB,
 	&CPed::FinishFightMoveCB, &PhonePutDownCB, &PhonePickUpCB, &CPed::PedAnimDoorCloseRollingCB, &CPed::FinishJumpCB,
 	&CPed::PedLandCB, &CPed::RestoreHeadingRateCB, &CPed::PedSetQuickDraggedOutCarPositionCB, &CPed::PedSetDraggedOutCarPositionCB,
@@ -983,9 +979,6 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 						break;
 					case VEHICLE_TYPE_BOAT:
 						new_v = new(vp->index << 8) CBoat(mi, 2);
-						break;
-					case VEHICLE_TYPE_TRAIN:
-						new_v = new(vp->index << 8) CTrain(mi, 2);
 						break;
 					case VEHICLE_TYPE_HELI:
 						new_v = new(vp->index << 8) CHeli(mi, 2);

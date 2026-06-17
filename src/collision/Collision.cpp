@@ -7,7 +7,6 @@
 #include "General.h"
 #include "World.h"
 #include "Entity.h"
-#include "Train.h"
 #include "Streaming.h"
 #include "RenderBuffer.h"
 #include "SurfaceTable.h"
@@ -15,6 +14,7 @@
 #include "Collision.h"
 #include "Camera.h"
 #include "ColStore.h"
+#include "Timer.h"
 
 #ifdef VU_COLLISION
 #include "VuCollision.h"
