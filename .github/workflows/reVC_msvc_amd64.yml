@@ -54,15 +54,15 @@ jobs:
         mv ./vendor/mpg123/dist/Win64/libmpg123-0.dll ./gamefiles/
         mv ./vendor/openal-soft/dist/Win64/OpenAL32.dll ./gamefiles/
     - name: Collect artifact name
-        id: artname
-        shell: pwsh
-        run: |
-          $suffix = ""
-          if ("${{ matrix.discord_rpc }}" -eq "true") {
-            $suffix = "-drpc"
-          }
+      id: artname
+      shell: pwsh
+      run: |
+        $suffix = ""
+        if ("${{ matrix.discord_rpc }}" -eq "true") {
+          $suffix = "-drpc"
+        }
 
-          echo "name=reVC_${{ matrix.buildtype }}_${{ matrix.platform }}$suffix" >> $env:GITHUB_OUTPUT
+        echo "name=reVC_${{ matrix.buildtype }}_${{ matrix.platform }}$suffix" >> $env:GITHUB_OUTPUT
     - name: Upload artifact to actions
       uses: actions/upload-artifact@v6
       with:
