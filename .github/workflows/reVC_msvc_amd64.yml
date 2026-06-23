@@ -17,6 +17,7 @@ jobs:
       matrix:
         platform: [win-amd64-librw_d3d9-oal, win-amd64-librw_gl3_glfw-oal]
         buildtype: [Debug, Release]
+        discord_rpc: [true, false]
     steps:
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v3
@@ -34,8 +35,13 @@ jobs:
       run: |
           7z x ${{env.GLFW_FILE}}
     - name: Configure build
+      shell: pwsh
       run: |
-        ./premake5 vs2022 --with-librw --glfwdir64=${{env.GLFW_BASE}}
+        $drpc = ""
+        if ("${{ matrix.discord_rpc }}" -eq "true") {
+        $drpc = " --with-discord-rpc"
+        }
+        Invoke-Expression "./premake5 vs2022 --with-librw --glfwdir64=${{ env.GLFW_BASE }}$drpc"
     - name: Build
       run: |
         msbuild -m build/reVC.sln /property:Configuration=${{matrix.buildtype}} /property:Platform=${{matrix.platform}}
@@ -47,8 +53,18 @@ jobs:
       run: |
         mv ./vendor/mpg123/dist/Win64/libmpg123-0.dll ./gamefiles/
         mv ./vendor/openal-soft/dist/Win64/OpenAL32.dll ./gamefiles/
+    - name: Collect artifact name
+        id: artname
+        shell: pwsh
+        run: |
+          $suffix = ""
+          if ("${{ matrix.discord_rpc }}" -eq "true") {
+            $suffix = "-drpc"
+          }
+
+          echo "name=reVC_${{ matrix.buildtype }}_${{ matrix.platform }}$suffix" >> $env:GITHUB_OUTPUT
     - name: Upload artifact to actions
       uses: actions/upload-artifact@v6
       with:
-        name: reVC_${{matrix.buildtype}}_${{matrix.platform}}
+        name: ${{ steps.artname.outputs.name }}
         path: ./gamefiles/*
