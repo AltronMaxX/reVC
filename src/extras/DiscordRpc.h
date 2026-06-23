@@ -3,7 +3,6 @@
 #ifdef USE_DISCORD_RPC
 #include "discord_rpc.h"
 #include "discord_register.h"
-#include "windows.h"
 #include "common.h"
 
 class DiscordRPC

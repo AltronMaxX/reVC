@@ -1,0 +1,69 @@
+name: reVC linux cmake amd64
+
+on:
+  pull_request:
+  push:
+  release:
+    types: published
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        buildtype: [Debug, Release]
+        discord_rpc: [ON, OFF]
+
+    name: "${{ matrix.buildtype }} | discord_rpc=${{ matrix.discord_rpc }}"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            libopenal-dev \
+            libglew-dev \
+            libglfw3-dev \
+            libsndfile1-dev \
+            libmpg123-dev \
+            libx11-dev
+
+      - name: Configure (CMake)
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
+            -DREVC_VENDORED_LIBRW=ON  \
+            -DREVC_AUDIO=OAL \
+            -DREVC_WITH_DISCORD_RPC=${{ matrix.discord_rpc }} \
+            -DLIBRW_PLATFORM=GL3 \
+            -DLIBRW_GL3_GFXLIB=GLFW \
+            -DREVC_INSTALL=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Collect artifact name
+        id: artname
+        run: |
+          DRPC=""
+          if [ "${{ matrix.discord_rpc }}" = "ON" ]; then
+            DRPC="-drpc"
+          fi
+          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-gl3-glfw-oal${DRPC}" >> "$GITHUB_OUTPUT"
+
+      - name: Move binary to gamefiles
+        run: |
+          find build -name reVC -type f -exec cp {} ./gamefiles/ \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artname.outputs.name }}
+          path: ./gamefiles/*

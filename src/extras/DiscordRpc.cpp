@@ -7,8 +7,12 @@
 #include "PlayerPed.h"
 #include "Ped.h"
 
+#include <codecvt>
+#include <locale>
+
 #ifdef USE_DISCORD_RPC
-#define APP_ID "1456434476057104528"
+static constexpr auto APP_ID =
+    "1456434476057104528";
 
 static void
 OnReady(const DiscordUser *user)
@@ -32,11 +36,10 @@ DiscordRichPresence discordPresence;
 void DiscordRPC::Initialize()
 {
 	debug("Intialising DiscordRPC... \n");
-	DiscordEventHandlers handlers;
+	DiscordEventHandlers handlers = {};
 	handlers.ready = OnReady;
 	handlers.disconnected = OnDisconnected;
 	handlers.errored = OnErrored;
-	memset(&handlers, 0, sizeof(handlers));
 	Discord_Initialize(APP_ID, &handlers, 1, nullptr);
 	memset(&discordPresence, 0, sizeof(discordPresence));
 	debug("Intialised DiscordRPC... \n");
@@ -48,22 +51,20 @@ void DiscordRPC::Shutdown()
 	Discord_Shutdown();
 }
 
-static const char *
-WideToUtf8(wchar *s)
+static const char *WideToUtf8(wchar_t *s)
 {
 	static std::string utf8;
-	if(!s) return "";
 
-	int wlen = 0;
-	while(wlen < 256 && s[wlen] != 0) wlen++;
+	if(!s)
+		return "";
 
-	auto w = reinterpret_cast<const wchar_t *>(s);
+	try {
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+		utf8 = conv.to_bytes(s);
+	} catch(...) {
+		return "";
+	}
 
-	int bytes = WideCharToMultiByte(CP_UTF8, 0, w, wlen, nullptr, 0, nullptr, nullptr);
-	if(bytes <= 0) return "";
-
-	utf8.resize(bytes);
-	WideCharToMultiByte(CP_UTF8, 0, w, wlen, utf8.data(), bytes, nullptr, nullptr);
 	return utf8.c_str();
 }
 
@@ -79,13 +80,13 @@ void DiscordRPC::Update()
 		discordPresence.instance = 1;
 	} else {*/
 		auto player = CWorld::Players[CWorld::PlayerInFocus];
-		auto z1 = CTheZones::CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), true, false);
+		auto z1 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), true, false);
 		auto z2 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), false, true);
 		if(!z1 && !z2) return;
-		CZone *use = z2 ? z1 : z1;
+		CZone *use = z2 ? z2 : z1;
 		if(!use) return;
 		CPlayerPed* playerPed = player.m_pPed;
-		if(playerPed->Driving()) {
+		if(playerPed->Driving() && playerPed->m_pMyVehicle) {
 			if(playerPed->m_pMyVehicle->IsBoat()) {
 				discordPresence.details = "Sailing in ";
 			} else if(playerPed->m_pMyVehicle->IsPlane() || playerPed->m_pMyVehicle->IsHeli()
@@ -97,7 +98,7 @@ void DiscordRPC::Update()
 		} else {
 			discordPresence.details = "Walking in ";
 		}
-		discordPresence.state = WideToUtf8(use->GetTranslatedName());
+		discordPresence.state = WideToUtf8(reinterpret_cast<wchar_t *>(use->GetTranslatedName()));
 		discordPresence.instance = 1;
 	//}
 

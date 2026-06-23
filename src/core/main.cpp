@@ -79,7 +79,7 @@
 #include "GitSHA1.h"
 #endif
 #ifdef USE_DISCORD_RPC
-#include "DiscordRPC.h"
+#include "DiscordRpc.h"
 #endif
 
 GlobalScene Scene;

@@ -96,7 +96,7 @@
 #include "TexturePools.h"
 #endif
 #ifdef USE_DISCORD_RPC
-#include <DiscordRPC.h>
+#include <DiscordRpc.h>
 #endif
 
 eLevelName CGame::currLevel;

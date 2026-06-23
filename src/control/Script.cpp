@@ -53,7 +53,7 @@
 #include <stdarg.h>
 #endif
 #ifdef USE_DISCORD_RPC
-#include "DiscordRPC.h"
+#include "DiscordRpc.h"
 #endif
 
 uint8 CTheScripts::ScriptSpace[SIZE_SCRIPT_SPACE];
