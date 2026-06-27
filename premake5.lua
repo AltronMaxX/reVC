@@ -253,10 +253,12 @@ project "discord-rpc"
 		path.join(Dsrpc, "src/discord_register_win.cpp"),
 	}
 	
-	--filter "architecture:not x86"
-		--flags { "ExcludeFromBuild" }
-	filter "system:not windows"
-		flags { "ExcludeFromBuild" }
+	filter "platforms:win*"
+		staticruntime "on"
+
+	filter "platforms:*gl3_glfw*"
+		staticruntime "off"
+
 	filter {}
 end
 
