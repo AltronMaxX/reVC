@@ -614,6 +614,14 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 	}
 
 	float speedA, speedB;
+#ifdef FIX_BUGS
+	// Keep player-on-foot pushing force against parked/wrecked vehicles consistent above 30 FPS.
+	const bool playerPedPushesVehicleA = A->IsPed() && ((CPed*)A)->IsPlayer() && B->IsVehicle() &&
+		(B->GetStatus() == STATUS_ABANDONED || B->GetStatus() == STATUS_WRECKED || A->bHasHitWall);
+	const bool playerPedPushesVehicleB = B->IsPed() && ((CPed*)B)->IsPlayer() && A->IsVehicle() &&
+		(A->GetStatus() == STATUS_ABANDONED || A->GetStatus() == STATUS_WRECKED || B->bHasHitWall);
+	const float pedVehiclePushScale = Min(CTimer::GetTimeStepFix(), 1.0f);
+#endif
 	if(B->GetIsStatic() && !foo){
 		if(A->bPedPhysics){
 			speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
@@ -784,6 +792,10 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				A->ApplyMoveForce(fA);
 			}
 			if(!B->bInfiniteMass && !ispedcontactB){
+#ifdef FIX_BUGS
+				if(playerPedPushesVehicleA)
+					fB *= pedVehiclePushScale;
+#endif
 				B->ApplyMoveForce(fB);
 				B->ApplyTurnForce(fB, pointposB);
 			}
@@ -811,6 +823,10 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			CVector fA = colpoint.normal*(impulseA/massFactorA);
 			CVector fB = colpoint.normal*(-impulseB/massFactorB);
 			if(!A->bInfiniteMass && !ispedcontactA){
+#ifdef FIX_BUGS
+				if(playerPedPushesVehicleB)
+					fA *= pedVehiclePushScale;
+#endif
 				if(fA.z < 0.0f) fA.z = 0.0f;
 				A->ApplyMoveForce(fA);
 				A->ApplyTurnForce(fA, pointposA);

@@ -355,6 +355,9 @@ CBoat::ProcessControl(void)
 				bBoatInWater = false;
 				//BUG? aren't we forgetting the timestep here?
 				float moveImpulse = -0.5f*DotProduct(m_vecMoveSpeed, GetForward()) * m_fMass;
+#ifdef FIX_BUGS
+				moveImpulse *= Min(CTimer::GetTimeStepFix(), 1.0f);
+#endif
 				ApplyMoveForce(moveImpulse*GetForward());
 				if(m_skimmerThingTimer == 0.0f)
 					m_skimmerThingTimer = CTimer::GetTimeInMilliseconds() + 300.0f;
@@ -770,17 +773,22 @@ CBoat::ProcessControlInputs(uint8 pad)
 	if(m_nPadID > 3)
 		m_nPadID = 3;
 
-	m_fBrake += (CPad::GetPad(pad)->GetBrake()/255.0f - m_fBrake)*0.1f;
+#ifdef FIX_BUGS
+	float inputStep = Min(CTimer::GetTimeStepFix(), 1.0f);
+#else
+	float inputStep = 1.0f;
+#endif
+	m_fBrake += (CPad::GetPad(pad)->GetBrake()/255.0f - m_fBrake)*(0.1f*inputStep);
 	m_fBrake = Clamp(m_fBrake, 0.0f, 1.0f);
 
 	if(m_fBrake < 0.05f){
 		m_fBrake = 0.0f;
-		m_fAccelerate += (CPad::GetPad(pad)->GetAccelerate()/255.0f - m_fAccelerate)*0.1f;
+		m_fAccelerate += (CPad::GetPad(pad)->GetAccelerate()/255.0f - m_fAccelerate)*(0.1f*inputStep);
 		m_fAccelerate = Clamp(m_fAccelerate, 0.0f, 1.0f);
 	}else
 		m_fAccelerate = -m_fBrake*0.3f;
 
-	m_fSteeringLeftRight += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteeringLeftRight)*0.2f;
+	m_fSteeringLeftRight += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteeringLeftRight)*(0.2f*inputStep);
 	m_fSteeringLeftRight = Clamp(m_fSteeringLeftRight, -1.0f, 1.0f);
 
 	float steeringSq = m_fSteeringLeftRight < 0.0f ? -SQR(m_fSteeringLeftRight) : SQR(m_fSteeringLeftRight);

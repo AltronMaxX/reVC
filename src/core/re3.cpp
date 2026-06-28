@@ -516,6 +516,11 @@ bool LoadINISettings()
 	ReadIniIfExists("Display", "Subtitles", &FrontEndMenuManager.m_PrefsShowSubtitles);
 	ReadIniIfExists("Graphics", "AspectRatio", &FrontEndMenuManager.m_PrefsUseWideScreen);
 	ReadIniIfExists("Graphics", "FrameLimiter", &FrontEndMenuManager.m_PrefsFrameLimiter);
+	{
+		int32 maxFps = RsGlobal.maxFPS;
+		if (ReadIniIfExists("Graphics", "MaxFPS", &maxFps))
+			RsGlobal.maxFPS = Max(1, maxFps);
+	}
 #ifdef LEGACY_MENU_OPTIONS
 	ReadIniIfExists("Graphics", "VSync", &FrontEndMenuManager.m_PrefsVsyncDisp);
 	ReadIniIfExists("Graphics", "Trails", &CMBlur::BlurOn);
@@ -624,6 +629,7 @@ void SaveINISettings()
 	StoreIni("Display", "DrawDistance", FrontEndMenuManager.m_PrefsLOD);
 	StoreIni("Display", "Subtitles", FrontEndMenuManager.m_PrefsShowSubtitles);
 	StoreIni("Graphics", "AspectRatio", FrontEndMenuManager.m_PrefsUseWideScreen);
+	StoreIni("Graphics", "MaxFPS", (int32)RsGlobal.maxFPS);
 #ifdef LEGACY_MENU_OPTIONS
 	StoreIni("Graphics", "VSync", FrontEndMenuManager.m_PrefsVsyncDisp);
 	StoreIni("Graphics", "Trails", CMBlur::BlurOn);

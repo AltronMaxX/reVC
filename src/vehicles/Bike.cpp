@@ -217,6 +217,10 @@ CBike::ProcessControl(void)
 	float brake = 0.0f;
 	CColModel *colModel = GetColModel();
 	float wheelScale = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->m_wheelScale;
+#ifdef FIX_BUGS
+	const float wheelAirStep = Min(CTimer::GetTimeStepFix(), 1.0f);
+	const float wheelAirDamping = Pow(0.95f, wheelAirStep);
+#endif
 	bWarnedPeds = false;
 	bLeanMatrixClean = false;
 	m_doingBurnout = 0;
@@ -862,7 +866,11 @@ CBike::ProcessControl(void)
 					WheelState[BIKEWHEEL_FRONT] = WHEEL_STATE_NORMAL;
 			}else{
 				// Wheel in the air
+#ifdef FIX_BUGS
+				m_aWheelSpeed[BIKEWHEEL_FRONT] *= wheelAirDamping;
+#else
 				m_aWheelSpeed[BIKEWHEEL_FRONT] *= 0.95f;
+#endif
 				m_aWheelRotation[BIKEWHEEL_FRONT] += m_aWheelSpeed[BIKEWHEEL_FRONT];
 			}
 		}
@@ -939,13 +947,22 @@ CBike::ProcessControl(void)
 			else{
 				if(acceleration > 0.0f){
 					if(m_aWheelSpeed[BIKEWHEEL_REAR] < 2.0f)
-						m_aWheelSpeed[BIKEWHEEL_REAR] -= 0.2f;
+#ifdef FIX_BUGS
+						m_aWheelSpeed[BIKEWHEEL_REAR] -= 0.2f*wheelAirStep;
+#else
+							m_aWheelSpeed[BIKEWHEEL_REAR] -= 0.2f;
+#endif
 				}else{
 					if(m_aWheelSpeed[BIKEWHEEL_REAR] > -2.0f)
-						m_aWheelSpeed[BIKEWHEEL_REAR] += 0.1f;
+#ifdef FIX_BUGS
+						m_aWheelSpeed[BIKEWHEEL_REAR] += 0.1f*wheelAirStep;
+#else
+							m_aWheelSpeed[BIKEWHEEL_REAR] += 0.1f;
+#endif
 				}
 			}
 			m_aWheelRotation[BIKEWHEEL_REAR] += m_aWheelSpeed[BIKEWHEEL_REAR];
+
 		}
 
 		if(m_doingBurnout && m_aWheelState[BIKEWHEEL_REAR] == WHEEL_STATE_SPINNING){
@@ -1006,7 +1023,11 @@ CBike::ProcessControl(void)
 					WheelState[BIKEWHEEL_FRONT] = WHEEL_STATE_NORMAL;
 			}else{
 				// Wheel in the air
+#ifdef FIX_BUGS
+				m_aWheelSpeed[BIKEWHEEL_FRONT] *= wheelAirDamping;
+#else
 				m_aWheelSpeed[BIKEWHEEL_FRONT] *= 0.95f;
+#endif
 				m_aWheelRotation[BIKEWHEEL_FRONT] += m_aWheelSpeed[BIKEWHEEL_FRONT];
 			}
 		}

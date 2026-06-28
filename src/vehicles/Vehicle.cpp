@@ -406,7 +406,12 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		CVector vecStabilise = (GetUp().z > 0.0f) ? vecFRight : -vecFRight;
 		float fStabiliseDirection = (GetRight().z > 0.0f) ? -1.0f : 1.0f;
 		float fStabiliseSpeed = pFlyingHandling->fRollStab * fStabiliseDirection * (1.0f - DotProduct(GetRight(), vecStabilise)) * (1.0f - Abs(GetForward().z));
-		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * GetRight(), GetUp()); // no CTimer::GetTimeStep(), is it right?
+		float fStabiliseImpulse = fStabiliseSpeed * m_fTurnMass;
+#ifdef FIX_BUGS
+		// Keep roll-stabilization strength consistent above 30 FPS.
+		fStabiliseImpulse *= Min(CTimer::GetTimeStepFix(), 1.0f);
+#endif
+		ApplyTurnForce(fStabiliseImpulse * GetRight(), GetUp()); // no CTimer::GetTimeStep(), is it right?
 
 		// up/down
 		float fTail = -DotProduct(GetSpeed(vecTail), GetUp());
@@ -812,12 +817,8 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 	if(contactSpeedRight != 0.0f){
 		// exert opposing force
 		right = -contactSpeedRight/wheelsOnGround;
-		// BUG?
-		// contactSpeedRight is independent of framerate but right has timestep as a factor
-		// so we probably have to fix this
-		// fixing this causes jittery cars at 15fps, and causes the car to move backwards slowly at 18fps
-		// at 19fps, the effects are gone ...
-		//right *= CTimer::GetTimeStepFix();
+		// Keep vehicle grip/slide behavior consistent above 30 FPS without affecting low-FPS behavior.
+		right *= Min(CTimer::GetTimeStepFix(), 1.0f);
 
 		if(wheelStatus == WHEEL_STATUS_BURST){
 			float fwdspeed = Min(contactSpeedFwd, fBurstSpeedMax);
@@ -839,10 +840,8 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 	}else if(contactSpeedFwd != 0.0f){
 		fwd = -contactSpeedFwd/wheelsOnGround;
 #ifdef FIX_BUGS
-		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
-		// so we probably have to fix this
-		// better get rid of it here too
-		//fwd *= CTimer::GetTimeStepFix();
+		// Same rationale as right-axis compensation above.
+		fwd *= Min(CTimer::GetTimeStepFix(), 1.0f);
 #endif
 
 		if(!bBraking){
@@ -976,10 +975,8 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 		// exert opposing force
 		right = -contactSpeedRight/wheelsOnGround;
 #ifdef FIX_BUGS
-		// contactSpeedRight is independent of framerate but right has timestep as a factor
-		// so we probably have to fix this
-		// see above
-		//right *= CTimer::GetTimeStepFix();
+		// Keep bike grip/slide behavior consistent above 30 FPS without affecting low-FPS behavior.
+		right *= Min(CTimer::GetTimeStepFix(), 1.0f);
 #endif
 
 		if(wheelStatus == WHEEL_STATUS_BURST){
@@ -1002,10 +999,8 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 	}else if(contactSpeedFwd != 0.0f){
 		fwd = -contactSpeedFwd/wheelsOnGround;
 #ifdef FIX_BUGS
-		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
-		// so we probably have to fix this
-		// see above
-		//fwd *= CTimer::GetTimeStepFix();
+		// Same rationale as right-axis compensation above.
+		fwd *= Min(CTimer::GetTimeStepFix(), 1.0f);
 #endif
 
 		if(!bBraking){
