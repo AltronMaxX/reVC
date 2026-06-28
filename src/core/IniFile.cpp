@@ -7,8 +7,8 @@
 #include "main.h"
 #include "Population.h"
 
-float CIniFile::PedNumberMultiplier = 1.0f;
-float CIniFile::CarNumberMultiplier = 1.0f;
+float CIniFile::PedNumberMultiplier = 0.6f;
+float CIniFile::CarNumberMultiplier = 0.6f;
 
 void CIniFile::LoadIniFile()
 {
@@ -23,7 +23,7 @@ void CIniFile::LoadIniFile()
 		CarNumberMultiplier = Min(3.0f, Max(0.5f, CarNumberMultiplier));
 		CFileMgr::CloseFile(f);
 	}
-	CPopulation::MaxNumberOfPedsInUse = 64.0f * PedNumberMultiplier;
-	CPopulation::MaxNumberOfPedsInUseInterior = 80.0f * PedNumberMultiplier;
-	CCarCtrl::MaxNumberOfCarsInUse = 36.0f * CarNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUse = 25.0f * PedNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUseInterior = 40.0f * PedNumberMultiplier;
+	CCarCtrl::MaxNumberOfCarsInUse = 12.0f * CarNumberMultiplier;
 }

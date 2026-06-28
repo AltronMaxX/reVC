@@ -75,8 +75,6 @@ int32 CStreaming::ms_imageSize;
 size_t CStreaming::ms_memoryAvailable;
 
 int32 desiredNumVehiclesLoaded = 20;
-static const int32 POPULATION_STREAMFLAGS = STREAMFLAGS_DEPENDENCY | STREAMFLAGS_PRIORITY;
-static const int32 POPULATION_KEEP_STREAMFLAGS = STREAMFLAGS_DONT_REMOVE | STREAMFLAGS_PRIORITY;
 
 CEntity *pIslandLODmainlandEntity;
 CEntity *pIslandLODbeachEntity;
@@ -231,7 +229,7 @@ CStreaming::Init2(void)
 	ms_memoryAvailable = (_dwMemAvailPhys - 10*MB)/2;
 	if(ms_memoryAvailable < 65*MB)
 		ms_memoryAvailable = 65*MB;
-	desiredNumVehiclesLoaded = (int32)((ms_memoryAvailable / MB - 65) / 3 + 20);
+	desiredNumVehiclesLoaded = (int32)((ms_memoryAvailable / MB - 65) / 3 + 12);
 	if(desiredNumVehiclesLoaded > MAXVEHICLESLOADED)
 		desiredNumVehiclesLoaded = MAXVEHICLESLOADED;
 #else
@@ -336,20 +334,21 @@ CStreaming::Update(void)
 	if(CTimer::GetIsPaused())
 		return;
 
+	LoadBigBuildingsWhenNeeded();
+	if(!ms_disableStreaming && TheCamera.GetPosition().z < 55.0f)
+		AddModelsToRequestList(TheCamera.GetPosition(), 0);
+
+	DeleteFarAwayRwObjects(TheCamera.GetPosition());
+
 	if(!ms_disableStreaming &&
 	   !CCutsceneMgr::IsCutsceneProcessing() &&
+	   ms_numModelsRequested < 5 &&
 	   !CRenderer::m_loadingPriority &&
 	   CGame::currArea == AREA_MAIN_MAP &&
 	   !CReplay::IsPlayingBack()){
 		StreamVehiclesAndPeds();
 		StreamZoneModels(FindPlayerCoors());
 	}
-
-	LoadBigBuildingsWhenNeeded();
-	if(!ms_disableStreaming && TheCamera.GetPosition().z < 55.0f)
-		AddModelsToRequestList(TheCamera.GetPosition(), 0);
-
-	DeleteFarAwayRwObjects(TheCamera.GetPosition());
 
 	LoadRequestedModels();
 
@@ -1639,8 +1638,8 @@ CStreaming::StreamVehiclesAndPeds(void)
 		return;
 
 	if(FindPlayerPed()->m_pWanted->AreSwatRequired()){
-		RequestModel(MI_ENFORCER, POPULATION_KEEP_STREAMFLAGS);
-		RequestModel(MI_SWAT, POPULATION_KEEP_STREAMFLAGS);
+		RequestModel(MI_ENFORCER, STREAMFLAGS_DONT_REMOVE);
+		RequestModel(MI_SWAT, STREAMFLAGS_DONT_REMOVE);
 	}else{
 		SetModelIsDeletable(MI_ENFORCER);
 		if(!HasModelLoaded(MI_ENFORCER))
@@ -1648,8 +1647,8 @@ CStreaming::StreamVehiclesAndPeds(void)
 	}
 
 	if(FindPlayerPed()->m_pWanted->AreFbiRequired()){
-		RequestModel(MI_FBIRANCH, POPULATION_KEEP_STREAMFLAGS);
-		RequestModel(MI_FBI, POPULATION_KEEP_STREAMFLAGS);
+		RequestModel(MI_FBIRANCH, STREAMFLAGS_DONT_REMOVE);
+		RequestModel(MI_FBI, STREAMFLAGS_DONT_REMOVE);
 	}else{
 		SetModelIsDeletable(MI_FBIRANCH);
 		if(!HasModelLoaded(MI_FBIRANCH))
@@ -1657,9 +1656,9 @@ CStreaming::StreamVehiclesAndPeds(void)
 	}
 
 	if(FindPlayerPed()->m_pWanted->AreArmyRequired()){
-		RequestModel(MI_RHINO, POPULATION_KEEP_STREAMFLAGS);
-		RequestModel(MI_BARRACKS, POPULATION_KEEP_STREAMFLAGS);
-		RequestModel(MI_ARMY, POPULATION_KEEP_STREAMFLAGS);
+		RequestModel(MI_RHINO, STREAMFLAGS_DONT_REMOVE);
+		RequestModel(MI_BARRACKS, STREAMFLAGS_DONT_REMOVE);
+		RequestModel(MI_ARMY, STREAMFLAGS_DONT_REMOVE);
 	}else{
 		SetModelIsDeletable(MI_RHINO);
 		SetModelIsDeletable(MI_BARRACKS);
@@ -1668,7 +1667,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 	}
 
 	if(FindPlayerPed()->m_pWanted->NumOfHelisRequired() > 0)
-		RequestModel(MI_CHOPPER, POPULATION_KEEP_STREAMFLAGS);
+		RequestModel(MI_CHOPPER, STREAMFLAGS_DONT_REMOVE);
 	else
 		SetModelIsDeletable(MI_CHOPPER);
 
@@ -1681,24 +1680,24 @@ CStreaming::StreamVehiclesAndPeds(void)
 		SetModelIsDeletable(MI_VICE6);
 		SetModelIsDeletable(MI_VICE7);
 		SetModelIsDeletable(MI_VICE8);
-		RequestModel(MI_VICECHEE, POPULATION_KEEP_STREAMFLAGS);
+		RequestModel(MI_VICECHEE, STREAMFLAGS_DONT_REMOVE);
 		if(CPopulation::NumMiamiViceCops == 0)
 			switch (CCarCtrl::MiamiViceCycle) {
 			case 0:
-				RequestModel(MI_VICE1, POPULATION_KEEP_STREAMFLAGS);
-				RequestModel(MI_VICE2, POPULATION_KEEP_STREAMFLAGS);
+				RequestModel(MI_VICE1, STREAMFLAGS_DONT_REMOVE);
+				RequestModel(MI_VICE2, STREAMFLAGS_DONT_REMOVE);
 				break;
 			case 1:
-				RequestModel(MI_VICE3, POPULATION_KEEP_STREAMFLAGS);
-				RequestModel(MI_VICE4, POPULATION_KEEP_STREAMFLAGS);
+				RequestModel(MI_VICE3, STREAMFLAGS_DONT_REMOVE);
+				RequestModel(MI_VICE4, STREAMFLAGS_DONT_REMOVE);
 				break;
 			case 2:
-				RequestModel(MI_VICE5, POPULATION_KEEP_STREAMFLAGS);
-				RequestModel(MI_VICE6, POPULATION_KEEP_STREAMFLAGS);
+				RequestModel(MI_VICE5, STREAMFLAGS_DONT_REMOVE);
+				RequestModel(MI_VICE6, STREAMFLAGS_DONT_REMOVE);
 				break;
 			case 3:
-				RequestModel(MI_VICE7, POPULATION_KEEP_STREAMFLAGS);
-				RequestModel(MI_VICE8, POPULATION_KEEP_STREAMFLAGS);
+				RequestModel(MI_VICE7, STREAMFLAGS_DONT_REMOVE);
+				RequestModel(MI_VICE8, STREAMFLAGS_DONT_REMOVE);
 				break;
 			}
 	}
@@ -1732,7 +1731,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 		}
 		model = CCarCtrl::ChooseCarModelToLoad(mostRequestedRating);
 		if(!HasModelLoaded(model)){
-			RequestModel(model, POPULATION_STREAMFLAGS);
+			RequestModel(model, STREAMFLAGS_DEPENDENCY);
 			timeBeforeNextLoad = 350;
 		}
 		CCarCtrl::NumRequestsOfCarRating[mostRequestedRating] = 0;
@@ -1769,7 +1768,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 			while(ms_bIsPedFromPedGroupLoaded[j]);
 			ms_bIsPedFromPedGroupLoaded[j] = true;
 			if(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j] != -1)
-				RequestModel(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j], POPULATION_STREAMFLAGS);
+				RequestModel(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j], STREAMFLAGS_DEPENDENCY);
 		}
 		ms_numPedsLoaded = MAXZONEPEDSLOADED;
 		timeBeforeNextLoad = 300;
@@ -1797,7 +1796,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 			ms_bIsPedFromPedGroupLoaded[j] = true;
 			int newMI = CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j];
 			if(newMI != oldMI){
-				RequestModel(newMI, POPULATION_STREAMFLAGS);
+				RequestModel(newMI, STREAMFLAGS_DEPENDENCY);
 				debug("Request Ped %s\n", CModelInfo::GetModelInfo(newMI)->GetModelName());
 				if(ms_numPedsLoaded == MAXZONEPEDSLOADED){
 					SetModelIsDeletable(oldMI);
@@ -1810,8 +1809,8 @@ CStreaming::StreamZoneModels(const CVector &pos)
 		}
 	}
 
-	RequestModel(MI_MALE01, POPULATION_KEEP_STREAMFLAGS);
-	RequestModel(MI_TAXI_D, POPULATION_KEEP_STREAMFLAGS);
+	RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE);
+	RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE);
 
 	gangsToLoad = 0;
 	gangCarsToLoad = 0;
@@ -1836,8 +1835,8 @@ CStreaming::StreamZoneModels(const CVector &pos)
 			bit = 1<<i;
 
 			if(gangModelsToload & bit && (ms_loadedGangs & bit) == 0){
-				RequestModel(CGangs::GetGangPedModel1(i), POPULATION_STREAMFLAGS);
-				RequestModel(CGangs::GetGangPedModel2(i), POPULATION_STREAMFLAGS);
+				RequestModel(CGangs::GetGangPedModel1(i), STREAMFLAGS_DEPENDENCY);
+				RequestModel(CGangs::GetGangPedModel2(i), STREAMFLAGS_DEPENDENCY);
 				ms_loadedGangs |= bit;
 			}else if((gangModelsToload & bit) == 0 && ms_loadedGangs & bit){
 				SetModelIsDeletable(CGangs::GetGangPedModel1(i));
@@ -1849,7 +1848,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 
 			if(CGangs::GetGangVehicleModel(i) != -1){
 				if((gangCarsToLoad & bit) && (ms_loadedGangCars & bit) == 0){
-					RequestModel(CGangs::GetGangVehicleModel(i), POPULATION_STREAMFLAGS);
+					RequestModel(CGangs::GetGangVehicleModel(i), STREAMFLAGS_DEPENDENCY);
 				}else if((gangCarsToLoad & bit) == 0 && ms_loadedGangCars & bit){
 					SetModelIsDeletable(CGangs::GetGangVehicleModel(i));
 					SetModelTxdIsDeletable(CGangs::GetGangVehicleModel(i));
@@ -2577,10 +2576,7 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 	float xmin, xmax, ymin, ymax;
 	int ixmin, ixmax, iymin, iymax;
 	int ix, iy;
-	int centerX, centerY;
 	int dx, dy, d;
-	int ring;
-	int32 sectorFlags;
 	CSector *sect;
 
 	xmin = pos.x - STREAM_DIST;
@@ -2596,39 +2592,30 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 	if(iymin < 0) iymin = 0;
 	iymax = CWorld::GetSectorIndexY(ymax);
 	if(iymax >= NUMSECTORS_Y) iymax = NUMSECTORS_Y-1;
-	centerX = CWorld::GetSectorIndexX(pos.x);
-	centerY = CWorld::GetSectorIndexY(pos.y);
 
 	CWorld::AdvanceCurrentScanCode();
 
-	for(ring = 0; ring <= 3; ring++){
-		for(dy = -ring; dy <= ring; dy++){
-			for(dx = -ring; dx <= ring; dx++){
-				if(Max(Abs(dx), Abs(dy)) != ring)
-					continue;
+	for(iy = iymin; iy <= iymax; iy++){
+		dy = iy - CWorld::GetSectorIndexY(pos.y);
+		for(ix = ixmin; ix <= ixmax; ix++){
 
-				ix = centerX + dx;
-				iy = centerY + dy;
-				if(ix < ixmin || ix > ixmax || iy < iymin || iy > iymax)
-					continue;
+			if(CRenderer::m_loadingPriority && ms_numModelsRequested > 5)
+				return;
 
-				if(CRenderer::m_loadingPriority && ms_numModelsRequested > 5)
-					return;
+			dx = ix - CWorld::GetSectorIndexX(pos.x);
+			d = dx*dx + dy*dy;
+			sect = CWorld::GetSector(ix, iy);
+			if(d <= 0){
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], flags);
+			}else if(d <= 3*3){
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
+				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 
-				d = dx*dx + dy*dy;
-				sectorFlags = ring <= 1 ? flags | STREAMFLAGS_PRIORITY : flags;
-				sect = CWorld::GetSector(ix, iy);
-				if(d <= 0){
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], sectorFlags);
-				}else if(d <= 3*3){
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], pos.x, pos.y, xmin, ymin, xmax, ymax, sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, sectorFlags);
-					ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], pos.x, pos.y, xmin, ymin, xmax, ymax, sectorFlags);
-				}
 			}
 		}
 	}
@@ -3137,7 +3124,7 @@ CStreaming::LoadScene(const CVector &pos)
 			CZoneInfo zone;
 			CTheZones::GetZoneInfoForTimeOfDay(&pos, &zone);
 			int32 model = CCarCtrl::ChooseCarModelToLoad(CCarCtrl::ChooseCarRating(&zone));
-			CStreaming::RequestModel(model, POPULATION_STREAMFLAGS);
+			CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
 		}
 	}
 	LoadAllRequestedModels(false);
