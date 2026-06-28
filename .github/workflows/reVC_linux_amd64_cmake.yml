@@ -28,12 +28,22 @@ jobs:
           sudo apt-get install -y \
             cmake \
             ninja-build \
+            gcc-multilib \
+            g++-multilib \
             libopenal-dev \
-            libglew-dev \
-            libglfw3-dev \
             libsndfile1-dev \
             libmpg123-dev \
-            libx11-dev
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            wayland-protocols \
+            libwayland-bin \
+            libglew-dev
 
       - name: Configure (CMake)
         run: |
