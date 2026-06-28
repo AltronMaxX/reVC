@@ -94,7 +94,7 @@ int32 CCarCtrl::NumRandomCars;
 int32 CCarCtrl::NumParkedCars;
 int32 CCarCtrl::NumPermanentCars;
 int8 CCarCtrl::CountDownToCarsAtStart;
-int32 CCarCtrl::MaxNumberOfCarsInUse = 180;
+int32 CCarCtrl::MaxNumberOfCarsInUse = 36;
 uint32 CCarCtrl::LastTimeLawEnforcerCreated;
 uint32 CCarCtrl::LastTimeFireTruckCreated;
 uint32 CCarCtrl::LastTimeAmbulanceCreated;
@@ -120,7 +120,7 @@ CCarCtrl::GenerateRandomCars()
 		if (CountDownToCarsAtStart == 0)
 			GenerateOneRandomCar();
 		else if (--CountDownToCarsAtStart == 0) {
-			for (int i = 0; i < 180; i++)
+			for (int i = 0; i < 100; i++)
 				GenerateOneRandomCar();
 			CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter = 20;
 		}
