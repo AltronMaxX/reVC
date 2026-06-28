@@ -5,6 +5,7 @@ set(PROJECT REVC)
 
 project(${EXECUTABLE} C CXX)
 set(${PROJECT}_AUTHOR "${PROJECT} Team")
+set(CMAKE_CXX_STANDARD 23)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(GetGitRevisionDescription)
