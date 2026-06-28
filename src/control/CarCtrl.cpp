@@ -308,10 +308,8 @@ CCarCtrl::GenerateOneRandomCar()
 	CPathNode* pCurNode = &ThePaths.m_pathNodes[curNodeId];
 	CPathNode* pNextNode = &ThePaths.m_pathNodes[nextNodeId];
 	if (pCurNode->bWaterPath && preferredDistance < boatSpawnDistance) {
-		float boatAngleLimit = bTopDownCamera ? angleLimit : 0.0f;
-		bool boatForward = bTopDownCamera ? invertAngleLimitTest : false;
 		bool foundDistantBoatPath = ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
-			boatSpawnDistance, boatAngleLimit, boatForward, &spawnPosition, &curNodeId, &nextNodeId,
+			boatSpawnDistance, angleLimit, invertAngleLimitTest, &spawnPosition, &curNodeId, &nextNodeId,
 			&positionBetweenNodes, ignoreDisabledPaths, true);
 		if (!foundDistantBoatPath &&
 			!ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
