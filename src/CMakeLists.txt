@@ -104,6 +104,12 @@ if(${PROJECT}_WITH_ASAN)
     target_link_options(${EXECUTABLE} PUBLIC -fsanitize=address)
 endif()
 
+if(${PROJECT}_WITH_DISCORD_RPC)
+    target_compile_definitions(${EXECUTABLE} PRIVATE USE_DISCORD_RPC)
+    target_include_directories(${EXECUTABLE} PRIVATE "${DISCORD_RPC_DIR}/include")
+    target_link_libraries(${EXECUTABLE} PRIVATE discord-rpc)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     target_compile_options(${EXECUTABLE}
         PRIVATE
