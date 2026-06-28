@@ -100,6 +100,16 @@ if(${PROJECT}_WITH_DISCORD_RPC)
     message(STATUS "Discord RPC enabled (${DISCORD_RPC_DIR})")
 endif()
 
+if(LIBRW_GL3_GFXLIB STREQUAL "GLFW")
+    set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+    add_subdirectory(vendor/glfw)
+endif()
+
 # ── librw ─────────────────────────────────────────────────────────────────────
 option(${PROJECT}_VENDORED_LIBRW "Use vendored librw" ON)
 
@@ -107,16 +117,6 @@ if(${PROJECT}_VENDORED_LIBRW)
     add_subdirectory(vendor/librw)
 else()
     find_package(librw REQUIRED)
-endif()
-
-if(LIBRW_GL3_GFXLIB STREQUAL "GLFW")
-    set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-    
-    add_subdirectory(vendor/glfw)
 endif()
 
 # ── Main project ──────────────────────────────────────────────────────────────

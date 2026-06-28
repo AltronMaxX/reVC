@@ -25,8 +25,9 @@ add_executable(${EXECUTABLE} WIN32
 )
 
 target_link_libraries(${EXECUTABLE} PRIVATE
-        librw::librw
-        Threads::Threads
+    librw::librw
+    Threads::Threads
+    glfw
 )
 
 target_include_directories(${EXECUTABLE}
@@ -108,11 +109,6 @@ if(${PROJECT}_WITH_DISCORD_RPC)
     target_compile_definitions(${EXECUTABLE} PRIVATE USE_DISCORD_RPC)
     target_include_directories(${EXECUTABLE} PRIVATE "${DISCORD_RPC_DIR}/include")
     target_link_libraries(${EXECUTABLE} PRIVATE discord-rpc)
-endif()
-
-if(LIBRW_GL3_GFXLIB STREQUAL "GLFW")
-    target_include_directories(${EXECUTABLE} PRIVATE "vendor/glfw/include")
-    target_link_libraries(${EXECUTABLE} PRIVATE glfw)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
