@@ -63,6 +63,7 @@ bool BaseConnection::Open()
     setsockopt(self->sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
 #endif
 
+    // Standard paths: $TEMP/discord-ipc-0 .. 9
     for (int pipeNum = 0; pipeNum < 10; ++pipeNum) {
         snprintf(
           PipeAddr.sun_path, sizeof(PipeAddr.sun_path), "%s/discord-ipc-%d", tempPath, pipeNum);
@@ -72,6 +73,21 @@ bool BaseConnection::Open()
             return true;
         }
     }
+
+    // Flatpak Discord: $TEMP/app/com.discordapp.Discord/discord-ipc-0 .. 9
+    for (int pipeNum = 0; pipeNum < 10; ++pipeNum) {
+        snprintf(PipeAddr.sun_path,
+          sizeof(PipeAddr.sun_path),
+          "%s/app/com.discordapp.Discord/discord-ipc-%d",
+          tempPath,
+          pipeNum);
+        int err = connect(self->sock, (const sockaddr*)&PipeAddr, sizeof(PipeAddr));
+        if (err == 0) {
+            self->isOpen = true;
+            return true;
+        }
+    }
+
     self->Close();
     return false;
 }
