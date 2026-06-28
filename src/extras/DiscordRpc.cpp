@@ -1,13 +1,11 @@
 #include "DiscordRpc.h"
 #include <common.h>
-#include <Script.h>
 #include <PlayerInfo.h>
 #include <World.h>
 #include <Zones.h>
 #include "PlayerPed.h"
 #include "Ped.h"
 
-#include <codecvt>
 #include <locale>
 
 #ifdef USE_DISCORD_RPC
@@ -20,12 +18,12 @@ OnReady(const DiscordUser *user)
 	debug("Discord RPC READY: %s#%s\n", user->username, user->discriminator);
 }
 static void
-OnDisconnected(int code, const char *msg)
+OnDisconnected(const int code, const char *msg)
 {
 	debug("Discord RPC DISCONNECTED: %d %s\n", code, msg ? msg : "");
 }
 static void
-OnErrored(int code, const char *msg)
+OnErrored(const int code, const char *msg)
 {
 	debug("Discord RPC ERROR: %d %s\n", code, msg ? msg : "");
 }
@@ -35,36 +33,41 @@ DiscordRichPresence discordPresence;
 
 void DiscordRPC::Initialize()
 {
-	debug("Intialising DiscordRPC... \n");
+	debug("Initialising DiscordRPC... \n");
 	DiscordEventHandlers handlers = {};
 	handlers.ready = OnReady;
 	handlers.disconnected = OnDisconnected;
 	handlers.errored = OnErrored;
 	Discord_Initialize(APP_ID, &handlers, 1, nullptr);
 	memset(&discordPresence, 0, sizeof(discordPresence));
-	debug("Intialised DiscordRPC... \n");
+	debug("Initialized DiscordRPC... \n");
 }
 
 void DiscordRPC::Shutdown()
 {
-	debug("Shutdowning DiscordRPC... \n");
+	debug("Shutdown DiscordRPC... \n");
 	Discord_Shutdown();
 }
 
-static const char *WideToUtf8(wchar_t *s)
+static const char *WideToUtf8(const wchar *s)
 {
 	static std::string utf8;
+	utf8.clear();
+	if(!s) return "";
 
-	if(!s)
-		return "";
+	for(const wchar *p = s; *p; p++) {
 
-	try {
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-		utf8 = conv.to_bytes(s);
-	} catch(...) {
-		return "";
+		if(const uint32_t cp = *p; cp < 0x80) {
+			utf8 += static_cast<char>(cp);
+		} else if(cp < 0x800) {
+			utf8 += static_cast<char>(0xC0 | (cp >> 6));
+			utf8 += static_cast<char>(0x80 | (cp & 0x3F));
+		} else {
+			utf8 += static_cast<char>(0xE0 | (cp >> 12));
+			utf8 += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+			utf8 += static_cast<char>(0x80 | (cp & 0x3F));
+		}
 	}
-
 	return utf8.c_str();
 }
 
@@ -80,13 +83,12 @@ void DiscordRPC::Update()
 		discordPresence.instance = 1;
 	} else {*/
 		auto player = CWorld::Players[CWorld::PlayerInFocus];
-		auto z1 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), true, false);
-		auto z2 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), false, true);
+		const auto z1 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), true, false);
+	        const auto z2 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), false, true);
 		if(!z1 && !z2) return;
 		CZone *use = z2 ? z2 : z1;
 		if(!use) return;
-		CPlayerPed* playerPed = player.m_pPed;
-		if(playerPed->Driving() && playerPed->m_pMyVehicle) {
+	        if(CPlayerPed *playerPed = player.m_pPed; playerPed->Driving() && playerPed->m_pMyVehicle) {
 			if(playerPed->m_pMyVehicle->IsBoat()) {
 				discordPresence.details = "Sailing in ";
 			} else if(playerPed->m_pMyVehicle->IsPlane() || playerPed->m_pMyVehicle->IsHeli()
@@ -98,7 +100,7 @@ void DiscordRPC::Update()
 		} else {
 			discordPresence.details = "Walking in ";
 		}
-		discordPresence.state = WideToUtf8(reinterpret_cast<wchar_t *>(use->GetTranslatedName()));
+		discordPresence.state = WideToUtf8(use->GetTranslatedName());
 		discordPresence.instance = 1;
 	//}
 
