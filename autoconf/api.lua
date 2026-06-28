@@ -206,6 +206,7 @@ function autoconf.toolset(cfg)
 			['vs2015']   = p.tools.msc,
 			['vs2017']   = p.tools.msc,
 			['vs2019']   = p.tools.msc,
+			['vs2022']   = p.tools.msc,
 			['gmake']    = premake.tools.gcc,
 			['gmake2']    = premake.tools.gcc,
 			['codelite'] = premake.tools.gcc,
