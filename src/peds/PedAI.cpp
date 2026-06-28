@@ -1076,8 +1076,8 @@ CPed::ProcessObjective(void)
 								SetMoveState(PEDMOVE_STILL);
 
 							if (m_objective == OBJECTIVE_HASSLE_CHAR) {
-								Say(SOUND_PED_COP_REACTION);
-								m_pedInObjective->Say(SOUND_PED_UNK_126);
+								Say(SOUND_PED_COP_ASK_FOR_ID);
+								m_pedInObjective->Say(SOUND_PED_INNOCENT);
 								m_leaveCarTimer = CTimer::GetTimeInMilliseconds() + 3000;
 								m_pedInObjective->m_leaveCarTimer = CTimer::GetTimeInMilliseconds() + 3000;
 								SetObjective(OBJECTIVE_WANDER);
@@ -4600,13 +4600,97 @@ CPed::ExitCar(void)
 CVector
 CPed::GetPositionToOpenCarDoor(CVehicle *veh, uint32 component)
 {
-	CVector vehDoorPos = GetPositionToOpenCarDoor(veh, component, 1.0f);
+	CVector doorPos;
+	CVector vehDoorOffset;
+	CVehicleModelInfo* vehModel = veh->GetModelInfo();
 
-/*
-	// Unused
-	vehDoorPosWithoutOffset = veh->GetMatrix() * localVehDoorPos;
-*/
-	return vehDoorPos;
+	if (veh->IsBike()) {
+		CBike* bike = (CBike*)veh;
+
+		if (component == CAR_WINDSCREEN) {
+			doorPos = vehModel->GetFrontSeatPosn();
+			return bike->GetMatrix() * (doorPos +
+				CVector(-vecPedBikeKickAnimOffset.x, vecPedBikeKickAnimOffset.y, -vecPedBikeKickAnimOffset.z));
+		} else {
+			switch (bike->m_bikeAnimType) {
+			case ASSOCGRP_BIKE_VESPA:
+				vehDoorOffset = vecPedVespaBikeJumpRhsAnimOffset;
+				break;
+			case ASSOCGRP_BIKE_HARLEY:
+				vehDoorOffset = vecPedHarleyBikeJumpRhsAnimOffset;
+				break;
+			case ASSOCGRP_BIKE_DIRT:
+				vehDoorOffset = vecPedDirtBikeJumpRhsAnimOffset;
+				break;
+			default:
+				vehDoorOffset = vecPedStdBikeJumpRhsAnimOffset;
+				break;
+			}
+		}
+
+		doorPos = vehModel->GetFrontSeatPosn();
+		if (component == CAR_DOOR_LR || component == CAR_DOOR_RR) {
+			doorPos = vehModel->m_positions[CAR_POS_BACKSEAT];
+		}
+
+		if (component == CAR_DOOR_LR || component == CAR_DOOR_LF) {
+			vehDoorOffset.x *= -1.f;
+		}
+
+		CVector correctedPos;
+		bike->GetCorrectedWorldDoorPosition(correctedPos, vehDoorOffset, doorPos);
+		return correctedPos;
+	} else {
+		float seatOffset;
+		if (veh->bIsVan && (component == CAR_DOOR_LR || component == CAR_DOOR_RR)) {
+			seatOffset = 0.0f;
+			vehDoorOffset = vecPedVanRearDoorAnimOffset;
+		} else {
+			seatOffset = veh->pHandling->fSeatOffsetDistance;
+			if (veh->bLowVehicle) {
+				vehDoorOffset = vecPedCarDoorLoAnimOffset;
+			} else {
+				vehDoorOffset = vecPedCarDoorAnimOffset;
+			}
+		}
+
+		switch (component) {
+		case CAR_DOOR_RF:
+			doorPos = vehModel->GetFrontSeatPosn();
+			doorPos.x += seatOffset;
+			vehDoorOffset.x = -vehDoorOffset.x;
+			break;
+
+		case CAR_DOOR_RR:
+			doorPos = vehModel->m_positions[CAR_POS_BACKSEAT];
+			doorPos.x += seatOffset;
+			vehDoorOffset.x = -vehDoorOffset.x;
+			break;
+
+		case CAR_DOOR_LF:
+			doorPos = vehModel->GetFrontSeatPosn();
+			doorPos.x += seatOffset;
+			doorPos.x = -doorPos.x;
+			break;
+
+		case CAR_DOOR_LR:
+			doorPos = vehModel->m_positions[CAR_POS_BACKSEAT];
+			doorPos.x += seatOffset;
+			doorPos.x = -doorPos.x;
+			break;
+
+		default:
+			doorPos = vehModel->GetFrontSeatPosn();
+			vehDoorOffset = CVector(0.0f, 0.0f, 0.0f);
+			break;
+		}
+
+		CVector diffVec = doorPos - vehDoorOffset;
+		return Multiply3x3(veh->GetMatrix(), diffVec) + veh->GetPosition();
+
+		//unused
+		//doorPos = Multiply3x3(veh->GetMatrix(), doorPos) + veh->GetMatrix();
+	}
 }
 
 void
@@ -5058,7 +5142,7 @@ CPed::PedSetDraggedOutCarPositionCB(CAnimBlendAssociation* animAssoc, void* arg)
 				break;
 		}
 	} else {
-		draggedOutOffset = vecPedDraggedOutCarAnimOffset;
+		draggedOutOffset = CVector(vecPedDraggedOutCarAnimOffset.x, vecPedDraggedOutCarAnimOffset.y, 0.0f);
 	}
 	if (ped->m_vehDoor == CAR_DOOR_RF || ped->m_vehDoor == CAR_DOOR_RR)
 		draggedOutOffset.x = -draggedOutOffset.x;
@@ -5069,7 +5153,7 @@ CPed::PedSetDraggedOutCarPositionCB(CAnimBlendAssociation* animAssoc, void* arg)
 	ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	ped->SetPosition(posAfterBeingDragged);
 
-	if (ped->m_pMyVehicle && !ped->m_pMyVehicle->IsBike() && !ped->m_pMyVehicle->IsRoomForPedToLeaveCar(ped->m_vehDoor, &vecPedDraggedOutCarAnimOffset)) {
+	if (ped->m_pMyVehicle && !ped->m_pMyVehicle->IsBike() && !ped->m_pMyVehicle->IsRoomForPedToLeaveCar(ped->m_vehDoor, &draggedOutOffset)) {
 		ped->PositionPedOutOfCollision();
 	}
 
@@ -5684,7 +5768,12 @@ CPed::GetPositionToOpenCarDoor(CVehicle *veh, uint32 component, float offset)
 		doorPos = vehModel->GetFrontSeatPosn();
 
 		if (component == CAR_WINDSCREEN) {
+#ifdef FIX_BUGS
+			return bike->GetMatrix() * (doorPos +
+				CVector(-vecPedBikeKickAnimOffset.x, vecPedBikeKickAnimOffset.y, -vecPedBikeKickAnimOffset.z));
+#else
 			return bike->GetMatrix() * (doorPos + vecPedBikeKickAnimOffset);
+#endif
 		} else {
 			switch (bike->m_bikeAnimType) {
 			case ASSOCGRP_BIKE_VESPA:
@@ -6312,7 +6401,7 @@ CPed::WarpPedToNearEntityOffScreen(CEntity *warpTo)
 
 		if (Abs(zCorrectedPos.z - warpToPos.z) < 3.0f || Abs(zCorrectedPos.z - appropriatePos.z) < 3.0f) {
 			appropriatePos.z = zCorrectedPos.z;
-			if (!TheCamera.IsSphereVisible(appropriatePos, 0.6f, &TheCamera.GetCameraMatrix())
+			if (!TheCamera.IsSphereVisible(appropriatePos, 0.6f)
 				&& CWorld::GetIsLineOfSightClear(appropriatePos, warpToPos, true, true, false, true, false, false, false)
 				&& !CWorld::TestSphereAgainstWorld(appropriatePos, 0.6f, this, true, true, false, true, false, false)) {
 				teleported = true;

@@ -749,7 +749,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CPlayerPed* pPlayerPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPlayerPed);
-		pPlayerPed->m_fArmour = CLAMP(pPlayerPed->m_fArmour + ScriptParams[1], 0.0f, CWorld::Players[ScriptParams[0]].m_nMaxArmour);
+		pPlayerPed->m_fArmour = Clamp(pPlayerPed->m_fArmour + ScriptParams[1], 0.0f, CWorld::Players[ScriptParams[0]].m_nMaxArmour);
 		return 0;
 	}
 	case COMMAND_ADD_ARMOUR_TO_CHAR:
@@ -757,7 +757,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
 		script_assert(pPed);
-		pPed->m_fArmour = CLAMP(pPed->m_fArmour + ScriptParams[1], 0.0f, 100.0f);
+		pPed->m_fArmour = Clamp(pPed->m_fArmour + ScriptParams[1], 0.0f, 100.0f);
 		return 0;
 	}
 	case COMMAND_OPEN_GARAGE:
@@ -811,7 +811,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 							flags = pPed->m_pMyVehicle->m_nNumMaxPassengers != 0 ? CAR_DOOR_FLAG_LF : CAR_DOOR_FLAG_LF | CAR_DOOR_FLAG_LR;
 							break;
 						case CAR_DOOR_LR:
-							flags = pPed->m_pMyVehicle->m_nNumMaxPassengers != 0 ? CAR_DOOR_FLAG_RF : CAR_DOOR_FLAG_LF | CAR_DOOR_FLAG_LR;
+							flags = pPed->m_pMyVehicle->m_nNumMaxPassengers != 0 ? CAR_DOOR_FLAG_LR : CAR_DOOR_FLAG_LF | CAR_DOOR_FLAG_LR;
 							break;
 						case CAR_DOOR_RF:
 							flags = CAR_DOOR_FLAG_RF;
@@ -1398,7 +1398,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 		DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-		DMAudio.PlayFrontEndTrack(ScriptParams[0] + STREAMED_SOUND_MISSION_COMPLETED - 1, 0);
+		DMAudio.PlayFrontEndTrack(ScriptParams[0] + STREAMED_SOUND_MISSION_COMPLETED - 1, FALSE);
 		return 0;
 	}
 	case COMMAND_CLEAR_AREA:

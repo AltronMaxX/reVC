@@ -40,8 +40,8 @@ bool CPopulation::ms_bGivePedsWeapons;
 int32 CPopulation::m_AllRandomPedsThisType = -1;
 float CPopulation::PedDensityMultiplier = 1.0f;
 uint32 CPopulation::ms_nTotalMissionPeds;
-int32 CPopulation::MaxNumberOfPedsInUse = 25;
-int32 CPopulation::MaxNumberOfPedsInUseInterior = 40;
+int32 CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS;
+int32 CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR;
 uint32 CPopulation::ms_nNumCivMale;
 uint32 CPopulation::ms_nNumCivFemale;
 uint32 CPopulation::ms_nNumCop;
@@ -413,7 +413,7 @@ CPopulation::PedCreationDistMultiplier()
 		return 1.0f;
 
 	float vehSpeed = veh->m_vecMoveSpeed.Magnitude2D();
-	return CLAMP(vehSpeed - 0.1f + 1.0f, 1.0f, 1.5f);
+	return Clamp(vehSpeed - 0.1f + 1.0f, 1.0f, 1.5f);
 }
 
 CPed*
@@ -565,7 +565,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 
 	// Yeah, float
 	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * PedDensityMultiplier
-	* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult;
+		* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult;
 	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
 
 	if (ms_nTotalPeds < maxPossiblePedsForArea || addCop) {
@@ -911,10 +911,9 @@ CPopulation::MoveCarsAndPedsOutOfAbandonedZones()
 void
 CPopulation::ConvertAllObjectsToDummyObjects()
 {
-	int poolSize = CPools::GetObjectPool()->GetSize();
-	for (int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-
-		CObject *obj = CPools::GetObjectPool()->GetSlot(poolIndex);
+	uint32 i = CPools::GetObjectPool()->GetSize();
+	while(i--) {
+		CObject *obj = CPools::GetObjectPool()->GetSlot(i);
 		if (obj) {
 			if (obj->CanBeDeleted())
 				ConvertToDummyObject(obj);
@@ -980,26 +979,29 @@ CPopulation::TestSafeForRealObject(CDummyObject *dummy)
 {
 	CPtrNode *ptrNode;
 	CColModel *dummyCol = dummy->GetColModel();
-	float colRadius = dummy->GetBoundRadius();
-	CVector colCentre = dummy->GetBoundCentre();
 
-	int minX = CWorld::GetSectorIndexX(dummy->GetPosition().x - colRadius);
+	float radius = dummyCol->boundingSphere.radius;
+	int minX = CWorld::GetSectorIndexX(dummy->GetPosition().x - radius);
 	if (minX < 0) minX = 0;
-	int minY = CWorld::GetSectorIndexY(dummy->GetPosition().y - colRadius);
+	int minY = CWorld::GetSectorIndexY(dummy->GetPosition().y - radius);
 	if (minY < 0) minY = 0;
-	int maxX = CWorld::GetSectorIndexX(dummy->GetPosition().x + colRadius);
+	int maxX = CWorld::GetSectorIndexX(dummy->GetPosition().x + radius);
 #ifdef FIX_BUGS
 	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
 #else
 	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X;
 #endif
 
-	int maxY = CWorld::GetSectorIndexY(dummy->GetPosition().y + colRadius);
+	int maxY = CWorld::GetSectorIndexY(dummy->GetPosition().y + radius);
 #ifdef FIX_BUGS
 	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
 #else
 	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y;
 #endif
+
+	float colRadius = dummy->GetBoundRadius();
+	CVUVECTOR colCentre;
+	dummy->GetBoundCentre(colCentre);
 
 	static CColPoint aTempColPoints[MAX_COLLISION_POINTS];
 
@@ -1093,6 +1095,7 @@ CPopulation::ManagePopulation(void)
 			}
 
 			float dist = (ped->GetPosition() - playerPos).Magnitude2D();
+
 			bool pedIsFarAway = false;
 
 			if (ped->IsGangMember())
@@ -1103,8 +1106,9 @@ CPopulation::ManagePopulation(void)
 			if (PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier) < dist ||
 				(!ped->bCullExtraFarAway && PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier < dist)) {
 				pedIsFarAway = true;
-
-				} else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) {
+			}
+#ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
+			else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) {
 				if (CTimer::GetTimeInMilliseconds() > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
 					if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
 						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
@@ -1116,7 +1120,9 @@ CPopulation::ManagePopulation(void)
 					}
 				}
 						
-			} else {
+			}
+#endif
+			else {
 				ped->m_nExtendedRangeTimer = ped->m_nPedType == PEDTYPE_COP ? CTimer::GetTimeInMilliseconds() + 10000 : CTimer::GetTimeInMilliseconds() + 4000;
 			}
 
@@ -1435,7 +1441,7 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 	CPed *createdPeds[5];
 
 	if (!TheCamera.IsSphereVisible(coors, 3.0f) || MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
-		if (CPedPlacement::IsPositionClearForPed(coors, 3.0f, -1, 0)) {
+		if (CPedPlacement::IsPositionClearForPed(coors, 3.0f, -1, nil)) {
 			bool leaderFoundGround;
 			float leaderGroundZ = CWorld::FindGroundZFor3DCoord(coors.x, coors.y, coors.z, &leaderFoundGround) + 1.0f;
 			if (leaderFoundGround) {
@@ -1515,11 +1521,14 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
 		MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
 
-		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, 0)) {
+		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, nil)) {
 			int pedIdx = 0;
 			CVector leaderPos;
+#ifdef FIX_BUGS
+			bool createLeader = true;
+#endif
 
-			for (int i = 0; i < pedAmount; i++) {	
+			for (int i = 0; i < pedAmount; i++) {
 				float angleMult = i + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
 				float randomR = circleR + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f) * circleR;
 				float xOffset = randomR * Cos(angleMult * circleSector);
@@ -1528,14 +1537,16 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 				float groundZ = CWorld::FindGroundZFor3DCoord(xOffset + coors.x, yOffset + coors.y, coors.z + 1.0, &foundGround) + 1.0f;
 				if (foundGround) {
 					CVector finalPos(coors.x + xOffset, coors.y + yOffset, coors.z > groundZ ? coors.z : groundZ);
-
-					if (i == 0)
+#ifndef FIX_BUGS
+					const bool createLeader = i == 0;
+#endif
+					if (createLeader)
 						leaderPos = finalPos;
 
 					int gangModel = ChooseGangOccupation(pedType - PEDTYPE_GANG1);
 					if (((CPedModelInfo*)CModelInfo::GetModelInfo(gangModel))->GetRwObject()) {
 						CEntity* obstacles[6] = { nil, nil, nil, nil, nil, nil };
-						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetModelInfo(gangModel)->GetColModel()->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetColModel(gangModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
 						bool foundObstacle = false;
 						for (int m = 0; m < ARRAY_SIZE(obstacles); m++) {
 							CEntity* obstacle = obstacles[m];
@@ -1552,11 +1563,11 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 								}
 							}
 						}
-						bool memberCanSeeLeader = i == 0 ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
+						bool memberCanSeeLeader = createLeader ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
 
-						bool notTooCloseToLeader = i == 0 ? true : !(Abs(finalPos.z - leaderPos.z) < 1.0f);
+						bool notTooHighFromLeader = createLeader ? true : !(Abs(finalPos.z - leaderPos.z) >= 1.0f);
 
-						if (!foundObstacle && memberCanSeeLeader && notTooCloseToLeader) {
+						if (!foundObstacle && memberCanSeeLeader && notTooHighFromLeader) {
 							CPed* newPed = AddPed(pedType, gangModel, finalPos);
 							if (newPed) {
 								createdPeds[pedIdx++] = newPed;
@@ -1569,6 +1580,9 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 									newPed->bCanAttackPlayerWithCops = true;
 
 								CVisibilityPlugins::SetClumpAlpha(newPed->GetClump(), 0);
+#ifdef FIX_BUGS
+								createLeader = false;
+#endif
 							}
 							// No.
 #ifndef FIX_BUGS
@@ -1616,7 +1630,7 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 		return;
 
 	if (!TheCamera.IsSphereVisible(coors, 1.5f) || MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
-		if (CPedPlacement::IsPositionClearForPed(coors, CModelInfo::GetModelInfo(manModel)->GetColModel()->boundingSphere.radius, -1, 0)) {
+		if (CPedPlacement::IsPositionClearForPed(coors, CModelInfo::GetColModel(manModel)->boundingSphere.radius, -1, nil)) {
 			bool manFoundGround;
 			float manGroundZ = CWorld::FindGroundZFor3DCoord(coors.x, coors.y, coors.z, &manFoundGround) + 1.0f;
 			if (manFoundGround) {
@@ -1650,7 +1664,7 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 									CEntity* obstacles[3];
 									memcpy(obstacles, gCoupleObstacles, sizeof(gCoupleObstacles));
 
-									CPedPlacement::IsPositionClearForPed(womanPos, CModelInfo::GetModelInfo(womanModel)->GetColModel()->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+									CPedPlacement::IsPositionClearForPed(womanPos, CModelInfo::GetColModel(womanModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
 									for (int i = 0; i < ARRAY_SIZE(obstacles); i++) {
 										CEntity *obstacle = obstacles[i];
 										if (obstacle) {
@@ -1698,9 +1712,12 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
 		MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
 
-		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, 0)) {
+		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, nil)) {
 			int pedIdx = 0;
 			CVector leaderPos;
+#ifdef FIX_BUGS
+			bool createLeader = true;
+#endif
 
 			for (int i = 0; i < pedAmount; i++) {	
 				float angleMult = i + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
@@ -1712,14 +1729,18 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 				if (foundGround) {
 					CVector finalPos(coors.x + xOffset, coors.y + yOffset, coors.z > groundZ ? coors.z : groundZ);
 
-					if (i == 0)
+#ifndef FIX_BUGS
+					const bool createLeader = i == 0;
+#endif
+					if (createLeader)
 						leaderPos = finalPos;
 
 					int pedModel = ChooseCivilianOccupation(group);
 					CPedModelInfo *pedModelInfo = (CPedModelInfo*)CModelInfo::GetModelInfo(pedModel);
+
 					if (pedModelInfo->GetRwObject()) {
 						CEntity* obstacles[6] = { nil, nil, nil, nil, nil, nil };
-						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetModelInfo(pedModel)->GetColModel()->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetColModel(pedModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
 						bool foundObstacle = false;
 						for (int m = 0; m < ARRAY_SIZE(obstacles); m++) {
 							CEntity* obstacle = obstacles[m];
@@ -1736,11 +1757,11 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 								}
 							}
 						}
-						bool memberCanSeeLeader = i == 0 ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
+						bool memberCanSeeLeader = createLeader ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
 
-						bool notTooCloseToLeader = i == 0 ? true : !(Abs(finalPos.z - leaderPos.z) < 1.0f);
+						bool notTooHighFromLeader = createLeader ? true : !(Abs(finalPos.z - leaderPos.z) >= 1.0f);
 
-						if (!foundObstacle && memberCanSeeLeader && notTooCloseToLeader) {
+						if (!foundObstacle && memberCanSeeLeader && notTooHighFromLeader) {
 							CPed *newPed = AddPed(pedModelInfo->m_pedType, pedModel, finalPos);
 							if (newPed) {
 								createdPeds[pedIdx++] = newPed;
@@ -1751,6 +1772,9 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 								newPed->m_fRotationCur = angle;
 								newPed->m_fearFlags = 0;
 								CVisibilityPlugins::SetClumpAlpha(newPed->GetClump(), 0);
+#ifdef FIX_BUGS
+								createLeader = false;
+#endif
 							}
 							// No.
 #ifndef FIX_BUGS

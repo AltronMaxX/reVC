@@ -60,7 +60,7 @@ enum eCarLock {
 	CARLOCK_LOCKED_PLAYER_INSIDE,
 	CARLOCK_LOCKED_INITIALLY,
 	CARLOCK_FORCE_SHUT_DOORS,
-	CARLOCK_SKIP_SHUT_DOORS
+	CARLOCK_LOCKED_BUT_CAN_BE_DAMAGED
 };
 
 enum eBombType
@@ -276,12 +276,12 @@ public:
 	int8 m_comedyControlState;
 	CStoredCollPoly m_aCollPolys[2];     // poly which is under front/rear part of car
 	float m_fSteerInput;
-	uint8 m_vehType;
+	eVehicleType m_vehType;
 
-	static void *operator new(size_t);
-	static void *operator new(size_t sz, int slot);
-	static void operator delete(void*, size_t);
-	static void operator delete(void*, int);
+	static void *operator new(size_t) throw();
+	static void *operator new(size_t sz, int slot) throw();
+	static void operator delete(void*, size_t) throw();
+	static void operator delete(void*, int) throw();
 
 	CVehicle(void) {}	// FAKE
 	CVehicle(uint8 CreatedBy);

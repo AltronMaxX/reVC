@@ -18,7 +18,7 @@ CVarConsole::Initialise()
 }
 
 void
-CVarConsole::Add(const char *text, int8 *pVal, uint8 step, int8 min, int8 max, bool8 isVar)
+CVarConsole::Add(char *text, int8 *pVal, uint8 step, int8 min, int8 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -37,7 +37,7 @@ CVarConsole::Add(const char *text, int8 *pVal, uint8 step, int8 min, int8 max, b
 }
 
 void
-CVarConsole::Add(const char *text, int16 *pVal, uint16 step, int16 min, int16 max, bool8 isVar)
+CVarConsole::Add(char *text, int16 *pVal, uint16 step, int16 min, int16 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -56,7 +56,7 @@ CVarConsole::Add(const char *text, int16 *pVal, uint16 step, int16 min, int16 ma
 }
 
 void
-CVarConsole::Add(const char *text, int32 *pVal, uint32 step, int32 min, int32 max, bool8 isVar)
+CVarConsole::Add(char *text, int32 *pVal, uint32 step, int32 min, int32 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -75,7 +75,7 @@ CVarConsole::Add(const char *text, int32 *pVal, uint32 step, int32 min, int32 ma
 }
 
 void
-CVarConsole::Add(const char *text, int64 *pVal, uint64 step, int64 min, int64 max, bool8 isVar)
+CVarConsole::Add(char *text, int64 *pVal, uint64 step, int64 min, int64 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -94,7 +94,7 @@ CVarConsole::Add(const char *text, int64 *pVal, uint64 step, int64 min, int64 ma
 }
 
 void
-CVarConsole::Add(const char *text, uint8 *pVal, uint8 step, int8 min, int8 max, bool8 isVar)
+CVarConsole::Add(char *text, uint8 *pVal, uint8 step, int8 min, int8 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -113,7 +113,7 @@ CVarConsole::Add(const char *text, uint8 *pVal, uint8 step, int8 min, int8 max, 
 }
 
 void
-CVarConsole::Add(const char *text, uint16 *pVal, uint16 step, int16 min, int16 max, bool8 isVar)
+CVarConsole::Add(char *text, uint16 *pVal, uint16 step, int16 min, int16 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -132,7 +132,7 @@ CVarConsole::Add(const char *text, uint16 *pVal, uint16 step, int16 min, int16 m
 }
 
 void
-CVarConsole::Add(const char *text, uint32 *pVal, uint32 step, int32 min, int32 max, bool8 isVar)
+CVarConsole::Add(char *text, uint32 *pVal, uint32 step, int32 min, int32 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -151,7 +151,7 @@ CVarConsole::Add(const char *text, uint32 *pVal, uint32 step, int32 min, int32 m
 }
 
 void
-CVarConsole::Add(const char *text, uint64 *pVal, uint64 step, int64 min, int64 max, bool8 isVar)
+CVarConsole::Add(char *text, uint64 *pVal, uint64 step, int64 min, int64 max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -170,7 +170,7 @@ CVarConsole::Add(const char *text, uint64 *pVal, uint64 step, int64 min, int64 m
 }
 
 void
-CVarConsole::Add(const char *text, float *pVal, float step, float min, float max, bool8 isVar)
+CVarConsole::Add(char *text, float *pVal, float step, float min, float max, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -189,7 +189,7 @@ CVarConsole::Add(const char *text, float *pVal, float step, float min, float max
 }
 
 void
-CVarConsole::Add(const char *text, bool *pVal, bool8 isVar)
+CVarConsole::Add(char *text, bool *pVal, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -205,7 +205,7 @@ CVarConsole::Add(const char *text, bool *pVal, bool8 isVar)
 }
 
 void
-CVarConsole::Add(const char *text, bool8 *pVal, bool8 isVar)
+CVarConsole::Add(char *text, bool8 *pVal, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -221,7 +221,7 @@ CVarConsole::Add(const char *text, bool8 *pVal, bool8 isVar)
 }
 
 void
-CVarConsole::Add(const char *text, bool16 *pVal, bool8 isVar)
+CVarConsole::Add(char *text, bool16 *pVal, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -237,7 +237,7 @@ CVarConsole::Add(const char *text, bool16 *pVal, bool8 isVar)
 }
 
 void
-CVarConsole::Add(const char *text, bool32 *pVal, bool8 isVar)
+CVarConsole::Add(char *text, bool32 *pVal, bool8 isVar)
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {
@@ -253,7 +253,7 @@ CVarConsole::Add(const char *text, bool32 *pVal, bool8 isVar)
 }
 
 void
-CVarConsole::Add(const char *text, void (*pCallback)(void))
+CVarConsole::Add(char *text, void (*pCallback)(void))
 {
 	int i;
 	for (i = 0; i < m_nCountEntries; i++) {

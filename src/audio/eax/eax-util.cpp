@@ -11,7 +11,7 @@
 #include <math.h>
 
 // Function prototypes used by EAX3ListenerInterpolate
-void CLAMP(EAXVECTOR *eaxVector);
+void Clamp(EAXVECTOR *eaxVector);
 bool CheckEAX3LP(LPEAXLISTENERPROPERTIES lpEAX3LP);
 
 
@@ -123,12 +123,12 @@ bool EAX3ListenerInterpolate(LPEAXLISTENERPROPERTIES lpStart, LPEAXLISTENERPROPE
 
 	// Reflections Pan
 
-	// To interpolate the vector correctly we need to ensure that both the initial and final vectors vectors are CLAMPed to a length of 1.0f
+	// To interpolate the vector correctly we need to ensure that both the initial and final vectors vectors are clamped to a length of 1.0f
 	StartVector = lpStart->vReflectionsPan;
 	FinalVector = lpFinish->vReflectionsPan;
 
-	CLAMP(&StartVector);
-	CLAMP(&FinalVector);
+	Clamp(&StartVector);
+	Clamp(&FinalVector);
 
 	if (lpStart->vReflectionsPan.x == lpFinish->vReflectionsPan.x)
 		lpResult->vReflectionsPan.x = lpStart->vReflectionsPan.x;
@@ -159,12 +159,12 @@ bool EAX3ListenerInterpolate(LPEAXLISTENERPROPERTIES lpStart, LPEAXLISTENERPROPE
 	
 	// Reverb Pan
 
-	// To interpolate the vector correctly we need to ensure that both the initial and final vectors are CLAMPed to a length of 1.0f	
+	// To interpolate the vector correctly we need to ensure that both the initial and final vectors are clamped to a length of 1.0f	
 	StartVector = lpStart->vReverbPan;
 	FinalVector = lpFinish->vReverbPan;
 
-	CLAMP(&StartVector);
-	CLAMP(&FinalVector);
+	Clamp(&StartVector);
+	Clamp(&FinalVector);
 
 	if (lpStart->vReverbPan.x == lpFinish->vReverbPan.x)
 		lpResult->vReverbPan.x = lpStart->vReverbPan.x;
@@ -232,7 +232,7 @@ bool EAX3ListenerInterpolate(LPEAXLISTENERPROPERTIES lpStart, LPEAXLISTENERPROPE
 	// Flags
 	lpResult->ulFlags = (lpStart->ulFlags & lpFinish->ulFlags);
 
-	// CLAMP Delays
+	// Clamp Delays
 	if (lpResult->flReflectionsDelay > EAXLISTENER_MAXREFLECTIONSDELAY)
 		lpResult->flReflectionsDelay = EAXLISTENER_MAXREFLECTIONSDELAY;
 
@@ -319,10 +319,10 @@ bool CheckEAX3LP(LPEAXLISTENERPROPERTIES lpEAX3LP)
 }
 
 /*
-	CLAMP
-	CLAMPs the length of the vector to 1.0f
+	Clamp
+	Clamps the length of the vector to 1.0f
 */
-void CLAMP(EAXVECTOR *eaxVector)
+void Clamp(EAXVECTOR *eaxVector)
 {
 	float flMagnitude;
 	float flInvMagnitude;

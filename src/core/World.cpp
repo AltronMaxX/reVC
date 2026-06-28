@@ -65,7 +65,7 @@ CWorld::Initialise()
 void
 CWorld::Add(CEntity *ent)
 {
-	if(ent->IsVehicle() || ent->IsPed()) DMAudio.SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, true);
+	if(ent->IsVehicle() || ent->IsPed()) DMAudio.SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, TRUE);
 
 	if(ent->bIsBIGBuilding)
 		ms_bigBuildingsList[ent->m_level].InsertItem(ent);
@@ -80,7 +80,7 @@ CWorld::Add(CEntity *ent)
 void
 CWorld::Remove(CEntity *ent)
 {
-	if(ent->IsVehicle() || ent->IsPed()) DMAudio.SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, false);
+	if(ent->IsVehicle() || ent->IsPed()) DMAudio.SetEntityStatus(((CPhysical *)ent)->m_audioEntityId, FALSE);
 
 	if(ent->bIsBIGBuilding)
 		ms_bigBuildingsList[ent->m_level].RemoveItem(ent);
@@ -365,7 +365,7 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 					colmodel = nil;
 
 			} else if(e->bUsesCollision)
-				colmodel = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel();
+				colmodel = CModelInfo::GetColModel(e->GetModelIndex());
 
 			if(colmodel && CCollision::ProcessLineOfSight(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                              ignoreSeeThrough, ignoreShootThrough))
@@ -399,8 +399,8 @@ CWorld::ProcessVerticalLine(const CVector &point1, float z2, CColPoint &point, C
 	CVector point2(point1.x, point1.y, z2);
 	int secX = GetSectorIndexX(point1.x);
 	int secY = GetSectorIndexY(point1.y);
-	secX = CLAMP(secX, 0, NUMSECTORS_X-1);
-	secY = CLAMP(secY, 0, NUMSECTORS_Y-1);
+	secX = Clamp(secX, 0, NUMSECTORS_X-1);
+	secY = Clamp(secY, 0, NUMSECTORS_Y-1);
 	return ProcessVerticalLineSector(*GetSector(secX, secY),
 	                                 CColLine(point1, point2), point, entity, checkBuildings, checkVehicles,
 	                                 checkPeds, checkObjects, checkDummies, ignoreSeeThrough, poly);
@@ -465,7 +465,7 @@ CWorld::ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CCol
 		if(e->m_scanCode != GetCurrentScanCode() && e->bUsesCollision) {
 			e->m_scanCode = GetCurrentScanCode();
 
-			colmodel = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel();
+			colmodel = CModelInfo::GetColModel(e->GetModelIndex());
 			if(CCollision::ProcessVerticalLine(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                   ignoreSeeThrough, false, poly))
 				entity = e;
@@ -666,7 +666,7 @@ CWorld::GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bo
 
 			if(e != pIgnoreEntity && !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
 
-				colmodel = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel();
+				colmodel = CModelInfo::GetColModel(e->GetModelIndex());
 
 				if(CCollision::TestLineOfSight(line, e->GetMatrix(), *colmodel, ignoreSeeThrough, false))
 					return false;
@@ -971,7 +971,7 @@ CWorld::TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float rad
 				float distance = diff.Magnitude();
 
 				if(e->GetBoundRadius() + radius > distance) {
-					CColModel *eCol = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel();
+					CColModel *eCol = CModelInfo::GetColModel(e->GetModelIndex());
 					int collidedSpheres =
 					    CCollision::ProcessColModels(sphereMat, OurColModel, e->GetMatrix(), *eCol,
 					                                 gaTempSphereColPoints, nil, nil);
@@ -1486,7 +1486,7 @@ CWorld::CallOffChaseForAreaSectorListVehicles(CPtrList &list, float x1, float y1
 				CColModel *pColModel = pVehicle->GetColModel();
 				bool bInsideSphere = false;
 				for(int32 i = 0; i < pColModel->numSpheres; i++) {
-					CVector pos = pVehicle->m_matrix * pColModel->spheres[i].center;
+					CVector pos = pVehicle->GetMatrix() * pColModel->spheres[i].center;
 					float fRadius = pColModel->spheres[i].radius;
 					if(pos.x + fRadius > x1 && pos.x - fRadius < x2 && pos.y + fRadius > y1 &&
 					   pos.y - fRadius < y2)
@@ -1803,7 +1803,7 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 		position.z = FindGroundZFor3DCoord(position.x, position.y,
 			position.z + fHeight, nil) -
 			fBoundingBoxMinZ;
-		pEntity->m_matrix.UpdateRW();
+		pEntity->GetMatrix().UpdateRW();
 		pEntity->UpdateRwFrame();
 	} else if(IsLightThatNeedsRepositioning(modelId)) {
 		CVector position = pEntity->GetMatrix().GetPosition();

@@ -100,7 +100,7 @@ CPlayerInfo::Clear(void)
 void
 CPlayerInfo::Process(void)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -299,7 +299,7 @@ CPlayerInfo::Process(void)
 		m_fRoadDensity = ThePaths.CalcRoadDensity(playerPos.x, playerPos.y);
 	}
 
-	m_fRoadDensity = CLAMP(m_fRoadDensity, 0.5f, 1.45f);
+	m_fRoadDensity = Clamp(m_fRoadDensity, 0.5f, 1.45f);
 
 	// Because vehicle enter/exit use same key binding.
 	bool enterOrExitVeh;
@@ -652,7 +652,7 @@ CPlayerInfo::GetPos()
 CVector
 FindPlayerCoors(void)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if (CReplay::IsPlayingBack())
 		return TheCamera.GetPosition();
 #endif
@@ -666,7 +666,7 @@ FindPlayerCoors(void)
 const CVector &
 FindPlayerSpeed(void)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	static CVector vecTmpVector(0.0f, 0.0f, 0.0f);
 	if (CReplay::IsPlayingBack())
 		return vecTmpVector;
@@ -714,7 +714,7 @@ FindPlayerPed(void)
 const CVector &
 FindPlayerCentreOfWorld(int32 player)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if(CReplay::IsPlayingBack()) return TheCamera.GetPosition();
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
@@ -726,7 +726,7 @@ FindPlayerCentreOfWorld(int32 player)
 const CVector &
 FindPlayerCentreOfWorld_NoSniperShift(void)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if (CReplay::IsPlayingBack()) return TheCamera.GetPosition();
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();

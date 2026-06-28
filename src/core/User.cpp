@@ -124,7 +124,7 @@ CUserDisplay::Init()
 void
 CUserDisplay::Process()
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if (CReplay::IsPlayingBack())
 		return;
 #endif

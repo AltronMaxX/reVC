@@ -23,6 +23,7 @@
 #ifdef FIX_BUGS
 #include "Replay.h"
 #endif
+#include "SaveBuf.h"
 #include "Script.h"
 #include "Shadows.h"
 #include "SpecialFX.h"
@@ -33,6 +34,7 @@
 #include "Hud.h"
 #include "Messages.h"
 #include "Streaming.h"
+#include "SaveBuf.h"
 
 #ifdef COMPATIBLE_SAVES
 #define PICKUPS_SAVE_SIZE 0x4440
@@ -363,7 +365,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			}
 		}
 
-		if(isPickupTouched) {
+		if (isPickupTouched) {
 			eWeaponType weaponType = CPickups::WeaponForModel(m_pObject->GetModelIndex());
 			if (weaponType < WEAPONTYPE_TOTALWEAPONS && CDarkel::FrenzyOnGoing()) {
 				isPickupTouched = false;
@@ -1014,8 +1016,7 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		entity->bDoNotRender = CTheScripts::IsPlayerOnAMission() || CDarkel::FrenzyOnGoing() || !CGame::nastyGame;
 
 	if (!entity->bDoNotRender) {
-		float s = Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800));
-		float modifiedSin = 0.3f * (s + 1.0f);
+		float modifiedSin = 0.3f * (Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800)) + 1.0f);
 
 #ifdef FIX_BUGS
 		int16 colorId = 0;
@@ -1155,7 +1156,20 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		if (model == MI_MINIGUN || model == MI_MINIGUN2)
 			scale = 1.2f;
 
-		entity->GetMatrix().SetRotateZOnlyScaled((float)(CTimer::GetTimeInMilliseconds() & 0x7FF) * DEGTORAD(360.0f / 0x800), scale);
+		float angle = (float)(CTimer::GetTimeInMilliseconds() & 0x7FF) * DEGTORAD(360.0f / 0x800);
+		float c = Cos(angle) * scale;
+		float s = Sin(angle) * scale;
+
+		// we know from SA they were setting each field manually like this
+		entity->GetMatrix().rx = c;
+		entity->GetMatrix().ry = s;
+		entity->GetMatrix().rz = 0.0f;
+		entity->GetMatrix().fx = -s;
+		entity->GetMatrix().fy = c;
+		entity->GetMatrix().fz = 0.0f;
+		entity->GetMatrix().ux = 0.0f;
+		entity->GetMatrix().uy = 0.0f;
+		entity->GetMatrix().uz = scale;
 
 		if (entity->GetModelIndex() == MI_MINIGUN2) {
 			CMatrix matrix1;
@@ -1432,9 +1446,9 @@ CPickups::RemoveUnnecessaryPickups(const CVector& center, float radius)
 void
 CPickups::Load(uint8 *buf, uint32 size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 
-	for(int32 i = 0; i < NUMPICKUPS; i++) {
+	for (int32 i = 0; i < NUMPICKUPS; i++) {
 #ifdef COMPATIBLE_SAVES
 		ReadSaveBuf(&aPickUps[i].m_vecPos, buf);
 		ReadSaveBuf(&aPickUps[i].m_fRevenue, buf);
@@ -1458,14 +1472,14 @@ CPickups::Load(uint8 *buf, uint32 size)
 		SkipSaveBuf(buf, 3);
 
 		aPickUps[i].m_pObject = aPickUps[i].m_eType != PICKUP_NONE && tmp_pObject != 0 ? CPools::GetObjectPool()->GetSlot(tmp_pObject - 1) : nil;
-		aPickUps[i].m_pExtraObject =
-		    aPickUps[i].m_eType != PICKUP_NONE && tmp_pExtraObject != 0 ? CPools::GetObjectPool()->GetSlot(tmp_pExtraObject - 1) : nil;
+		aPickUps[i].m_pExtraObject = aPickUps[i].m_eType != PICKUP_NONE && tmp_pExtraObject != 0 ? CPools::GetObjectPool()->GetSlot(tmp_pExtraObject - 1) : nil;
 #else
 		ReadSaveBuf(&aPickUps[i], buf);
 
-		if(aPickUps[i].m_eType != PICKUP_NONE) {
-			if(aPickUps[i].m_pObject != nil) aPickUps[i].m_pObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pObject - 1);
-			if(aPickUps[i].m_pExtraObject != nil)
+		if (aPickUps[i].m_eType != PICKUP_NONE) {
+			if (aPickUps[i].m_pObject != nil)
+				aPickUps[i].m_pObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pObject - 1);
+			if (aPickUps[i].m_pExtraObject != nil)
 				aPickUps[i].m_pExtraObject = CPools::GetObjectPool()->GetSlot((uintptr)aPickUps[i].m_pExtraObject - 1);
 		}
 #endif
@@ -1475,9 +1489,10 @@ CPickups::Load(uint8 *buf, uint32 size)
 	SkipSaveBuf(buf, 2);
 	NumMessages = 0;
 
-	for(uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++) ReadSaveBuf(&aPickUpsCollected[i], buf);
+	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
+		ReadSaveBuf(&aPickUpsCollected[i], buf);
 
-	VALIDATESAVEBUF(size)
+VALIDATESAVEBUF(size)
 }
 
 void
@@ -1486,19 +1501,15 @@ CPickups::Save(uint8 *buf, uint32 *size)
 	*size = PICKUPS_SAVE_SIZE;
 	*size += sizeof(uint16) + sizeof(uint16) + sizeof(aPickUpsCollected);
 
-	INITSAVEBUF
+INITSAVEBUF
 
-	for(int32 i = 0; i < NUMPICKUPS; i++) {
+	for (int32 i = 0; i < NUMPICKUPS; i++) {
 #ifdef COMPATIBLE_SAVES
 		WriteSaveBuf(buf, aPickUps[i].m_vecPos);
 		WriteSaveBuf(buf, aPickUps[i].m_fRevenue);
-		int32 tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pObject != nil
-		                ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pObject) + 1
-		                : 0;
+		int32 tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pObject != nil ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pObject) + 1 : 0;
 		WriteSaveBuf(buf, tmp);
-		tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pExtraObject != nil
-		          ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pExtraObject) + 1
-		          : 0;
+		tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pExtraObject != nil ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aPickUps[i].m_pExtraObject) + 1 : 0;
 		WriteSaveBuf(buf, tmp);
 		WriteSaveBuf(buf, aPickUps[i].m_nQuantity);
 		WriteSaveBuf(buf, aPickUps[i].m_nTimer);
@@ -1510,17 +1521,17 @@ CPickups::Save(uint8 *buf, uint32 *size)
 		WriteSaveBuf(buf, aPickUps[i].m_eType);
 		WriteSaveBuf(buf, aPickUps[i].m_bRemoved);
 		uint8 flags = 0;
-		if(aPickUps[i].m_bWasAmmoCollected) flags |= BIT(0);
-		if(aPickUps[i].m_bWasControlMessageShown) flags |= BIT(1);
+		if (aPickUps[i].m_bWasAmmoCollected) flags |= BIT(0);
+		if (aPickUps[i].m_bWasControlMessageShown) flags |= BIT(1);
 		WriteSaveBuf(buf, flags);
 		ZeroSaveBuf(buf, 3);
 #else
 		CPickup *buf_pickup = WriteSaveBuf(buf, aPickUps[i]);
-		if(buf_pickup->m_eType != PICKUP_NONE) {
-			if(buf_pickup->m_pObject != nil)
-				buf_pickup->m_pObject = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pObject) + 1);
-			if(buf_pickup->m_pExtraObject != nil)
-				buf_pickup->m_pExtraObject = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pExtraObject) + 1);
+		if (buf_pickup->m_eType != PICKUP_NONE) {
+			if (buf_pickup->m_pObject != nil)
+				buf_pickup->m_pObject = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pObject) + 1);
+			if (buf_pickup->m_pExtraObject != nil)
+				buf_pickup->m_pExtraObject = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(buf_pickup->m_pExtraObject) + 1);
 		}
 #endif
 	}
@@ -1528,12 +1539,11 @@ CPickups::Save(uint8 *buf, uint32 *size)
 	WriteSaveBuf(buf, CollectedPickUpIndex);
 	WriteSaveBuf(buf, (uint16)0); // possibly was NumMessages
 
-	for(uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++) 
+	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
 		WriteSaveBuf(buf, aPickUpsCollected[i]);
 
-	VALIDATESAVEBUF(*size)
+VALIDATESAVEBUF(*size)
 }
-
 
 void
 CPacManPickup::Update()

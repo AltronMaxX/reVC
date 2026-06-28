@@ -84,6 +84,7 @@ public:
 	// All actually unused
 	static bool DefaultVisibilityCB(RpClump *clump);
 	static bool FrustumSphereCB(RpClump *clump);
+	static bool MloVisibilityCB(RpClump *clump);
 	static bool VehicleVisibilityCB(RpClump *clump);
 	static bool VehicleVisibilityCB_BigVehicle(RpClump *clump);
 
@@ -104,6 +105,7 @@ public:
 	static CSimpleModelInfo *GetAtomicModelInfo(RpAtomic *atomic);
 	static void SetAtomicFlag(RpAtomic*, int);
 	static void ClearAtomicFlag(RpAtomic*, int);
+	static void SetAtomicId(RpAtomic *atomic, int);
 	static int GetAtomicId(RpAtomic *atomic);
 	static void SetAtomicRenderCallback(RpAtomic*, RpAtomicCallBackRender);
 
@@ -127,15 +129,16 @@ public:
 	                                  int32 offset, int32 len);
 	static int32 ms_framePluginOffset;
 
-	// Not actually used
 	struct ClumpExt
 	{
 		ClumpVisibilityCB visibilityCB;
 		int alpha;
 	};
 	static void SetClumpModelInfo(RpClump*, CClumpModelInfo*);
+	static CClumpModelInfo *GetClumpModelInfo(RpClump*);
 	static void SetClumpAlpha(RpClump*, int);
 	static int GetClumpAlpha(RpClump*);
+	static bool IsClumpVisible(RpClump*);
 
 	static void *ClumpConstructor(void *object, int32 offset, int32 len);
 	static void *ClumpDestructor(void *object, int32 offset, int32 len);

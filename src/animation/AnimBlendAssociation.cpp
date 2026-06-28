@@ -223,7 +223,7 @@ CAnimBlendAssociation::UpdateBlend(float timeDelta)
 	}
 
 	if(blendAmount > 1.0f){
-		// Maximally faded in, CLAMP values
+		// Maximally faded in, clamp values
 		blendAmount = 1.0f;
 		blendDelta = Min(0.0f, blendDelta);
 	}

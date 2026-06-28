@@ -46,7 +46,14 @@ CStinger::Init(CPed *pPed)
 
 	pOwner = pPed;
 	for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
-		pSpikes[i] = new CStingerSegment;
+		pSpikes[i] = new CStingerSegment();
+#ifdef FIX_BUGS
+		if (!pSpikes[i]) {
+			// Abort!! Pool is full
+			Remove();
+			return;
+		}
+#endif
 		pSpikes[i]->bUsesCollision = false;
 	}
 	bIsDeployed = true;
@@ -75,10 +82,19 @@ CStinger::Remove()
 
 	for (int32 i = 0; i < NUM_STINGER_SEGMENTS; i++) {
 		CStingerSegment *spikeSegment = pSpikes[i];
+
+#ifdef FIX_BUGS
+		if (spikeSegment) {
+			CWorld::Remove(spikeSegment);
+			delete spikeSegment;
+			pSpikes[i] = nil;
+		}
+#else
 		if (spikeSegment->m_entryInfoList.first != nil)
 			spikeSegment->bRemoveFromWorld = true;
 		else
 			delete spikeSegment;
+#endif
 	}
 	bIsDeployed = false;
 }
@@ -86,9 +102,15 @@ CStinger::Remove()
 void
 CStinger::Deploy(CPed *pPed)
 {
+	// So total number of stingers allowed at the same time is 2, each by different CCopPed.
 	if (NumOfStingerSegments < NUM_STINGER_SEGMENTS*2 && !pPed->bInVehicle && pPed->IsPedInControl()) {
 		if (!bIsDeployed && RpAnimBlendClumpGetAssociation(pPed->GetClump(), ANIM_STD_THROW_UNDER) == nil) {
 			Init(pPed);
+#ifdef FIX_BUGS
+			// Above call won't set it to true no more when object pool is full
+			if (!bIsDeployed)
+				return;
+#endif
 			pPed->SetPedState(PED_DEPLOY_STINGER);
 			CAnimManager::AddAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_THROW_UNDER);
 		}
@@ -161,6 +183,7 @@ CStinger::CheckForBurstTyres()
 	}
 }
 
+// Only called when bIsDeployed
 void
 CStinger::Process()
 {
@@ -197,7 +220,7 @@ CStinger::Process()
 			float degangle = progress * ARRAY_SIZE(m_vPositions);
 			float angle1 = m_fMax_Z + DEGTORAD(degangle);
 			float angle2 = m_fMax_Z - DEGTORAD(degangle);
-			int pos = CLAMP(degangle, 0, ARRAY_SIZE(m_vPositions)-1);
+			int pos = Clamp(degangle, 0, ARRAY_SIZE(m_vPositions)-1);
 
 			CVector2D pos2d = m_vPositions[pos];
 			CVector pos3d = m_vPos;
@@ -226,7 +249,11 @@ CStinger::Process()
 		break;
 	case STINGERSTATE_REMOVE:
 		Remove();
+#ifdef FIX_BUGS
+		return;
+#else
 		break;
+#endif
 	}
 	CheckForBurstTyres();
 }

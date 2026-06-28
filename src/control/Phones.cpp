@@ -13,6 +13,7 @@
 #include "RpAnimBlend.h"
 #include "AnimBlendAssociation.h"
 #include "soundlist.h"
+#include "SaveBuf.h"
 #ifdef FIX_BUGS
 #include "Replay.h"
 #endif
@@ -43,7 +44,7 @@ CPed *CPhoneInfo::pCallBackPed; // ped who picking up the phone (reset after pic
 void
 CPhoneInfo::Update(void)
 {
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
@@ -220,7 +221,9 @@ INITSAVEBUF
 #else
 		ReadSaveBuf(&m_aPhones[i], buf);
 		// It's saved as building pool index in save file, convert it to true entity
-		if(m_aPhones[i].m_pEntity) { m_aPhones[i].m_pEntity = CPools::GetBuildingPool()->GetSlot((uintptr)m_aPhones[i].m_pEntity - 1); }
+		if (m_aPhones[i].m_pEntity) {
+			m_aPhones[i].m_pEntity = CPools::GetBuildingPool()->GetSlot((uintptr)m_aPhones[i].m_pEntity - 1);
+		}
 #endif
 	}
 VALIDATESAVEBUF(size)
@@ -316,7 +319,7 @@ void
 CPhoneInfo::Save(uint8 *buf, uint32 *size)
 {
 	*size = PHONEINFO_SAVE_SIZE;
-	INITSAVEBUF
+INITSAVEBUF
 	WriteSaveBuf(buf, m_nMax);
 	WriteSaveBuf(buf, m_nScriptPhonesMax);
 	for(int phoneId = 0; phoneId < NUMPHONES; phoneId++) {
@@ -325,24 +328,22 @@ CPhoneInfo::Save(uint8 *buf, uint32 *size)
 		ZeroSaveBuf(buf, 6 * 4);
 		WriteSaveBuf(buf, m_aPhones[phoneId].m_repeatedMessagePickupStart);
 		// Convert entity pointer to building pool index while saving
-		int32 tmp =
-		    m_aPhones[phoneId].m_pEntity ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding *)m_aPhones[phoneId].m_pEntity) + 1 : 0;
+		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
 		WriteSaveBuf(buf, tmp);
 		WriteSaveBuf(buf, m_aPhones[phoneId].m_nState);
 		WriteSaveBuf(buf, m_aPhones[phoneId].m_visibleToCam);
 		ZeroSaveBuf(buf, 3);
 #else
-		CPhone *phone = WriteSaveBuf(buf, m_aPhones[phoneId]);
+		CPhone* phone = WriteSaveBuf(buf, m_aPhones[phoneId]);
 
 		// Convert entity pointer to building pool index while saving
-		if(phone->m_pEntity) {
-			phone->m_pEntity = (CEntity *)(CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding *)phone->m_pEntity) + 1);
+		if (phone->m_pEntity) {
+			phone->m_pEntity = (CEntity*) (CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)phone->m_pEntity) + 1);
 		}
 #endif
 	}
-	VALIDATESAVEBUF(*size)
+VALIDATESAVEBUF(*size)
 }
-
 
 void
 CPhoneInfo::Shutdown(void)

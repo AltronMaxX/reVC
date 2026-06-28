@@ -345,13 +345,27 @@ CPed::SetAttack(CEntity *victim)
 
 		if (m_pLookTarget) {
 			SetAimFlag(m_pLookTarget);
-		} else if (this == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam()) {
-			SetAimFlag(m_fRotationCur);
-			((CPlayerPed*)this)->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
-		} else if (curWeapon->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM)) {
-			SetAimFlag(m_fRotationCur);
+#ifdef FREE_CAM
+		} else if (this != FindPlayerPed() || !((CPlayerPed*)this)->m_bFreeAimActive) {
+#else
+		} else {
+#endif
+			if (this == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam()) {
+				SetAimFlag(m_fRotationCur);
+				((CPlayerPed*)this)->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
+			} else if (curWeapon->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM)) {
+				SetAimFlag(m_fRotationCur);
+			}
 		}
 	}
+#ifdef FIX_BUGS
+	// fix aiming for flamethrower and minigun while using PC controls
+	else if (curWeapon->m_AnimToPlay == ASSOCGRP_FLAMETHROWER && TheCamera.Cams[0].Using3rdPersonMouseCam() && this == FindPlayerPed())
+	{
+		SetAimFlag(m_fRotationCur);
+		((CPlayerPed*)this)->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
+	}
+#endif
 	if (m_nPedState == PED_ATTACK) {
 		bIsAttacking = true;
 		return;
@@ -813,6 +827,9 @@ CPed::Attack(void)
 		if (!bIsDucking && !GetFireAnimNotDucking(ourWeapon) && ourWeapon->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM))
 			m_pedIK.m_flags |= CPedIK::AIMS_WITH_ARM;
 		else
+#ifdef FREE_CAM
+			if (!IsPlayer() || !((CPlayerPed*)this)->m_bFreeAimActive)
+#endif
 			m_pedIK.m_flags &= ~CPedIK::AIMS_WITH_ARM;
 	}
 
@@ -821,7 +838,7 @@ CPed::Attack(void)
 		|| weaponAnimAssoc->currentTime - weaponAnimAssoc->timeStep > delayBetweenAnimAndFire) {
 
 		if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW) {
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_ATTACK, 0.0f);
+			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
 		} else if (weaponAnimTime <= delayBetweenAnimAndFire || weaponAnimTime - weaponAnimAssoc->timeStep > delayBetweenAnimAndFire || !weaponAnimAssoc->IsRunning()) {
 			if (weaponAnimAssoc->speed < 1.0f)
 				weaponAnimAssoc->speed = 1.0f;
@@ -897,7 +914,7 @@ CPed::Attack(void)
 				CPad::GetPad(0)->StartShake(240, 180);
 			}
 		} else {
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
+			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_ATTACK, 0.0f);
 			if (IsPlayer()) {
 				CPad::GetPad(0)->StartShake(240, 90);
 			}
@@ -1009,6 +1026,15 @@ CPed::Attack(void)
 			weaponAnimAssoc->SetCurrentTime(animLoopEnd);
 			weaponAnimAssoc->flags &= ~ASSOC_RUNNING;
 			SetPointGunAt(m_pPointGunAt);
+#ifdef FREE_CAM
+		} else if (IsPlayer() && ((CPlayerPed*)this)->m_bFreeAimActive && GetWeapon()->m_eWeaponState != WEAPONSTATE_RELOADING) {
+			float limitedCam = CGeneral::LimitRadianAngle(-TheCamera.Orientation);
+			SetLookFlag(limitedCam, true, true);
+			SetAimFlag(limitedCam);
+			SetLookTimer(INT32_MAX);
+			SetPointGunAt(nil);
+			((CPlayerPed*)this)->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
+#endif
 		} else {
 			ClearAimFlag();
 
@@ -1304,7 +1330,7 @@ CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 				if (IsPlayer())
 					moveAssoc->speed = 1.2f;
 
-				m_takeAStepAfterAttack = 0;
+				m_takeAStepAfterAttack = false;
 				m_fightButtonPressure = 0;
 
 			} else if (IsPlayer() && GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED && GetWeapon()->m_eWeaponType != WEAPONTYPE_BRASSKNUCKLE &&
@@ -3915,7 +3941,7 @@ CPed::DriveVehicle(void)
 			targetLRLean = 0.0f;
 			timeBlend = Pow(0.86f, CTimer::GetTimeStep());
 		} else {
-			targetLRLean = CLAMP(bike->m_fLeanLRAngle / bike->pBikeHandling->fFullAnimLean, -1.0f, 1.0f);
+			targetLRLean = Clamp(bike->m_fLeanLRAngle / bike->pBikeHandling->fFullAnimLean, -1.0f, 1.0f);
 			timeBlend = Pow(0.86f, CTimer::GetTimeStep());
 		}
 
@@ -4102,7 +4128,7 @@ CPed::DriveVehicle(void)
 				lDriveAssoc->blendAmount = 0.0f;
 
 			if (rDriveAssoc)
-				rDriveAssoc->blendAmount = CLAMP(steerAngle * -100.0f / 61.0f, 0.0f, 1.0f);
+				rDriveAssoc->blendAmount = Clamp(steerAngle * -100.0f / 61.0f, 0.0f, 1.0f);
 			else if (m_pMyVehicle->IsBoat() && !(m_pMyVehicle->pHandling->Flags & HANDLING_SIT_IN_BOAT))
 				CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_BOAT_DRIVE_RIGHT);
 			else if (m_pMyVehicle->bLowVehicle)
@@ -4115,7 +4141,7 @@ CPed::DriveVehicle(void)
 				rDriveAssoc->blendAmount = 0.0f;
 
 			if (lDriveAssoc)
-				lDriveAssoc->blendAmount = CLAMP(steerAngle * 100.0f / 61.0f, 0.0f, 1.0f);
+				lDriveAssoc->blendAmount = Clamp(steerAngle * 100.0f / 61.0f, 0.0f, 1.0f);
 			else if (m_pMyVehicle->IsBoat() && !(m_pMyVehicle->pHandling->Flags & HANDLING_SIT_IN_BOAT))
 				CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_BOAT_DRIVE_LEFT);
 			else if (m_pMyVehicle->bLowVehicle)

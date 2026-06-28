@@ -94,7 +94,7 @@ int32 CCarCtrl::NumRandomCars;
 int32 CCarCtrl::NumParkedCars;
 int32 CCarCtrl::NumPermanentCars;
 int8 CCarCtrl::CountDownToCarsAtStart;
-int32 CCarCtrl::MaxNumberOfCarsInUse = 12;
+int32 CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS;
 uint32 CCarCtrl::LastTimeLawEnforcerCreated;
 uint32 CCarCtrl::LastTimeFireTruckCreated;
 uint32 CCarCtrl::LastTimeAmbulanceCreated;
@@ -400,7 +400,7 @@ CCarCtrl::GenerateOneRandomCar()
 		pVehicle->m_bSirenOrAlarm = true;
 	pVehicle->AutoPilot.m_nNextPathNodeInfo = connectionId;
 	pVehicle->AutoPilot.m_nNextLane = pVehicle->AutoPilot.m_nCurrentLane = CGeneral::GetRandomNumber() % lanesOnCurrentRoad;
-	CBox* boundingBox = &CModelInfo::GetModelInfo(pVehicle->GetModelIndex())->GetColModel()->boundingBox;
+	CBox* boundingBox = &CModelInfo::GetColModel(pVehicle->GetModelIndex())->boundingBox;
 	float carLength = 1.0f + (boundingBox->max.y - boundingBox->min.y) / 2;
 	float distanceBetweenNodes = (pCurNode->GetPosition() - pNextNode->GetPosition()).Magnitude2D();
 	/* If car is so long that it doesn't fit between two car nodes, place it directly in the middle. */
@@ -964,6 +964,7 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 		}
 		float distanceToPlayer = (pVehicle->GetPosition() - vecPlayerPos).Magnitude2D();
 		float threshold = OFFSCREEN_DESPAWN_RANGE;
+#ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
 		if (pVehicle->GetIsOnScreen() ||
 			TheCamera.Cams[TheCamera.ActiveCam].LookingLeft ||
 			TheCamera.Cams[TheCamera.ActiveCam].LookingRight ||
@@ -975,11 +976,15 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 			pVehicle->bIsLawEnforcer ||
 			pVehicle->bIsCarParkVehicle ||
 			CTimer::GetTimeInMilliseconds() < pVehicle->m_nSetPieceExtendedRangeTime
-			){
+			)
+#endif
+		{
 			threshold = ONSCREEN_DESPAWN_RANGE * TheCamera.GenerationDistMultiplier;
 		}
+#ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
 		if (TheCamera.GetForward().z < -0.9f)
 			threshold = 70.0f;
+#endif
 		if (pVehicle->bExtendedRange)
 			threshold *= EXTENDED_RANGE_DESPAWN_MULTIPLIER;
 		if (distanceToPlayer > threshold && !CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())){
@@ -1007,14 +1012,17 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 		delete pVehicle;
 		return;
 	}
-	if (pVehicle->GetStatus() != STATUS_WRECKED || pVehicle->m_nTimeOfDeath == 0)
-		return;
-	if (CTimer::GetTimeInMilliseconds() > pVehicle->m_nTimeOfDeath + 60000 &&
-		!pVehicle->GetIsOnScreen()){
-		if ((pVehicle->GetPosition() - vecPlayerPos).MagnitudeSqr() > SQR(7.5f)){
-			if (!CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())){
-				CWorld::Remove(pVehicle);
-				delete pVehicle;
+	if (pVehicle->GetStatus() == STATUS_WRECKED) {
+		if (pVehicle->m_nTimeOfDeath != 0) {
+			if (CTimer::GetTimeInMilliseconds() > pVehicle->m_nTimeOfDeath + 60000 &&
+				CTimer::GetTimeInMilliseconds() > pVehicle->m_nSetPieceExtendedRangeTime &&
+				!(pVehicle->GetIsOnScreen())) {
+				if ((pVehicle->GetPosition() - vecPlayerPos).MagnitudeSqr() > SQR(6.5f)) {
+					if (!CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())) {
+						CWorld::Remove(pVehicle);
+						delete pVehicle;
+					}
+				}
 			}
 		}
 	}
@@ -1052,8 +1060,8 @@ CCarCtrl::UpdateCarOnRails(CVehicle* pVehicle)
 		pVehicle->AutoPilot.ModifySpeed(0.0f);
 		if (CTimer::GetTimeInMilliseconds() > pVehicle->AutoPilot.m_nTempAction){
 			pVehicle->AutoPilot.m_nTempAction = TEMPACT_NONE;
-			pVehicle->AutoPilot.m_nAntiReverseTimer = 0;
-			pVehicle->AutoPilot.m_nTimeToStartMission = 0;
+			pVehicle->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+			pVehicle->AutoPilot.m_nTimeToStartMission = CTimer::GetTimeInMilliseconds();
 		}
 		return;
 	}
@@ -1554,7 +1562,7 @@ void CCarCtrl::WeaveThroughCarsSectorList(CPtrList& lst, CVehicle* pVehicle, CPh
 			continue;
 		if (Abs(pTestVehicle->GetPosition().z - pVehicle->GetPosition().z) >= VEHICLE_HEIGHT_DIFF_TO_CONSIDER_WEAVING)
 			continue;
-		if (pTestVehicle != pVehicle)
+		if (pTestVehicle != pVehicle && (!pVehicle->bPartOfConvoy || !pTestVehicle->bPartOfConvoy))
 			WeaveForOtherCar(pTestVehicle, pVehicle, pAngleToWeaveLeft, pAngleToWeaveRight);
 	}
 }
@@ -1562,8 +1570,6 @@ void CCarCtrl::WeaveThroughCarsSectorList(CPtrList& lst, CVehicle* pVehicle, CPh
 void CCarCtrl::WeaveForOtherCar(CEntity* pOtherEntity, CVehicle* pVehicle, float* pAngleToWeaveLeft, float* pAngleToWeaveRight)
 {
 	CVehicle* pOtherCar = (CVehicle*)pOtherEntity;
-	if (pVehicle->bPartOfConvoy && pOtherCar->bPartOfConvoy)
-		return;
 	if (pVehicle->AutoPilot.m_nCarMission == MISSION_RAMPLAYER_CLOSE && pOtherEntity == FindPlayerVehicle())
 		return;
 	if (pVehicle->AutoPilot.m_nCarMission == MISSION_RAMCAR_CLOSE && pOtherEntity == pVehicle->AutoPilot.m_pTargetCar)
@@ -1581,8 +1587,8 @@ void CCarCtrl::WeaveForOtherCar(CEntity* pOtherEntity, CVehicle* pVehicle, float
 	forward.Normalise();
 	float forwardAngle = CGeneral::GetATanOfXY(forward.x, forward.y);
 	float angleDiff = angleBetweenVehicles - forwardAngle;
-	float lenProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.y * sin(angleDiff));
-	float widthProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.x * cos(angleDiff));
+	float lenProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.y * Sin(angleDiff));
+	float widthProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.x * Cos(angleDiff));
 	float lengthToEvade = (2 * (lenProjection + widthProjection) + WIDTH_COEF_TO_WEAVE_SAFELY * 2 * pVehicle->GetColModel()->boundingBox.max.x) / distance;
 	float diffToLeftAngle = LimitRadianAngle(angleBetweenVehicles - *pAngleToWeaveLeft);
 	diffToLeftAngle = ABS(diffToLeftAngle);
@@ -2575,7 +2581,7 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* pVehicle, float 
 	float angleToTarget = CGeneral::GetATanOfXY(targetX - pVehicle->GetPosition().x, targetY - pVehicle->GetPosition().y);
 	float angleForward = CGeneral::GetATanOfXY(forward.x, forward.y);
 	float steerAngle = LimitRadianAngle(angleToTarget - angleForward);
-	steerAngle = CLAMP(steerAngle, -DEFAULT_MAX_STEER_ANGLE, DEFAULT_MAX_STEER_ANGLE);
+	steerAngle = Clamp(steerAngle, -DEFAULT_MAX_STEER_ANGLE, DEFAULT_MAX_STEER_ANGLE);
 #ifdef FIX_BUGS
 	float speedTarget = pVehicle->AutoPilot.GetCruiseSpeed();
 #else
@@ -2735,7 +2741,7 @@ void CCarCtrl::SteerAIPlaneTowardsTargetCoors(CAutomobile* pPlane)
 {
 	CVector2D vecToTarget = pPlane->AutoPilot.m_vecDestinationCoors - pPlane->GetPosition();
 	float fForwardZ = (pPlane->AutoPilot.m_vecDestinationCoors.z - pPlane->GetPosition().z) / vecToTarget.Magnitude();
-	fForwardZ = CLAMP(fForwardZ, -0.3f, 0.3f);
+	fForwardZ = Clamp(fForwardZ, -0.3f, 0.3f);
 	float angle = CGeneral::GetATanOfXY(vecToTarget.x, vecToTarget.y);
 	while (angle > TWOPI)
 		angle -= TWOPI;
@@ -3227,7 +3233,7 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 	float posBetweenNodes;
 	while (!created && attempts < 5){
 		if (ThePaths.GenerateCarCreationCoors(pPlayerPos.x, pPlayerPos.y, 0.707f, 0.707f,
-		REQUEST_ONSCREEN_DISTANCE, -1.0f, true, &spawnPos, &curNode, &nextNode, &posBetweenNodes, false)){
+			REQUEST_ONSCREEN_DISTANCE, -1.0f, true, &spawnPos, &curNode, &nextNode, &posBetweenNodes, false)){
 			int16 colliding[2];
 			if (!ThePaths.GetNode(curNode)->bWaterPath) {
 				CWorld::FindObjectsKindaColliding(spawnPos, 10.0f, true, colliding, 2, nil, false, true, true, false, false);

@@ -1,8 +1,10 @@
 #include "common.h"
 
 #include "Restart.h"
+#include "SaveBuf.h"
 #include "Zones.h"
 #include "PathFind.h"
+#include "SaveBuf.h"
 
 uint8 CRestart::OverrideHospitalLevel;
 uint8 CRestart::OverridePoliceStationLevel;
@@ -187,10 +189,7 @@ INITSAVEBUF
 	ReadSaveBuf(&bOverrideRestart, buf);
 
 	// skip something unused
-	uint8 tmp1;
-	ReadSaveBuf(&tmp1, buf);
-	uint16 tmp2;
-	ReadSaveBuf(&tmp2, buf);
+	SkipSaveBuf(buf, 3);
 
 	ReadSaveBuf(&OverridePosition, buf);
 	ReadSaveBuf(&OverrideHeading, buf);

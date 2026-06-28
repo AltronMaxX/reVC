@@ -1,5 +1,9 @@
 #include <csignal>
 #define WITHWINDOWS
+#include "Object.h"
+#include "Pools.h"
+#include "Restart.h"
+#include "Stats.h"
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
 #include <xinput.h>
@@ -44,14 +48,12 @@
 #include "Camera.h"
 #include "MBlur.h"
 #include "ControllerConfig.h"
-#include "Object.h"
-#include <Stats.h>
-#include <Restart.h>
-#include <Pools.h>
+#include "CarCtrl.h"
+#include "Population.h"
+#include "IniFile.h"
+#include "Zones.h"
 
-#ifdef DETECT_JOYSTICK_MENU
 #include "crossplatform.h"
-#endif
 
 #ifndef _WIN32
 #include "assert.h"
@@ -131,7 +133,7 @@ void LangJapSelect(int8 action)
 void
 CustomFrontendOptionsPopulate(void)
 {
-	// Moved to an array in MenuScreensCustom.cpp, but APIs are still available. see frontendoption.h
+	// Most of custom options are done statically in MenuScreensCustom.cpp, we add them here only if they're dependent to extra files
 
 	int fd;
 	// These work only if we have neo folder, so they're dynamically added
@@ -193,16 +195,29 @@ CustomFrontendOptionsPopulate(void)
 #endif
 
 #ifdef LOAD_INI_SETTINGS
-#include "ini_parser.hpp"
+#define MINI_CASE_SENSITIVE
+#include "ini.h"
 
-linb::ini cfg;
+mINI::INIFile ini("reVC.ini");
+mINI::INIStructure cfg;
+
 bool ReadIniIfExists(const char *cat, const char *key, uint32 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtoul(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
+		return true;
+	}
+	return false;
+}
+
+bool ReadIniIfExists(const char *cat, const char *key, uint8 *out)
+{
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -210,11 +225,10 @@ bool ReadIniIfExists(const char *cat, const char *key, uint32 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, bool *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtoul(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtoul(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -222,11 +236,10 @@ bool ReadIniIfExists(const char *cat, const char *key, bool *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, int32 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtol(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtol(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -234,11 +247,10 @@ bool ReadIniIfExists(const char *cat, const char *key, int32 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, int8 *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	char *endPtr;
-	if (value && value[0] != '\xBA') {
-		*out = strtol(value, &endPtr, 0);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtol(section.get(key).c_str(), &endPtr, 0);
 		return true;
 	}
 	return false;
@@ -246,10 +258,10 @@ bool ReadIniIfExists(const char *cat, const char *key, int8 *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, float *out)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	if (value && value[0] != '\xBA') {
-		*out = atof(value);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		char *endPtr;
+		*out = strtof(section.get(key).c_str(), &endPtr);
 		return true;
 	}
 	return false;
@@ -257,10 +269,10 @@ bool ReadIniIfExists(const char *cat, const char *key, float *out)
 
 bool ReadIniIfExists(const char *cat, const char *key, char *out, int size)
 {
-	std::string strval = cfg.get(cat, key, "\xBA");
-	const char *value = strval.c_str();
-	if (value && value[0] != '\xBA') {
-		strncpy(out, value, size);
+	mINI::INIMap<std::string> section = cfg.get(cat);
+	if (section.has(key)) {
+		strncpy(out, section.get(key).c_str(), size - 1);
+		out[size - 1] = '\0';
 		return true;
 	}
 	return false;
@@ -268,46 +280,46 @@ bool ReadIniIfExists(const char *cat, const char *key, char *out, int size)
 
 void StoreIni(const char *cat, const char *key, uint32 val)
 {
-	char temp[10];
-sprintf(temp, "%u", val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%u", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, uint8 val)
 {
-	char temp[10];
-	sprintf(temp, "%u", (uint32)val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%u", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, int32 val)
 {
-	char temp[10];
+	char temp[11];
 	sprintf(temp, "%d", val);
-	cfg.set(cat, key, temp);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, int8 val)
 {
-	char temp[10];
-	sprintf(temp, "%d", (int32)val);
-	cfg.set(cat, key, temp);
+	char temp[11];
+	sprintf(temp, "%d", val);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, float val)
 {
-	char temp[10];
+	char temp[50];
 	sprintf(temp, "%f", val);
-	cfg.set(cat, key, temp);
+	cfg[cat][key] = temp;
 }
 
 void StoreIni(const char *cat, const char *key, char *val, int size)
 {
-	cfg.set(cat, key, val);
+	cfg[cat][key] = val;
 }
 
 const char *iniControllerActions[] = { "PED_FIREWEAPON", "PED_CYCLE_WEAPON_RIGHT", "PED_CYCLE_WEAPON_LEFT", "GO_FORWARD", "GO_BACK", "GO_LEFT", "GO_RIGHT", "PED_SNIPER_ZOOM_IN",
-	"PED_SNIPER_ZOOM_OUT", "VEHICLE_ENTER_EXIT", "CAMERA_CHANGE_VIEW_ALL_SITUATIONS", "PED_JUMPING", "PED_SPRINT", "PED_LOOKBEHIND", "PED_DUCK", "PED_ANSWER_PHONE",
+	"PED_SNIPER_ZOOM_OUT", "VEHICLE_ENTER_EXIT", "CAMERA_CHANGE_VIEW_ALL_SITUATIONS", "PED_JUMPING", "PED_SPRINT", "PED_LOOKBEHIND", "PED_DUCK", "PED_ANSWER_PHONE", 
 #ifdef BIND_VEHICLE_FIREWEAPON
 	"VEHICLE_FIREWEAPON",
 #endif
@@ -365,7 +377,7 @@ void LoadINIControllerSettings()
 #endif
 	// force to default GTA behaviour (never overwrite bindings on joy change/initialization) if user init'ed/set bindings before we introduced that
 	if (!ReadIniIfExists("Controller", "PadButtonsInited", &ControlsManager.ms_padButtonsInited)) {
-		ControlsManager.ms_padButtonsInited = cfg.category_size("Bindings") != 0 ? 16 : 0;
+		ControlsManager.ms_padButtonsInited = cfg.get("Bindings").size() != 0 ? 16 : 0;
 	}
 
 	for (int32 i = 0; i < MAX_CONTROLLERACTIONS; i++) {
@@ -467,12 +479,13 @@ void SaveINIControllerSettings()
 #endif
 #endif
 	StoreIni("Controller", "PadButtonsInited", ControlsManager.ms_padButtonsInited);
-	cfg.write_file("reVC.ini");
+
+	ini.write(cfg);
 }
 
 bool LoadINISettings()
 {
-	if (!cfg.load_file("reVC.ini"))
+	if (!ini.read(cfg))
 		return false;
 
 #ifdef IMPROVED_VIDEOMODE
@@ -493,8 +506,10 @@ bool LoadINISettings()
 	ReadIniIfExists("Audio", "MusicVolume", &FrontEndMenuManager.m_PrefsMusicVolume);
 	ReadIniIfExists("Audio", "MP3BoostVolume", &FrontEndMenuManager.m_PrefsMP3BoostVolume);
 	ReadIniIfExists("Audio", "Radio", &FrontEndMenuManager.m_PrefsRadioStation);
+#ifdef EXTERNAL_3D_SOUND
 	ReadIniIfExists("Audio", "SpeakerType", &FrontEndMenuManager.m_PrefsSpeakers);
 	ReadIniIfExists("Audio", "Provider", &FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+#endif
 	ReadIniIfExists("Audio", "DynamicAcoustics", &FrontEndMenuManager.m_PrefsDMA);
 	ReadIniIfExists("Display", "Brightness", &FrontEndMenuManager.m_PrefsBrightness);
 	ReadIniIfExists("Display", "DrawDistance", &FrontEndMenuManager.m_PrefsLOD);
@@ -528,13 +543,13 @@ bool LoadINISettings()
 #endif
 
 #ifdef PROPER_SCALING
-	ReadIniIfExists("Draw", "ProperScaling", &CDraw::ms_bProperScaling);
+	ReadIniIfExists("Draw", "ProperScaling", &CDraw::ms_bProperScaling);	
 #endif
 #ifdef FIX_RADAR
-	ReadIniIfExists("Draw", "FixRadar", &CDraw::ms_bFixRadar);
+	ReadIniIfExists("Draw", "FixRadar", &CDraw::ms_bFixRadar);	
 #endif
 #ifdef FIX_SPRITES
-	ReadIniIfExists("Draw", "FixSprites", &CDraw::ms_bFixSprites);
+	ReadIniIfExists("Draw", "FixSprites", &CDraw::ms_bFixSprites);	
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	ReadIniIfExists("General", "DrawVersionText", &gbDrawVersionText);
@@ -544,36 +559,37 @@ bool LoadINISettings()
 #endif
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
-	bool migrate = cfg.category_size("FrontendOptions") != 0;
+	bool migrate = cfg.get("FrontendOptions").size() != 0;
 	for (int i = 0; i < MENUPAGES; i++) {
 		for (int j = 0; j < NUM_MENUROWS; j++) {
 			CMenuScreenCustom::CMenuEntry &option = aScreens[i].m_aEntries[j];
 			if (option.m_Action == MENUACTION_NOTHING)
 				break;
-
+				
 			// CFO check
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
-				// CFO only supports saving uint8 right now
-
 				// Migrate from old .ini to new .ini
-				if (migrate && ReadIniIfExists("FrontendOptions", option.m_CFO->save, option.m_CFO->value))
-					cfg.remove("FrontendOptions", option.m_CFO->save);
+				// Old values can only be int8, new ones can contain float if it is slider
+				if (migrate && ReadIniIfExists("FrontendOptions", option.m_CFO->save, (int8*)option.m_CFO->value))
+					cfg["FrontendOptions"].remove(option.m_CFO->save);
+				else if (option.m_Action == MENUACTION_CFO_SLIDER)
+					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, (float*)option.m_CFO->value);
 				else
-					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, option.m_CFO->value);
+					ReadIniIfExists(option.m_CFO->saveCat, option.m_CFO->save, (int8*)option.m_CFO->value);
 
 				if (option.m_Action == MENUACTION_CFO_SELECT) {
-					option.m_CFOSelect->lastSavedValue = option.m_CFOSelect->displayedValue = *option.m_CFO->value;
+					option.m_CFOSelect->lastSavedValue = option.m_CFOSelect->displayedValue = *(int8*)option.m_CFO->value;
 				}
 			}
 		}
 	}
 #endif
 
-
-#ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed < 0 || FrontEndMenuManager.m_nPrefsWindowed >= NUM_WINDOW_MODES)
-		FrontEndMenuManager.m_nPrefsWindowed = WINDOWMODE_FULLSCREEN;
-	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+	// Fetched in above block, but needs evaluation
+#ifdef PED_CAR_DENSITY_SLIDERS
+	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * CIniFile::PedNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * CIniFile::PedNumberMultiplier;
+	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * CIniFile::CarNumberMultiplier;
 #endif
 
 	return true;
@@ -599,8 +615,10 @@ void SaveINISettings()
 	StoreIni("Audio", "MusicVolume", FrontEndMenuManager.m_PrefsMusicVolume);
 	StoreIni("Audio", "MP3BoostVolume", FrontEndMenuManager.m_PrefsMP3BoostVolume);
 	StoreIni("Audio", "Radio", FrontEndMenuManager.m_PrefsRadioStation);
+#ifdef EXTERNAL_3D_SOUND
 	StoreIni("Audio", "SpeakerType", FrontEndMenuManager.m_PrefsSpeakers);
 	StoreIni("Audio", "Provider", FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+#endif
 	StoreIni("Audio", "DynamicAcoustics", FrontEndMenuManager.m_PrefsDMA);
 	StoreIni("Display", "Brightness", FrontEndMenuManager.m_PrefsBrightness);
 	StoreIni("Display", "DrawDistance", FrontEndMenuManager.m_PrefsLOD);
@@ -633,14 +651,14 @@ void SaveINISettings()
 	StoreIni("Rendering", "NewRenderer", gbNewRenderer);
 #endif
 
-#ifdef PROPER_SCALING
-	StoreIni("Draw", "ProperScaling", CDraw::ms_bProperScaling);
+#ifdef PROPER_SCALING	
+	StoreIni("Draw", "ProperScaling", CDraw::ms_bProperScaling);	
 #endif
 #ifdef FIX_RADAR
 	StoreIni("Draw", "FixRadar", CDraw::ms_bFixRadar);
 #endif
 #ifdef FIX_SPRITES
-	StoreIni("Draw", "FixSprites", CDraw::ms_bFixSprites);
+	StoreIni("Draw", "FixSprites", CDraw::ms_bFixSprites);	
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	StoreIni("General", "DrawVersionText", gbDrawVersionText);
@@ -654,16 +672,18 @@ void SaveINISettings()
 			CMenuScreenCustom::CMenuEntry &option = aScreens[i].m_aEntries[j];
 			if (option.m_Action == MENUACTION_NOTHING)
 				break;
-
+				
 			if (option.m_Action < MENUACTION_NOTHING && option.m_CFO->save) {
-				// Beware: CFO only supports saving uint8 right now
-				StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *option.m_CFO->value);
+				if (option.m_Action == MENUACTION_CFO_SLIDER)
+					StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *(float*)option.m_CFO->value);
+				else
+					StoreIni(option.m_CFO->saveCat, option.m_CFO->save, *(int8*)option.m_CFO->value);
 			}
 		}
 	}
 #endif
 
-	cfg.write_file("reVC.ini");
+	ini.write(cfg);
 }
 
 #endif
@@ -760,12 +780,14 @@ FixCar(void)
 static void
 TeleportToWaypoint(void)
 {
-	if (FindPlayerVehicle()) {
-		if (CRadar::TargetMarkerId != -1)
-			FindPlayerVehicle()->Teleport(CRadar::TargetMarkerPos + CVector(0.0f, 0.0f, FindPlayerVehicle()->GetColModel()->boundingSphere.center.z));
-	} else
-		if(CRadar::TargetMarkerId != -1)
-			FindPlayerPed()->Teleport(CRadar::TargetMarkerPos + CVector(0.0f, 0.0f, FEET_OFFSET));
+	if (CRadar::TargetMarkerId == -1)
+		return;
+	CEntity* pEntityToTeleport = FindPlayerEntity();
+	CVector vNewPos = CRadar::TargetMarkerPos;
+	CStreaming::LoadScene(vNewPos);
+	CStreaming::LoadSceneCollision(vNewPos);
+	vNewPos.z = CWorld::FindGroundZForCoord(vNewPos.x, vNewPos.y) + pEntityToTeleport->GetDistanceFromCentreOfMassToBaseOfModel();
+	pEntityToTeleport->Teleport(vNewPos);
 }
 #endif
 
@@ -928,7 +950,7 @@ void CTweakVars::Add(CTweakVar *var)
 
 	TweakVarsList[TweakVarsListSize++] = var;
 //	TweakVarsList.push_back(var);
-
+	
 	if ( bAddTweakVarsNow )
 		var->AddDBG(pTweakVarsDefaultPath);
 }
@@ -939,16 +961,16 @@ void CTweakVars::AddDBG(const char *path)
 
 	for(int i = 0; i < TweakVarsListSize; ++i)
 		TweakVarsList[i]->AddDBG(pTweakVarsDefaultPath);
-
+	
 	bAddTweakVarsNow = true;
 }
 
 void CTweakSwitch::AddDBG(const char *path)
-{
+{		
 	DebugMenuEntry *e = DebugMenuAddVar(m_pPath == NULL ? path : m_pPath, m_pVarName, (int32_t *)m_pIntVar, m_pFunc, 1, m_nMin, m_nMax, m_aStr);
 	DebugMenuEntrySetWrap(e, true);
 }
-
+	
 void CTweakFunc::AddDBG  (const char *path) { DebugMenuAddCmd     (m_pPath == NULL ? path : m_pPath, m_pVarName, m_pFunc); }
 void CTweakBool::AddDBG  (const char *path) { DebugMenuAddVarBool8(m_pPath == NULL ? path : m_pPath, m_pVarName, (int8_t *)m_pBoolVar,  NULL); }
 void CTweakInt8::AddDBG  (const char *path) { DebugMenuAddVar     (m_pPath == NULL ? path : m_pPath, m_pVarName, (int8_t *)m_pIntVar,   NULL, m_nStep, m_nLoawerBound, m_nUpperBound, NULL); }
@@ -964,7 +986,7 @@ static const char *wt[] = {
 			"Sunny", "Cloudy", "Rainy", "Foggy"
 		};
 
-SETTWEAKPATH("TEST");
+SETTWEAKPATH("TEST");		
 TWEAKSWITCH(CWeather::NewWeatherType, 0, 3, wt, NULL);
 */
 
@@ -1085,7 +1107,7 @@ DebugMenuPopulate(void)
 		DebugMenuAddCmd("Spawn", "Spawn Skimmer", [](){ SpawnCar(MI_SKIMMER); });
 
 		DebugMenuAddVarBool8("Render", "Draw hud", &CHud::m_Wants_To_Draw_Hud, nil);
-#ifdef PROPER_SCALING
+#ifdef PROPER_SCALING	
 		DebugMenuAddVarBool8("Render", "Proper Scaling", &CDraw::ms_bProperScaling, nil);
 #endif
 #ifdef FIX_RADAR
@@ -1135,6 +1157,11 @@ extern bool gbRenderWorld2;
 #ifndef MASTER
 		DebugMenuAddVarBool8("Render", "Occlusion debug", &bDispayOccDebugStuff, nil);
 #endif
+#ifdef LIBRW
+		DebugMenuAddVarBool32("Render", "MatFX env map apply light", &rw::MatFX::envMapApplyLight, nil);
+		DebugMenuAddVarBool32("Render", "MatFX env map flip U", &rw::MatFX::envMapFlipU, nil);
+		DebugMenuAddVarBool32("Render", "MatFX env map use matcolor", &rw::MatFX::envMapUseMatColor, nil);
+#endif
 #ifdef EXTENDED_PIPELINES
 		static const char *vehpipenames[] = { "MatFX", "Neo" };
 		e = DebugMenuAddVar("Render", "Vehicle Pipeline", &CustomPipes::VehiclePipeSwitch, nil,
@@ -1160,8 +1187,8 @@ extern bool gbRenderWorld2;
 		DebugMenuAddVarBool8("Debug Render", "Don't render Vehicles", &gbDontRenderVehicles, nil);
 		DebugMenuAddVarBool8("Debug Render", "Don't render Objects", &gbDontRenderObjects, nil);
 		DebugMenuAddVarBool8("Debug Render", "Don't Render Water", &gbDontRenderWater, nil);
-
-
+		
+		
 #ifdef DRAW_GAME_VERSION_TEXT
 		DebugMenuAddVarBool8("Debug", "Version Text", &gbDrawVersionText, nil);
 #endif
@@ -1185,7 +1212,7 @@ extern bool gbRenderWorld2;
 		//DebugMenuAddCmd("Debug", "Stop Credits", CCredits::Stop);
 
 #ifdef RELOADABLES
-// maybe put it back if we have more to reload
+// maybe put it back if we have more to reload 
 //		DebugMenuAddCmd("Reload", "HUD.TXD", CHud::ReloadTXD);
 #endif
 
@@ -1257,20 +1284,20 @@ void re3_assert(const char *expr, const char *filename, unsigned int lineno, con
 	int nCode;
 
 	strcpy_s(re3_buff, re3_buffsize, "Assertion failed!" );
-	strcat_s(re3_buff, re3_buffsize, "\n" );
-
+	strcat_s(re3_buff, re3_buffsize, "\n" );	
+	
 	strcat_s(re3_buff, re3_buffsize, "File: ");
 	strcat_s(re3_buff, re3_buffsize, filename );
-	strcat_s(re3_buff, re3_buffsize, "\n" );
+	strcat_s(re3_buff, re3_buffsize, "\n" );	
 
 	strcat_s(re3_buff, re3_buffsize, "Line: " );
 	_itoa_s( lineno, re3_buff + strlen(re3_buff), re3_buffsize - strlen(re3_buff), 10 );
 	strcat_s(re3_buff, re3_buffsize, "\n");
-
+	
 	strcat_s(re3_buff, re3_buffsize, "Function: ");
 	strcat_s(re3_buff, re3_buffsize, func );
-	strcat_s(re3_buff, re3_buffsize, "\n" );
-
+	strcat_s(re3_buff, re3_buffsize, "\n" );	
+	
 	strcat_s(re3_buff, re3_buffsize, "Expression: ");
 	strcat_s(re3_buff, re3_buffsize, expr);
 	strcat_s(re3_buff, re3_buffsize, "\n");
@@ -1302,7 +1329,6 @@ void re3_assert(const char *expr, const char *filename, unsigned int lineno, con
 	// TODO
 	printf("\nREVC ASSERT FAILED\n\tFile: %s\n\tLine: %d\n\tFunction: %s\n\tExpression: %s\n",filename,lineno,func,expr);
 	assert(false);
-
 #endif
 }
 #endif
@@ -1333,18 +1359,20 @@ void re3_trace(const char *filename, unsigned int lineno, const char *func, cons
 #ifdef _WIN32
 	vsprintf_s(re3_buff, re3_buffsize, format, va);
 	va_end(va);
-
+	
 	sprintf_s(buff, re3_buffsize * 2, "[%s.%s:%d]: %s", filename, func, lineno, re3_buff);
 #else
 	vsprintf(re3_buff, format, va);
 	va_end(va);
-
+	
 	sprintf(buff, "[%s.%s:%d]: %s", filename, func, lineno, re3_buff);
 #endif
 
 	OutputDebugString(buff);
 }
+#endif
 
+#ifndef MASTER
 void re3_usererror(const char *format, ...)
 {
 	va_list va;
@@ -1352,7 +1380,7 @@ void re3_usererror(const char *format, ...)
 #ifdef _WIN32
 	vsprintf_s(re3_buff, re3_buffsize, format, va);
 	va_end(va);
-
+	
 	::MessageBoxA(nil, re3_buff, "REVC Error!",
 		MB_OK|MB_ICONHAND|MB_SETFOREGROUND|MB_TASKMODAL);
 

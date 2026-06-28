@@ -5,6 +5,7 @@
 #include "General.h"
 #include "Streaming.h"
 #include "Weapon.h"
+#include "SaveBuf.h"
 
 CGangInfo CGangs::Gang[NUM_GANGS];
 bool CGangs::GangAttackWithCops[NUM_GANGS];
@@ -118,7 +119,7 @@ void CGangs::LoadAllGangData(uint8 *buf, uint32 size)
 INITSAVEBUF
 	CheckSaveHeader(buf, 'G','N','G','\0', size - SAVE_HEADER_SIZE);
 
-	for (int i = 0; i < NUM_GANGS; i++) 
+	for (int i = 0; i < NUM_GANGS; i++)
 		ReadSaveBuf(&Gang[i], buf);
-	VALIDATESAVEBUF(size);
+VALIDATESAVEBUF(size);
 }

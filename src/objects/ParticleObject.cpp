@@ -39,7 +39,7 @@ CAudioHydrant::Add(CParticleObject *particleobject)
 			if ( AEHANDLE_IS_FAILED(List[i].AudioEntity) )
 				return false;
 			
-			DMAudio.SetEntityStatus(List[i].AudioEntity, true);
+			DMAudio.SetEntityStatus(List[i].AudioEntity, TRUE);
 			
 			List[i].pParticleObject = particleobject;
 			
@@ -1062,12 +1062,8 @@ static inline void
 SaveOneParticle(CParticleObject *p, uint8 *&buffer)
 {
 #define SkipBuf(buf, num) buf += num
-#define ZeroBuf(buf, num)                                                                                                                                      \
-	memset(buf, 0, num);                                                                                                                                   \
-	SkipBuf(buf, num)
-#define CopyToBuf(buf, data)                                                                                                                                   \
-	memcpy(buf, &data, sizeof(data));                                                                                                                      \
-	SkipBuf(buf, sizeof(data))
+#define ZeroBuf(buf, num) memset(buf, 0, num); SkipBuf(buf, num)
+#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipBuf(buf, sizeof(data))
 	// CPlaceable
 	{
 		CopyToBuf(buffer, p->GetMatrix().f);
@@ -1103,7 +1099,6 @@ SaveOneParticle(CParticleObject *p, uint8 *&buffer)
 }
 #endif
 
-
 bool
 CParticleObject::SaveParticle(uint8 *buffer, uint32 *length)
 {
@@ -1121,7 +1116,7 @@ CParticleObject::SaveParticle(uint8 *buffer, uint32 *length)
 	*(int32 *)buffer = numObjects;
 	buffer += sizeof(int32);
 	
-	int32 objectsLength = sizeof(CParticleObject) * (numObjects + 1);
+	int32 objectsLength = PARTICLE_OBJECT_SIZEOF * (numObjects + 1);
 	int32 dataLength = objectsLength + sizeof(int32);
 	
 	for ( CParticleObject *p = pCloseListHead; p != nil; p = p->m_pNext )
@@ -1129,8 +1124,8 @@ CParticleObject::SaveParticle(uint8 *buffer, uint32 *length)
 #ifdef COMPATIBLE_SAVES
 		SaveOneParticle(p, buffer);
 #else
-#if 0
-		*(CParticleObject *)buffer = *p;
+#ifdef THIS_IS_STUPID
+		*(CParticleObject*)buffer = *p;
 #else
 		memcpy(buffer, p, sizeof(CParticleObject));
 #endif
@@ -1143,14 +1138,13 @@ CParticleObject::SaveParticle(uint8 *buffer, uint32 *length)
 #ifdef COMPATIBLE_SAVES
 		SaveOneParticle(p, buffer);
 #else
-#if 0
-		*(CParticleObject *)buffer = *p;
+#ifdef THIS_IS_STUPID
+		*(CParticleObject*)buffer = *p;
 #else
 		memcpy(buffer, p, sizeof(CParticleObject));
 #endif
 		buffer += sizeof(CParticleObject);
 #endif
-
 	}
 	
 	*length = dataLength;
@@ -1168,7 +1162,7 @@ CParticleObject::LoadParticle(uint8 *buffer, uint32  length)
 	int32 numObjects = *(int32 *)buffer;
 	buffer += sizeof(int32);
 	
-	if ( length != sizeof(CParticleObject) * (numObjects + 1) + sizeof(int32) )
+	if ( length != PARTICLE_OBJECT_SIZEOF * (numObjects + 1) + sizeof(int32) )
 		return false;
 	
 	if ( numObjects == 0 )
@@ -1183,37 +1177,34 @@ CParticleObject::LoadParticle(uint8 *buffer, uint32  length)
 		CParticleObject *src = (CParticleObject *)buffer;
 		buffer += sizeof(CParticleObject);
 #endif
-
 		
 		if ( dst == nil )
 			return false;
 		
 		MoveToList(&pUnusedListHead, &pCloseListHead, dst);
-		
-		#ifndef COMPATIBLE_SAVES
-		dst->m_nState = POBJECTSTATE_UPDATE_CLOSE;
-		dst->m_Type = src->m_Type;
-		dst->m_ParticleType = src->m_ParticleType;
+
+#ifndef COMPATIBLE_SAVES
+		dst->m_nState           = POBJECTSTATE_UPDATE_CLOSE;
+		dst->m_Type             = src->m_Type;
+		dst->m_ParticleType     = src->m_ParticleType;
 		dst->SetPosition(src->GetPosition());
-		dst->m_vecTarget = src->m_vecTarget;
-		dst->m_nFrameCounter = src->m_nFrameCounter;
-		dst->m_bRemove = src->m_bRemove;
-		dst->m_pParticle = nil;
-		dst->m_nRemoveTimer = src->m_nRemoveTimer;
-		dst->m_Color = src->m_Color;
-		dst->m_fSize = src->m_fSize;
-		dst->m_fRandVal = src->m_fRandVal;
+		dst->m_vecTarget        = src->m_vecTarget;
+		dst->m_nFrameCounter    = src->m_nFrameCounter;
+		dst->m_bRemove          = src->m_bRemove;
+		dst->m_pParticle        = nil;
+		dst->m_nRemoveTimer     = src->m_nRemoveTimer;
+		dst->m_Color            = src->m_Color;
+		dst->m_fSize            = src->m_fSize;
+		dst->m_fRandVal         = src->m_fRandVal;
 		dst->m_nNumEffectCycles = src->m_nNumEffectCycles;
-		dst->m_nSkipFrames = src->m_nSkipFrames;
-		dst->m_nCreationChance = src->m_nCreationChance;
+		dst->m_nSkipFrames      = src->m_nSkipFrames;
+		dst->m_nCreationChance  = src->m_nCreationChance;
 #else
 		dst->m_nState = POBJECTSTATE_UPDATE_CLOSE;
 		dst->m_pParticle = NULL;
 
 #define SkipBuf(buf, num) buf += num
-#define CopyFromBuf(buf, data)                                                                                                                                 \
-	memcpy(&data, buf, sizeof(data));                                                                                                                      \
-	SkipBuf(buf, sizeof(data))
+#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipBuf(buf, sizeof(data))
 		// CPlaceable
 		{
 			CMatrix matrix;

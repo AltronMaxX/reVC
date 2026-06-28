@@ -1,4 +1,7 @@
 #pragma once
+#ifndef nil
+#define nil NULL
+#endif
 
 class CPtrNode
 {

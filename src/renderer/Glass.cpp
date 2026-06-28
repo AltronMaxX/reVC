@@ -151,9 +151,9 @@ CFallingGlassPane::Render(void)
 	uint8 alpha = CGlass::CalcAlphaWithNormal(&fwdNorm);
 
 #ifdef FIX_BUGS
-	uint16 time = CLAMP(CTimer::GetTimeInMilliseconds() > m_nTimer ? CTimer::GetTimeInMilliseconds() - m_nTimer : 0u, 0u, 500u);
+	uint16 time = Clamp(CTimer::GetTimeInMilliseconds() > m_nTimer ? CTimer::GetTimeInMilliseconds() - m_nTimer : 0u, 0u, 500u);
 #else
-	uint16 time = CLAMP(CTimer::GetTimeInMilliseconds() - m_nTimer, 0, 500);
+	uint16 time = Clamp(CTimer::GetTimeInMilliseconds() - m_nTimer, 0, 500);
 #endif
 
 	uint8 color = int32( float(alpha) * (float(time) / 500) );
@@ -551,7 +551,7 @@ CGlass::CalcAlphaWithNormal(CVector *normal)
 	
 	float fwdDir = 2.0f * DotProduct(*normal, TheCamera.GetForward());
 	float fwdDot = DotProduct(TheCamera.GetForward()-fwdDir*(*normal), CVector(0.57f, 0.57f, -0.57f));
-	return int32(LERP(fwdDot*fwdDot*fwdDot*fwdDot*fwdDot*fwdDot, 20.0f, 255.0f));
+	return int32(lerp(fwdDot*fwdDot*fwdDot*fwdDot*fwdDot*fwdDot, 20.0f, 255.0f));
 }
 
 void

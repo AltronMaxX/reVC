@@ -3,6 +3,7 @@
 #include "AudioScriptObject.h"
 #include "Pools.h"
 #include "DMAudio.h"
+#include "SaveBuf.h"
 
 cAudioScriptObject::cAudioScriptObject()
 {
@@ -23,25 +24,25 @@ cAudioScriptObject::Reset()
 }
 
 void *
-cAudioScriptObject::operator new(size_t sz)
+cAudioScriptObject::operator new(size_t sz) throw()
 {
 	return CPools::GetAudioScriptObjectPool()->New();
 }
 
 void *
-cAudioScriptObject::operator new(size_t sz, int handle)
+cAudioScriptObject::operator new(size_t sz, int handle) throw()
 {
 	return CPools::GetAudioScriptObjectPool()->New(handle);
 }
 
 void
-cAudioScriptObject::operator delete(void *p, size_t sz)
+cAudioScriptObject::operator delete(void *p, size_t sz) throw()
 {
 	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
 }
 
 void
-cAudioScriptObject::operator delete(void *p, int handle)
+cAudioScriptObject::operator delete(void *p, int handle) throw()
 {
 	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
 }
@@ -56,7 +57,7 @@ cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
 	int32 pool_size;
 	ReadSaveBuf(&pool_size, buf);
 	for (int32 i = 0; i < pool_size; i++) {
-		int handle;
+		int32 handle;
 		ReadSaveBuf(&handle, buf);
 		cAudioScriptObject *p = new(handle) cAudioScriptObject;
 		assert(p != nil);
@@ -92,6 +93,8 @@ cAudioScriptObject::SaveAllAudioScriptObjects(uint8 *buf, uint32 *size)
 void
 PlayOneShotScriptObject(uint8 id, CVector const &pos)
 {
+	if (!DMAudio.IsAudioInitialised()) return;
+
 	cAudioScriptObject *audioScriptObject = new cAudioScriptObject();
 	audioScriptObject->Posn = pos;
 	audioScriptObject->AudioId = id;

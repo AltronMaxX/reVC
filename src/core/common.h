@@ -11,6 +11,11 @@
 #define __STDC_LIMIT_MACROS // so we get UINT32_MAX etc
 #endif
 
+
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
+
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
@@ -168,8 +173,18 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 
 // game uses maximumWidth/Height, but this probably won't work
 // with RW windowed mode
+#ifdef GTA_PS2
+	#ifdef GTA_PAL
+		#define SCREEN_WIDTH  ((float)640)
+		#define SCREEN_HEIGHT ((float)512)
+	#else
+		#define SCREEN_WIDTH  ((float)640)
+		#define SCREEN_HEIGHT ((float)448)
+	#endif
+#else
 #define SCREEN_WIDTH  ((float)RsGlobal.width)
 #define SCREEN_HEIGHT ((float)RsGlobal.height)
+#endif
 
 #define SCREEN_HEIGHT_PAL ((float)512)
 #define SCREEN_HEIGHT_NTSC ((float)448)
@@ -205,6 +220,12 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 
 #include "maths.h"
 #include "Vector.h"
+#ifdef GTA_PS2
+#include "VuVector.h"
+#define CVUVECTOR CVuVector
+#else
+#define CVUVECTOR CVector
+#endif
 #include "Vector2D.h"
 #include "Matrix.h"
 #include "Rect.h"
@@ -274,9 +295,9 @@ extern int strncasecmp(const char *str1, const char *str2, size_t len);
 
 extern wchar *AllocUnicode(const char*src);
 
-#define CLAMP(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
+#define Clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 
-#define CLAMP2(v, center, radius) ((v) < (center) ? Max(v, center - radius) : Min(v, center + radius))
+#define Clamp2(v, center, radius) ((v) > (center) ? Min(v, center + radius) : Max(v, center - radius))
 
 inline float sq(float x) { return x*x; }
 #define SQR(x) ((x) * (x))
@@ -357,8 +378,11 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 #define _TODO(x)
 #define _TODOCONST(x) (x)
 
-#ifdef CHECK_STRUCT_SIZES 
-#define VALIDATE_SIZE(struc, size) static_assert(sizeof(struc) == size, "Invalid structure size of " #struc)
+#ifdef CHECK_STRUCT_SIZES
+template<int s, int t> struct check_size {
+	static_assert(s == t, "Invalid structure size");
+};
+#define VALIDATE_SIZE(struc, size) check_size<sizeof(struc), size> struc ## Check
 #else
 #define VALIDATE_SIZE(struc, size)
 #endif
@@ -370,238 +394,10 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 
 #define ABS(a)  (((a) < 0) ? (-(a)) : (a))
 #define norm(value, min, max) (((value) < (min)) ? 0 : (((value) > (max)) ? 1 : (((value) - (min)) / ((max) - (min)))))
-#define LERP(norm, min, max) ( (norm) * ((max) - (min)) + (min) )
+#define lerp(norm, min, max) ( (norm) * ((max) - (min)) + (min) )
 
 #define STRINGIFY(x)                    #x
 #define STR(x)                          STRINGIFY(x)
 #define CONCAT_(x,y) x##y
 #define CONCAT(x,y) CONCAT_(x,y)
 
-#ifdef DEBUGMENU
-// Tweaking stuff for debugmenu
-#define TWEAKPATH                                   ___tw___TWEAKPATH
-#define SETTWEAKPATH(path)	                        static const char *___tw___TWEAKPATH = path;
-#define TWEAKFUNC(v)                                static CTweakFunc   CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), TWEAKPATH);
-#define TWEAKFUNCN(v, name)                         static CTweakFunc   CONCAT(___tw___tweak, __COUNTER__)(&v, name, TWEAKPATH);
-#define TWEAKBOOL(v)                                static CTweakBool   CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), TWEAKPATH);
-#define TWEAKBOOLN(v, name)                         static CTweakBool   CONCAT(___tw___tweak, __COUNTER__)(&v, name, TWEAKPATH);
-#define TWEAKINT32(v, lower, upper, step)           static CTweakInt32  CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKINT32N(v, lower, upper, step, name)    static CTweakInt32  CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKUINT32(v, lower, upper, step)          static CTweakUInt32 CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKUINT32N(v, lower, upper, step, name)   static CTweakUInt32 CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKINT16(v, lower, upper, step)           static CTweakInt16  CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKINT16N(v, lower, upper, step, name)    static CTweakInt16  CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKUINT16(v, lower, upper, step)          static CTweakUInt16 CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKUINT16N(v, lower, upper, step, name)   static CTweakUInt16 CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKINT8(v, lower, upper, step)            static CTweakInt8   CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKINT8N(v, lower, upper, step, name)     static CTweakInt8   CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKUINT8(v, lower, upper, step)           static CTweakUInt8  CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKUINT8N(v, lower, upper, step, name)    static CTweakUInt8  CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKFLOAT(v, lower, upper, step)           static CTweakFloat  CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, step, TWEAKPATH);
-#define TWEAKFLOATN(v, lower, upper, step, name)    static CTweakFloat  CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, step, TWEAKPATH);
-#define TWEAKSWITCH(v, lower, upper, str, f)        static CTweakSwitch CONCAT(___tw___tweak, __COUNTER__)(&v, STR(v), lower, upper, str, f, TWEAKPATH);
-#define TWEAKSWITCHN(v, lower, upper, str, f, name) static CTweakSwitch CONCAT(___tw___tweak, __COUNTER__)(&v, name, lower, upper, str, f, TWEAKPATH);
-
-// interface
-class CTweakVar
-{
-public:
-	virtual void AddDBG(const char *path) = 0;
-};
-
-class CTweakVars
-{
-public:
-	static void Add(CTweakVar *var);
-	static void AddDBG(const char *path);
-};
-
-class CTweakFunc : public CTweakVar
-{
-	const char *m_pPath, *m_pVarName;
-	void (*m_pFunc)();
-public:
-	CTweakFunc(void (*pFunc)(), const char *strName, const char *strPath) :
-		m_pPath(strPath), m_pVarName(strName), m_pFunc(pFunc)
-	{
-		CTweakVars::Add(this);
-	}
-	
-	void AddDBG(const char *path);
-};
-
-class CTweakBool : public CTweakVar
-{
-	const char *m_pPath, *m_pVarName;
-	bool *m_pBoolVar;
-public:
-	CTweakBool(bool *pBool, const char *strName, const char *strPath) :
-		m_pPath(strPath), m_pVarName(strName), m_pBoolVar(pBool)
-	{
-		CTweakVars::Add(this);
-	}
-	
-	void AddDBG(const char *path);
-};
-
-class CTweakSwitch : public CTweakVar
-{
-	const char *m_pPath, *m_pVarName;
-	void *m_pIntVar;
-	int32 m_nMin, m_nMax;
-	const char **m_aStr;
-	void (*m_pFunc)();
-public:
-	CTweakSwitch(void *pInt, const char *strName, int32 nMin, int32 nMax, const char **aStr,
-	             void (*pFunc)(), const char *strPath)
-	    : m_pPath(strPath), m_pVarName(strName), m_pIntVar(pInt), m_nMin(nMin), m_nMax(nMax),
-	      m_aStr(aStr)
-	{
-		CTweakVars::Add(this);
-	}
-
-	void AddDBG(const char *path);
-};
-
-#define _TWEEKCLASS(name, type)                                                                    \
-	class name : public CTweakVar                                                              \
-	{                                                                                          \
-	public:                                                                                    \
-		const char *m_pPath, *m_pVarName;                                                  \
-		type *m_pIntVar, m_nLoawerBound, m_nUpperBound, m_nStep;                           \
-                                                                                                   \
-		name(type *pInt, const char *strName, type nLower, type nUpper, type nStep,        \
-		     const char *strPath)                                                          \
-		    : m_pPath(strPath), m_pVarName(strName), m_pIntVar(pInt),                      \
-		      m_nLoawerBound(nLower), m_nUpperBound(nUpper), m_nStep(nStep)                \
-                                                                                                   \
-		{                                                                                  \
-			CTweakVars::Add(this);                                                     \
-		}                                                                                  \
-                                                                                                   \
-		void AddDBG(const char *path);                                                     \
-	};
-
-_TWEEKCLASS(CTweakInt8, int8);
-_TWEEKCLASS(CTweakUInt8, uint8);
-_TWEEKCLASS(CTweakInt16, int16);
-_TWEEKCLASS(CTweakUInt16, uint16);
-_TWEEKCLASS(CTweakInt32, int32);
-_TWEEKCLASS(CTweakUInt32, uint32);
-_TWEEKCLASS(CTweakFloat, float);
-
-#undef _TWEEKCLASS
-#endif
-
-#ifdef VALIDATE_SAVE_SIZE
-extern int32 _saveBufCount;
-#define INITSAVEBUF _saveBufCount = 0;
-#define VALIDATESAVEBUF(b) assert(_saveBufCount == b);
-#else
-#define INITSAVEBUF
-#define VALIDATESAVEBUF(b)
-#endif
-
-inline void SkipSaveBuf(uint8 *&buf, int32 skip)
-{
-	buf += skip;
-#ifdef VALIDATE_SAVE_SIZE
-	_saveBufCount += skip;
-#endif
-}
-
-inline void SkipSaveBuf(uint8*& buf, uint32 &length, int32 skip)
-{
-	buf += skip;
-	length += skip;
-#ifdef VALIDATE_SAVE_SIZE
-	_saveBufCount += skip;
-#endif
-}
-
-template <typename T>
-inline void
-ReadSaveBuf(T *out, uint8 *&buf)
-{
-	*out = *(T *)buf;
-	SkipSaveBuf(buf, sizeof(T));
-}
-
-
-template<typename T>
-inline const T ReadSaveBuf(uint8 *&buf, uint32 &length)
-{
-	T &value = *(T*)buf;
-	SkipSaveBuf(buf, length, sizeof(T));
-	return value;
-}
-
-template <typename T>
-inline T *
-WriteSaveBuf(uint8 *&buf, const T &value)
-{
-	T *p = (T *)buf;
-	*p = value;
-	SkipSaveBuf(buf, sizeof(T));
-	return p;
-}
-
-#ifdef COMPATIBLE_SAVES
-inline void
-ZeroSaveBuf(uint8 *&buf, uint32 length)
-{
-	memset(buf, 0, length);
-	SkipSaveBuf(buf, length);
-}
-#endif
-
-template<typename T>
-inline T *WriteSaveBuf(uint8 *&buf, uint32 &length, const T &value)
-{
-	T *p = (T*)buf;
-	*p = value;
-	SkipSaveBuf(buf, length, sizeof(T));
-	return p;
-}
-
-
-#define SAVE_HEADER_SIZE (4*sizeof(char)+sizeof(uint32))
-
-#define WriteSaveHeader(buf,a,b,c,d,size) \
-	WriteSaveBuf(buf, a);\
-	WriteSaveBuf(buf, b);\
-	WriteSaveBuf(buf, c);\
-	WriteSaveBuf(buf, d);\
-	WriteSaveBuf<uint32>(buf, size);
-
-#define WriteSaveHeaderWithLength(buf,len,a,b,c,d,size) \
-	WriteSaveBuf(buf, len, a);\
-	WriteSaveBuf(buf, len, b);\
-	WriteSaveBuf(buf, len, c);\
-	WriteSaveBuf(buf, len, d);\
-	WriteSaveBuf<uint32>(buf, len, size);
-
-#define CheckSaveHeader(buf,a,b,c,d,size)\
-	char _c;\
-	uint32 _size;\
-	ReadSaveBuf(&_c, buf);                                                                                                                                 \
-	assert(_c == a);                                                                                                                                       \
-	ReadSaveBuf(&_c, buf);                                                                                                                                 \
-	assert(_c == b);                                                                                                                                       \
-	ReadSaveBuf(&_c, buf);                                                                                                                                 \
-	assert(_c == c);                                                                                                                                       \
-	ReadSaveBuf(&_c, buf);                                                                                                                                 \
-	assert(_c == d);                                                                                                                                       \
-	ReadSaveBuf(&_size, buf);                                                                                                                              \
-	assert(_size == size);
-
-
-#define CheckSaveHeaderWithLength(buf,len,a,b,c,d,size)\
-	assert(ReadSaveBuf<char>(buf,len) == a);\
-	assert(ReadSaveBuf<char>(buf,len) == b);\
-	assert(ReadSaveBuf<char>(buf,len) == c);\
-	assert(ReadSaveBuf<char>(buf,len) == d);\
-	assert(ReadSaveBuf<uint32>(buf,len) == size);
-
-
-void cprintf(char*, ...);

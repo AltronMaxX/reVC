@@ -1604,7 +1604,7 @@ psSelectDevice()
 #ifdef DEFAULT_NATIVE_RESOLUTION
 				GcurSelVM = 1;
 #else
-				MessageBox(nil, "Cannot find 640x480 video mode", "GTA3", MB_OK);
+				MessageBox(nil, "Cannot find 640x480 video mode", "GTA: Vice City", MB_OK);
 				return FALSE;
 #endif
 			}
@@ -1647,7 +1647,7 @@ psSelectDevice()
 		}
 
 		if(bestFsMode < 0){
-			MessageBox(nil, "Cannot find desired video mode", "GTA3", MB_OK);
+			MessageBox(nil, "Cannot find desired video mode", "GTA: Vice City", MB_OK);
 			return FALSE;
 		}
 		GcurSelVM = bestFsMode;
@@ -1665,7 +1665,7 @@ psSelectDevice()
 	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN)
 		GcurSelVM = bestWndMode;
 
-	// Windowed modes use the non-exclusive device mode, but vm keeps the requested resolution.
+	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
 	FrontEndMenuManager.m_nPrefsHeight = vm.height;
 	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
@@ -1700,7 +1700,7 @@ psSelectDevice()
 	}
 	
 #ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN)
+	if (!FrontEndMenuManager.m_nPrefsWindowed)
 #else
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
 #endif
@@ -2299,10 +2299,12 @@ WinMain(HINSTANCE instance,
 
 #ifdef LOAD_INI_SETTINGS
 		LoadINIControllerSettings();
-		if (connectedPadButtons != 0) {
-			ControlsManager.InitDefaultControlConfigJoyPad(connectedPadButtons);
-			SaveINIControllerSettings();
-		}
+		if (connectedPadButtons != 0)
+			ControlsManager.InitDefaultControlConfigJoyPad(connectedPadButtons); // add (connected-saved) amount of new button assignments on top of ours
+
+		// these have 2 purposes: creating .ini at the start, and adding newly introduced settings to old .ini at the start
+		SaveINISettings();
+		SaveINIControllerSettings();
 #endif
 	}
 	

@@ -8,6 +8,7 @@
 #include "Text.h"
 #include "World.h"
 #include "Timer.h"
+#include "SaveBuf.h"
 
 eLevelName CTheZones::m_CurrLevel;
 int16 CTheZones::FindIndex;
@@ -452,6 +453,7 @@ CTheZones::GetZoneInfoForTimeOfDay(const CVector *pos, CZoneInfo *info)
 			assert(d >= 0.0f && d <= 1.0f);
 			n = 1.0f - d;
 		}
+#ifdef FIX_BUGS
 		info->carDensity = day->carDensity * d + night->carDensity * n;
 		for(i = 0; i < ARRAY_SIZE(info->carThreshold); i++)
 			info->carThreshold[i] = day->carThreshold[i] * d + night->carThreshold[i] * n;
@@ -465,6 +467,22 @@ CTheZones::GetZoneInfoForTimeOfDay(const CVector *pos, CZoneInfo *info)
 		info->copPedThreshold = day->copPedThreshold * d + night->copPedThreshold * n;
 		for(i = 0; i < ARRAY_SIZE(info->gangPedThreshold); i++)
 			info->gangPedThreshold[i] = day->gangPedThreshold[i] * d + night->gangPedThreshold[i] * n;
+#else
+		// This is a complete mess.
+		info->carDensity = day->carDensity * n + night->carDensity * d;
+		for(i = 0; i < ARRAY_SIZE(info->carThreshold); i++)
+			info->carThreshold[i] = night->carThreshold[i] * d + night->carThreshold[i] * n;
+		for(i = 0; i < ARRAY_SIZE(info->boatThreshold); i++)
+			info->boatThreshold[i] = night->boatThreshold[i] * d + night->boatThreshold[i] * n;
+		for(i = 0; i < ARRAY_SIZE(info->gangThreshold); i++)
+			info->gangThreshold[i] = night->gangThreshold[i] * d + night->gangThreshold[i] * n;
+
+		info->copThreshold = night->copThreshold * d + night->copThreshold * n;
+		info->pedDensity = night->pedDensity * d + night->pedDensity * n;
+		info->copPedThreshold = night->copPedThreshold * d + night->copPedThreshold * n;
+		for(i = 0; i < ARRAY_SIZE(info->gangPedThreshold); i++)
+			info->gangPedThreshold[i] = night->gangPedThreshold[i] * d + night->gangPedThreshold[i] * n;
+#endif
 	}
 	if(CClock::GetIsTimeInRange(5, 19))
 		info->pedGroup = day->pedGroup;
@@ -697,11 +715,11 @@ CTheZones::SaveOneZone(CZone *zone, uint8 **buffer, uint32 *length, eZoneType zo
 	WriteSaveBuf(*buffer, *length, zone->zoneinfoNight);
 
 	int32 zoneId;
-	zoneId = GetIndexForZonePointer(zone->child);
+	zoneId = GetIndexForNavigationZonePointer(zone->child);
 	WriteSaveBuf(*buffer, *length, zoneId);
-	zoneId = GetIndexForZonePointer(zone->parent);
+	zoneId = GetIndexForNavigationZonePointer(zone->parent);
 	WriteSaveBuf(*buffer, *length, zoneId);
-	zoneId = GetIndexForZonePointer(zone->next);
+	zoneId = GetIndexForNavigationZonePointer(zone->next);
 	WriteSaveBuf(*buffer, *length, zoneId);
 }
 
@@ -714,9 +732,9 @@ CTheZones::LoadAllZones(uint8 *buffer, uint32 size)
 	uint32 length = 0;
 	CheckSaveHeaderWithLength(buffer, length, 'Z', 'N', 'S', '\0', size - SAVE_HEADER_SIZE);
 
-	m_CurrLevel = ReadSaveBuf<eLevelName>(buffer, length);
-	FindIndex = ReadSaveBuf<int16>(buffer, length);
-	ReadSaveBuf<int16>(buffer, length);
+	ReadSaveBuf(&m_CurrLevel, buffer);
+	ReadSaveBuf(&FindIndex, buffer);
+	SkipSaveBuf(buffer, 2);
 
 	for(i = 0; i < ARRAY_SIZE(NavigationZoneArray); i++)
 		LoadOneZone(&NavigationZoneArray[i], &buffer, &length, ZONE_NAVIG);
@@ -725,21 +743,21 @@ CTheZones::LoadAllZones(uint8 *buffer, uint32 size)
 		LoadOneZone(&InfoZoneArray[i], &buffer, &length, ZONE_INFO);
 
 	for(i = 0; i < ARRAY_SIZE(ZoneInfoArray); i++)
-		ZoneInfoArray[i] = ReadSaveBuf<CZoneInfo>(buffer, length);
+		ReadSaveBuf(&ZoneInfoArray[i], buffer);
 
-	TotalNumberOfNavigationZones = ReadSaveBuf<int16>(buffer, length);
-	TotalNumberOfInfoZones = ReadSaveBuf<int16>(buffer, length);
-	TotalNumberOfZoneInfos = ReadSaveBuf<int16>(buffer, length);
-	ReadSaveBuf<int16>(buffer, length);
+	ReadSaveBuf(&TotalNumberOfNavigationZones, buffer);
+	ReadSaveBuf(&TotalNumberOfInfoZones, buffer);
+	ReadSaveBuf(&TotalNumberOfZoneInfos, buffer);
+	SkipSaveBuf(buffer, 2);
 
 	for(i = 0; i < ARRAY_SIZE(MapZoneArray); i++)
 		LoadOneZone(&MapZoneArray[i], &buffer, &length, ZONE_MAPZONE);
 
 	for(i = 0; i < ARRAY_SIZE(AudioZoneArray); i++)
-		AudioZoneArray[i] = ReadSaveBuf<int16>(buffer, length);
+		ReadSaveBuf(&AudioZoneArray[i], buffer);
 
-	TotalNumberOfMapZones = ReadSaveBuf<uint16>(buffer, length);
-	NumberOfAudioZones = ReadSaveBuf<uint16>(buffer, length);
+	ReadSaveBuf(&TotalNumberOfMapZones, buffer);
+	ReadSaveBuf(&NumberOfAudioZones, buffer);
 
 	VALIDATESAVEBUF(size)
 }
@@ -747,26 +765,36 @@ CTheZones::LoadAllZones(uint8 *buffer, uint32 size)
 void
 CTheZones::LoadOneZone(CZone *zone, uint8 **buffer, uint32 *length, eZoneType zoneType)
 {
-	*(uint32*)&zone->name[0] = ReadSaveBuf<uint32>(*buffer, *length);
-	*(uint32*)&zone->name[4] = ReadSaveBuf<uint32>(*buffer, *length);
+#ifdef THIS_IS_STUPID
+	uint32 part1, part2;
+	ReadSaveBuf(&part1, *buffer, *length);
+	ReadSaveBuf(&part2, *buffer, *length);
 
-	zone->minx = ReadSaveBuf<float>(*buffer, *length);
-	zone->miny = ReadSaveBuf<float>(*buffer, *length);
-	zone->minz = ReadSaveBuf<float>(*buffer, *length);
-	zone->maxx = ReadSaveBuf<float>(*buffer, *length);
-	zone->maxy = ReadSaveBuf<float>(*buffer, *length);
-	zone->maxz = ReadSaveBuf<float>(*buffer, *length);
+	*(uint64 *)&zone->name[0] = (uint64)part2;
+	*(uint64 *)&zone->name[0] <<= 32;
+	*(uint64 *)&zone->name[0] |= (uint64)part1;
+#else
+	for(int i = 0; i < sizeof(zone->name); i++)
+		ReadSaveBuf(&zone->name[i], *buffer, *length);
+#endif
 
-	zone->type = ReadSaveBuf<eZoneType>(*buffer, *length);
-	zone->level = ReadSaveBuf<eLevelName>(*buffer, *length);
-	zone->zoneinfoDay = ReadSaveBuf<int16>(*buffer, *length);
-	zone->zoneinfoNight = ReadSaveBuf<int16>(*buffer, *length);
+	ReadSaveBuf(&zone->minx, *buffer, *length);
+	ReadSaveBuf(&zone->miny, *buffer, *length);
+	ReadSaveBuf(&zone->minz, *buffer, *length);
+	ReadSaveBuf(&zone->maxx, *buffer, *length);
+	ReadSaveBuf(&zone->maxy, *buffer, *length);
+	ReadSaveBuf(&zone->maxz, *buffer, *length);
+
+	ReadSaveBuf(&zone->type, *buffer, *length);
+	ReadSaveBuf(&zone->level, *buffer, *length);
+	ReadSaveBuf(&zone->zoneinfoDay, *buffer, *length);
+	ReadSaveBuf(&zone->zoneinfoNight, *buffer, *length);
 
 	int32 zoneId;
-	zoneId = ReadSaveBuf<int32>(*buffer, *length);
-	zone->child = GetPointerForZoneIndex(zoneId);
-	zoneId = ReadSaveBuf<int32>(*buffer, *length);
-	zone->parent = GetPointerForZoneIndex(zoneId);
-	zoneId = ReadSaveBuf<int32>(*buffer, *length);
-	zone->next = GetPointerForZoneIndex(zoneId);
+	ReadSaveBuf(&zoneId, *buffer, *length);
+	zone->child = GetPointerForNavigationZoneIndex(zoneId);
+	ReadSaveBuf(&zoneId, *buffer, *length);
+	zone->parent = GetPointerForNavigationZoneIndex(zoneId);
+	ReadSaveBuf(&zoneId, *buffer, *length);
+	zone->next = GetPointerForNavigationZoneIndex(zoneId);
 }

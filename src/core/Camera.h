@@ -633,7 +633,7 @@ public:
 	bool IsPointVisible(const CVector &center, const CMatrix *mat);
 	bool IsSphereVisible(const CVector &center, float radius, const CMatrix *mat);
 	bool IsSphereVisible(const CVector &center, float radius);
-	bool IsBoxVisible(CVector *box, const CMatrix *mat);
+	bool IsBoxVisible(CVUVECTOR *box, const CMatrix *mat);
 };
 
 VALIDATE_SIZE(CCamera, 0xE9D8);

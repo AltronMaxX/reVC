@@ -25,7 +25,11 @@ C_PcSave::SetSaveDirectory(const char *path)
 bool
 C_PcSave::DeleteSlot(int32 slot)
 {
+#ifdef FIX_BUGS
+	char FileName[MAX_PATH];
+#else
 	char FileName[200];
+#endif
 
 	PcSaveHelper.nErrorCode = SAVESTATUS_SUCCESSFUL;
 	sprintf(FileName, "%s%i.b", DefaultPCSaveFileName, slot + 1);
@@ -119,7 +123,7 @@ C_PcSave::PopulateSlotInfo()
 		if (Slots[i] == SLOT_OK) {
 			if (CheckDataNotCorrupt(i, savename)) {
 #ifdef FIX_INCOMPATIBLE_SAVES
-				if(!FixSave(i, GetSaveType(savename))) {
+				if (!FixSave(i, GetSaveType(savename))) {
 					CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i + 1, -1, -1, -1, -1, -1, SlotFileName[i]);
 					Slots[i] = SLOT_CORRUPTED;
 					continue;

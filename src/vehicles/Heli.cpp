@@ -260,7 +260,7 @@ CHeli::ProcessControl(void)
 		// Move up if too low
 		if(GetPosition().z - 2.0f < groundZ && m_heliStatus != HELI_STATUS_SHOT_DOWN)
 			m_vecMoveSpeed.z += CTimer::GetTimeStep()*0.01f;
-		m_vecMoveSpeed.z = CLAMP(m_vecMoveSpeed.z, -0.3f, 0.3f);
+		m_vecMoveSpeed.z = Clamp(m_vecMoveSpeed.z, -0.3f, 0.3f);
 	}
 
 	float fTargetDist = vTargetDist.Magnitude();
@@ -471,7 +471,7 @@ CHeli::ProcessControl(void)
 			DMAudio.PlayOneShot(m_audioEntityId, SOUND_PED_HELI_PLAYER_FOUND, 0.0f);
 			m_nPoliceShoutTimer = CTimer::GetTimeInMilliseconds() + 4500 + (CGeneral::GetRandomNumber() & 0xFFF);
 		}
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 		if (!CReplay::IsPlayingBack())
 #endif
 		{
@@ -815,7 +815,7 @@ CHeli::UpdateHelis(void)
 
 	// Spawn new police helis
 	int numHelisRequired = 
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 		CReplay::IsPlayingBack() ? 0 :
 #endif
 		FindPlayerPed()->m_pWanted->NumOfHelisRequired();

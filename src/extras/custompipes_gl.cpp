@@ -1,17 +1,17 @@
 #include "common.h"
 
 #ifdef RW_OPENGL
-#include "Clock.h"
-#include "FileMgr.h"
-#include "Lights.h"
-#include "Renderer.h"
+#include "main.h"
 #include "RwHelper.h"
+#include "Lights.h"
 #include "Timecycle.h"
-#include "TxdStore.h"
+#include "FileMgr.h"
+#include "Clock.h"
 #include "Weather.h"
+#include "TxdStore.h"
+#include "Renderer.h"
 #include "World.h"
 #include "custompipes.h"
-#include "main.h"
 
 #ifdef EXTENDED_PIPELINES
 
@@ -19,8 +19,7 @@
 #error "Need librw for EXTENDED_PIPELINES"
 #endif
 
-namespace CustomPipes
-{
+namespace CustomPipes {
 
 static int32 u_viewVec;
 static int32 u_rampStart;
@@ -54,7 +53,8 @@ uploadSpecLights(void)
 	} dirs[1 + NUMEXTRADIRECTIONALS];
 	memset(colors, 0, sizeof(colors));
 	memset(dirs, 0, sizeof(dirs));
-	for(int i = 0; i < 1 + NUMEXTRADIRECTIONALS; i++) dirs[i].power = 1.0f;
+	for(int i = 0; i < 1+NUMEXTRADIRECTIONALS; i++)
+		dirs[i].power = 1.0f;
 	float power = Power.Get();
 	Color speccol = SpecColor.Get();
 	colors[0].red = speccol.r;
@@ -62,15 +62,15 @@ uploadSpecLights(void)
 	colors[0].blue = speccol.b;
 	dirs[0].dir = pDirect->getFrame()->getLTM()->at;
 	dirs[0].power = power;
-	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++) {
-		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS) {
-			colors[1 + i] = pExtraDirectionals[i]->color;
-			dirs[1 + i].dir = pExtraDirectionals[i]->getFrame()->getLTM()->at;
-			dirs[1 + i].power = power * 2.0f;
+	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++){
+		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS){
+			colors[1+i] = pExtraDirectionals[i]->color;
+			dirs[1+i].dir = pExtraDirectionals[i]->getFrame()->getLTM()->at;
+			dirs[1+i].power = power*2.0f;
 		}
 	}
-	glUniform4fv(U(u_specDir), 1 + NUMEXTRADIRECTIONALS, (float *)&dirs);
-	glUniform4fv(U(u_specColor), 1 + NUMEXTRADIRECTIONALS, (float *)&colors);
+	glUniform4fv(U(u_specDir), 1 + NUMEXTRADIRECTIONALS, (float*)&dirs);
+	glUniform4fv(U(u_specColor), 1 + NUMEXTRADIRECTIONALS, (float*)&colors);
 }
 
 static void
@@ -80,7 +80,7 @@ vehicleRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	using namespace rw::gl3;
 
 	// TODO: make this less of a kludge
-	if(VehiclePipeSwitch == VEHICLEPIPE_MATFX) {
+	if(VehiclePipeSwitch == VEHICLEPIPE_MATFX){
 		matFXGlobals.pipelines[rw::platform]->render(atomic);
 		return;
 	}
@@ -99,7 +99,7 @@ vehicleRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	neoVehicleShader->use();
 
 	V3d eyePos = rw::engine->currentCamera->getFrame()->getLTM()->pos;
-	glUniform3fv(U(u_eye), 1, (float *)&eyePos);
+	glUniform3fv(U(u_eye), 1, (float*)&eyePos);
 
 	uploadSpecLights();
 
@@ -111,7 +111,7 @@ vehicleRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 
 	SetRenderState(SRCBLEND, BLENDONE);
 
-	while(n--) {
+	while(n--){
 		m = inst->material;
 
 		setMaterial(flags, m->color, m->surfaceProps);
@@ -143,22 +143,24 @@ CreateVehiclePipe(void)
 
 	if(CFileMgr::LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/carTweakingTable.dat'\n");
-	else {
-		char *fp = (char *)work_buff;
+	else{
+		char *fp = (char*)work_buff;
 		fp = ReadTweakValueTable(fp, Fresnel);
 		fp = ReadTweakValueTable(fp, Power);
 		fp = ReadTweakValueTable(fp, DiffColor);
 		fp = ReadTweakValueTable(fp, SpecColor);
 	}
 
+
 	{
 #include "shaders/obj/neoVehicle_frag.inc"
 #include "shaders/obj/neoVehicle_vert.inc"
-		const char *vs[] = {shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoVehicle_vert_src, nil};
-		const char *fs[] = {shaderDecl, header_frag_src, neoVehicle_frag_src, nil};
-		neoVehicleShader = Shader::create(vs, fs);
-		assert(neoVehicleShader);
+	const char *vs[] = { shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoVehicle_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, neoVehicle_frag_src, nil };
+	neoVehicleShader = Shader::create(vs, fs);
+	assert(neoVehicleShader);
 	}
+
 
 	rw::gl3::ObjPipeline *pipe = rw::gl3::ObjPipeline::create();
 	pipe->instanceCB = rw::gl3::defaultInstanceCB;
@@ -173,9 +175,11 @@ DestroyVehiclePipe(void)
 	neoVehicleShader->destroy();
 	neoVehicleShader = nil;
 
-	((rw::gl3::ObjPipeline *)vehiclePipe)->destroy();
+	((rw::gl3::ObjPipeline*)vehiclePipe)->destroy();
 	vehiclePipe = nil;
 }
+
+
 
 /*
  * Neo World pipe
@@ -189,7 +193,7 @@ worldRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	if(!LightmapEnable) {
+	if(!LightmapEnable){
 		gl3::defaultRenderCB(atomic, header);
 		return;
 	}
@@ -208,24 +212,25 @@ worldRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 
 	float lightfactor[4];
 
-	while(n--) {
+	while(n--){
 		m = inst->material;
 
-		if(MatFX::getEffects(m) == MatFX::DUAL) {
+		if(MatFX::getEffects(m) == MatFX::DUAL){
 			MatFX *matfx = MatFX::get(m);
 			Texture *dualtex = matfx->getDualTexture();
-			if(dualtex == nil) goto notex;
+			if(dualtex == nil)
+				goto notex;
 			setTexture(1, dualtex);
-			lightfactor[0] = lightfactor[1] = lightfactor[2] = WorldLightmapBlend.Get() * LightmapMult;
-		} else {
+			lightfactor[0] = lightfactor[1] = lightfactor[2] = WorldLightmapBlend.Get()*LightmapMult;
+		}else{
 		notex:
 			setTexture(1, nil);
 			lightfactor[0] = lightfactor[1] = lightfactor[2] = 0.0f;
 		}
-		lightfactor[3] = m->color.alpha / 255.0f;
+		lightfactor[3] = m->color.alpha/255.0f;
 		glUniform4fv(U(u_lightMap), 1, lightfactor);
 
-		RGBA color = {255, 255, 255, m->color.alpha};
+		RGBA color = { 255, 255, 255, m->color.alpha };
 		setMaterial(color, m->surfaceProps);
 
 		setTexture(0, m->texture);
@@ -248,16 +253,17 @@ CreateWorldPipe(void)
 	if(CFileMgr::LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/worldTweakingTable.dat'\n");
 	else
-		ReadTweakValueTable((char *)work_buff, WorldLightmapBlend);
+		ReadTweakValueTable((char*)work_buff, WorldLightmapBlend);
 
 	{
-#include "shaders/obj/default_UV2_vert.inc"
 #include "shaders/obj/neoWorldVC_frag.inc"
-		const char *vs[] = {shaderDecl, header_vert_src, default_UV2_vert_src, nil};
-		const char *fs[] = {shaderDecl, header_frag_src, neoWorldVC_frag_src, nil};
-		neoWorldShader = Shader::create(vs, fs);
-		assert(neoWorldShader);
+#include "shaders/obj/default_UV2_vert.inc"
+	const char *vs[] = { shaderDecl, header_vert_src, default_UV2_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, neoWorldVC_frag_src, nil };
+	neoWorldShader = Shader::create(vs, fs);
+	assert(neoWorldShader);
 	}
+
 
 	rw::gl3::ObjPipeline *pipe = rw::gl3::ObjPipeline::create();
 	pipe->instanceCB = rw::gl3::defaultInstanceCB;
@@ -272,9 +278,12 @@ DestroyWorldPipe(void)
 	neoWorldShader->destroy();
 	neoWorldShader = nil;
 
-	((rw::gl3::ObjPipeline *)worldPipe)->destroy();
+	((rw::gl3::ObjPipeline*)worldPipe)->destroy();
 	worldPipe = nil;
 }
+
+
+
 
 /*
  * Neo Gloss pipe
@@ -289,7 +298,8 @@ glossRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	using namespace rw::gl3;
 
 	worldRenderCB(atomic, header);
-	if(!GlossEnable) return;
+	if(!GlossEnable)
+		return;
 
 	Material *m;
 
@@ -301,7 +311,7 @@ glossRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	neoGlossShader->use();
 
 	V3d eyePos = rw::engine->currentCamera->getFrame()->getLTM()->pos;
-	glUniform3fv(U(u_eye), 1, (float *)&eyePos);
+	glUniform3fv(U(u_eye), 1, (float*)&eyePos);
 	float reflProps[4];
 	reflProps[0] = GlossMult;
 	reflProps[1] = 0.0f;
@@ -315,15 +325,15 @@ glossRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	SetRenderState(ZWRITEENABLE, FALSE);
 	SetRenderState(ALPHATESTFUNC, ALPHAALWAYS);
 
-	while(n--) {
+	while(n--){
 		m = inst->material;
 
-		RGBA color = {255, 255, 255, m->color.alpha};
+		RGBA color = { 255, 255, 255, m->color.alpha };
 		setMaterial(color, m->surfaceProps);
 
-		if(m->texture) {
+		if(m->texture){
 			Texture *tex = GetGlossTex(m);
-			if(tex) {
+			if(tex){
 				setTexture(0, tex);
 				drawInst(header, inst);
 			}
@@ -348,10 +358,10 @@ CreateGlossPipe(void)
 	{
 #include "shaders/obj/neoGloss_frag.inc"
 #include "shaders/obj/neoGloss_vert.inc"
-		const char *vs[] = {shaderDecl, header_vert_src, neoGloss_vert_src, nil};
-		const char *fs[] = {shaderDecl, header_frag_src, neoGloss_frag_src, nil};
-		neoGlossShader = Shader::create(vs, fs);
-		assert(neoGlossShader);
+	const char *vs[] = { shaderDecl, header_vert_src, neoGloss_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, neoGloss_frag_src, nil };
+	neoGlossShader = Shader::create(vs, fs);
+	assert(neoGlossShader);
 	}
 
 	rw::gl3::ObjPipeline *pipe = rw::gl3::ObjPipeline::create();
@@ -367,9 +377,11 @@ DestroyGlossPipe(void)
 	neoGlossShader->destroy();
 	neoGlossShader = nil;
 
-	((rw::gl3::ObjPipeline *)glossPipe)->destroy();
+	((rw::gl3::ObjPipeline*)glossPipe)->destroy();
 	glossPipe = nil;
 }
+
+
 
 /*
  * Neo Rim pipes
@@ -385,20 +397,20 @@ uploadRimData(bool enable)
 	using namespace rw::gl3;
 
 	V3d viewVec = rw::engine->currentCamera->getFrame()->getLTM()->at;
-	glUniform3fv(U(u_viewVec), 1, (float *)&viewVec);
+	glUniform3fv(U(u_viewVec), 1, (float*)&viewVec);
 	float rimData[4];
 	rimData[0] = Offset.Get();
 	rimData[1] = Scale.Get();
 	if(enable)
-		rimData[2] = Scaling.Get() * RimlightMult;
+		rimData[2] = Scaling.Get()*RimlightMult;
 	else
 		rimData[2] = 0.0f;
 	rimData[3] = 0.0f;
 	glUniform3fv(U(u_rimData), 1, rimData);
 	Color col = RampStart.Get();
-	glUniform4fv(U(u_rampStart), 1, (float *)&col);
+	glUniform4fv(U(u_rampStart), 1, (float*)&col);
 	col = RampEnd.Get();
-	glUniform4fv(U(u_rampEnd), 1, (float *)&col);
+	glUniform4fv(U(u_rampEnd), 1, (float*)&col);
 }
 
 static void
@@ -407,7 +419,7 @@ rimSkinRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	if(!RimlightEnable) {
+	if(!RimlightEnable){
 		gl3::skinRenderCB(atomic, header);
 		return;
 	}
@@ -429,7 +441,7 @@ rimSkinRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 
 	uploadSkinMatrices(atomic);
 
-	while(n--) {
+	while(n--){
 		m = inst->material;
 
 		setMaterial(flags, m->color, m->surfaceProps);
@@ -450,7 +462,7 @@ rimRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	if(!RimlightEnable) {
+	if(!RimlightEnable){
 		gl3::defaultRenderCB(atomic, header);
 		return;
 	}
@@ -470,7 +482,7 @@ rimRenderCB(rw::Atomic *atomic, rw::gl3::InstanceDataHeader *header)
 
 	uploadRimData(atomic->geometry->flags & Geometry::LIGHT);
 
-	while(n--) {
+	while(n--){
 		m = inst->material;
 
 		setMaterial(flags, m->color, m->surfaceProps);
@@ -492,8 +504,8 @@ CreateRimLightPipes(void)
 
 	if(CFileMgr::LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/rimTweakingTable.dat'\n");
-	else {
-		char *fp = (char *)work_buff;
+	else{
+		char *fp = (char*)work_buff;
 		fp = ReadTweakValueTable(fp, RampStart);
 		fp = ReadTweakValueTable(fp, RampEnd);
 		fp = ReadTweakValueTable(fp, Offset);
@@ -502,22 +514,23 @@ CreateRimLightPipes(void)
 	}
 
 	{
-#include "shaders/obj/neoRimSkin_vert.inc"
 #include "shaders/obj/simple_frag.inc"
-		const char *vs[] = {shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoRimSkin_vert_src, nil};
-		const char *fs[] = {shaderDecl, header_frag_src, simple_frag_src, nil};
-		neoRimSkinShader = Shader::create(vs, fs);
-		assert(neoRimSkinShader);
+#include "shaders/obj/neoRimSkin_vert.inc"
+	const char *vs[] = { shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoRimSkin_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, simple_frag_src, nil };
+	neoRimSkinShader = Shader::create(vs, fs);
+	assert(neoRimSkinShader);
 	}
 
 	{
-#include "shaders/obj/neoRim_vert.inc"
 #include "shaders/obj/simple_frag.inc"
-		const char *vs[] = {shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoRim_vert_src, nil};
-		const char *fs[] = {shaderDecl, header_frag_src, simple_frag_src, nil};
-		neoRimShader = Shader::create(vs, fs);
-		assert(neoRimShader);
+#include "shaders/obj/neoRim_vert.inc"
+	const char *vs[] = { shaderDecl, "#define DIRECTIONALS\n", header_vert_src, neoRim_vert_src, nil };
+	const char *fs[] = { shaderDecl, header_frag_src, simple_frag_src, nil };
+	neoRimShader = Shader::create(vs, fs);
+	assert(neoRimShader);
 	}
+
 
 	rw::gl3::ObjPipeline *pipe = rw::gl3::ObjPipeline::create();
 	pipe->instanceCB = rw::gl3::defaultInstanceCB;
@@ -541,12 +554,14 @@ DestroyRimLightPipes(void)
 	neoRimSkinShader->destroy();
 	neoRimSkinShader = nil;
 
-	((rw::gl3::ObjPipeline *)rimPipe)->destroy();
+	((rw::gl3::ObjPipeline*)rimPipe)->destroy();
 	rimPipe = nil;
 
-	((rw::gl3::ObjPipeline *)rimSkinPipe)->destroy();
+	((rw::gl3::ObjPipeline*)rimSkinPipe)->destroy();
 	rimSkinPipe = nil;
 }
+
+
 
 void
 CustomPipeRegisterGL(void)
@@ -564,7 +579,8 @@ CustomPipeRegisterGL(void)
 	u_specColor = rw::gl3::registerUniform("u_specColor");
 }
 
-} // namespace CustomPipes
+
+}
 
 #endif
 
@@ -576,7 +592,8 @@ CustomPipeRegisterGL(void)
 namespace WorldRender
 {
 
-struct BuildingInst {
+struct BuildingInst
+{
 	rw::Matrix matrix;
 	rw::gl3::InstanceDataHeader *instHeader;
 	uint8 fadeAlpha;
@@ -590,7 +607,8 @@ static RwRGBAReal black;
 static bool
 IsTextureTransparent(RwTexture *tex)
 {
-	if(tex == nil || tex->raster == nil) return false;
+	if(tex == nil || tex->raster == nil)
+		return false;
 	return PLUGINOFFSET(rw::gl3::Gl3Raster, tex->raster, rw::gl3::nativeRasterOffset)->hasAlpha;
 }
 
@@ -605,7 +623,7 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
 
 	atomic->getPipeline()->instance(atomic);
-	building->instHeader = (gl3::InstanceDataHeader *)atomic->geometry->instData;
+	building->instHeader = (gl3::InstanceDataHeader*)atomic->geometry->instData;
 	assert(building->instHeader != nil);
 	assert(building->instHeader->platform == PLATFORM_GL3);
 	building->fadeAlpha = 255;
@@ -626,16 +644,17 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 	building->matrix = *atomic->getFrame()->getLTM();
 
 	InstanceData *inst = building->instHeader->inst;
-	for(rw::uint32 i = 0; i < building->instHeader->numMeshes; i++, inst++) {
+	for(rw::uint32 i = 0; i < building->instHeader->numMeshes; i++, inst++){
 		Material *m = inst->material;
 
-		if(inst->vertexAlpha || m->color.alpha != 255 || IsTextureTransparent(m->texture)) {
+		if(inst->vertexAlpha || m->color.alpha != 255 ||
+		   IsTextureTransparent(m->texture)){
 			defer = true;
 			continue;
 		}
 
 		// alright we're rendering this atomic
-		if(!setupDone) {
+		if(!setupDone){
 			defaultShader->use();
 			setWorldMatrix(&building->matrix);
 			setupVertexInput(building->instHeader);
@@ -650,7 +669,8 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 		drawInst(building->instHeader, inst);
 	}
 	teardownVertexInput(building->instHeader);
-	if(defer) numBlendInsts[pass]++;
+	if(defer)
+		numBlendInsts[pass]++;
 }
 
 void
@@ -662,7 +682,7 @@ AtomicFullyTransparent(RpAtomic *atomic, int pass, int fadeAlpha)
 	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
 
 	atomic->getPipeline()->instance(atomic);
-	building->instHeader = (gl3::InstanceDataHeader *)atomic->geometry->instData;
+	building->instHeader = (gl3::InstanceDataHeader*)atomic->geometry->instData;
 	assert(building->instHeader != nil);
 	assert(building->instHeader->platform == PLATFORM_GL3);
 	building->fadeAlpha = fadeAlpha;
@@ -684,7 +704,7 @@ RenderBlendPass(int pass)
 	lights.numLocals = 0;
 
 	int i;
-	for(i = 0; i < numBlendInsts[pass]; i++) {
+	for(i = 0; i < numBlendInsts[pass]; i++){
 		BuildingInst *building = &blendInsts[pass][i];
 
 		setupVertexInput(building->instHeader);
@@ -696,14 +716,14 @@ RenderBlendPass(int pass)
 		setLights(&lights);
 
 		InstanceData *inst = building->instHeader->inst;
-		for(rw::uint32 j = 0; j < building->instHeader->numMeshes; j++, inst++) {
+		for(rw::uint32 j = 0; j < building->instHeader->numMeshes; j++, inst++){
 			Material *m = inst->material;
 			if(!inst->vertexAlpha && m->color.alpha == 255 && !IsTextureTransparent(m->texture) && building->fadeAlpha == 255)
-				continue; // already done this one
+				continue;	// already done this one
 
 			rw::RGBA color = m->color;
-			color.alpha = (color.alpha * building->fadeAlpha) / 255;
-			setMaterial(color, m->surfaceProps); // always modulate here
+			color.alpha = (color.alpha * building->fadeAlpha)/255;
+			setMaterial(color, m->surfaceProps);	// always modulate here
 
 			setTexture(0, m->texture);
 
@@ -712,7 +732,7 @@ RenderBlendPass(int pass)
 		teardownVertexInput(building->instHeader);
 	}
 }
-} // namespace WorldRender
+}
 #endif
 
 #endif

@@ -23,13 +23,13 @@
 #include "World.h"
 #include "Replay.h"
 #include "Coronas.h"
+#include "SaveBuf.h"
 
 #ifdef COMPATIBLE_SAVES
 #define SCRIPTPATHS_SAVE_SIZE 0x9C
 #else
 #define SCRIPTPATHS_SAVE_SIZE sizeof(aArray)
 #endif
-
 
 CPlaneTrail CPlaneTrails::aArray[6];
 RwImVertexIndex TrailIndices[32] = {
@@ -928,7 +928,7 @@ CEscalator::AddThisOne(CVector pos0, CVector pos1, CVector pos2, CVector pos3, b
 	m_pos2 = pos2;
 	m_pos3 = pos3;
 
-	float escalatorStepHeight = CModelInfo::GetModelInfo(MI_ESCALATORSTEP)->GetColModel()->boundingBox.max.z;
+	float escalatorStepHeight = CModelInfo::GetColModel(MI_ESCALATORSTEP)->boundingBox.max.z;
 	m_pos0.z -= escalatorStepHeight;
 	m_pos1.z -= escalatorStepHeight;
 	m_pos2.z -= escalatorStepHeight;
@@ -1161,7 +1161,7 @@ void CScriptPath::Update(void) {
 		return;
 
 	m_fPosition += m_fSpeed * CTimer::GetTimeStepInSeconds();
-	m_fPosition = CLAMP(m_fPosition, 0.0f, m_fTotalLength);
+	m_fPosition = Clamp(m_fPosition, 0.0f, m_fTotalLength);
 
 	if (m_pObjects[0] || m_pObjects[1] || m_pObjects[2] || m_pObjects[3]
 		|| m_pObjects[4] || m_pObjects[5]) {
@@ -1269,10 +1269,11 @@ bool CScriptPaths::IsOneActive(void) {
 }
 
 void CScriptPaths::Load(uint8 *buf, uint32 size) {
-	INITSAVEBUF
-	for(int32 i = 0; i < 3; i++) aArray[i].Clear();
+INITSAVEBUF
+	for (int32 i = 0; i < 3; i++)
+		aArray[i].Clear();
 
-	for(int32 i = 0; i < 3; i++) {
+	for (int32 i = 0; i < 3; i++) {
 #ifdef COMPATIBLE_SAVES
 		ReadSaveBuf(&aArray[i].m_numNodes, buf);
 		SkipSaveBuf(buf, 4);
@@ -1285,18 +1286,18 @@ void CScriptPaths::Load(uint8 *buf, uint32 size) {
 		ReadSaveBuf(&aArray[i], buf);
 #endif
 
-		for(int32 j = 0; j < 6; j++) {
+		for (int32 j = 0; j < 6; j++) {
 #ifdef COMPATIBLE_SAVES
 			aArray[i].m_pObjects[j] = nil;
 			int32 tmp;
 			ReadSaveBuf(&tmp, buf);
-			if(tmp != 0) {
+			if (tmp != 0) {
 				aArray[i].m_pObjects[j] = CPools::GetObjectPool()->GetSlot(tmp - 1);
 				aArray[i].m_pObjects[j]->m_phy_flagA08 = false;
 			}
 #else
 			CScriptPath *pPath = &aArray[i];
-			if(pPath->m_pObjects[j] != nil) {
+			if (pPath->m_pObjects[j] != nil) {
 				pPath->m_pObjects[j] = CPools::GetObjectPool()->GetSlot((uintptr)pPath->m_pObjects[j] - 1);
 				pPath->m_pObjects[j]->m_phy_flagA08 = false;
 			}
@@ -1304,15 +1305,17 @@ void CScriptPaths::Load(uint8 *buf, uint32 size) {
 		}
 
 		aArray[i].m_pNode = new CPlaneNode[aArray[i].m_numNodes];
-		for(int32 j = 0; j < aArray[i].m_numNodes; j++) { ReadSaveBuf(&aArray[i].m_pNode[j], buf); }
+		for (int32 j = 0; j < aArray[i].m_numNodes; j++) {
+			ReadSaveBuf(&aArray[i].m_pNode[j], buf);
+		}
 	}
-	VALIDATESAVEBUF(size)
+VALIDATESAVEBUF(size)
 }
 
 void CScriptPaths::Save(uint8 *buf, uint32 *size) {
 	*size = SCRIPTPATHS_SAVE_SIZE;
-	INITSAVEBUF
-	for(int32 i = 0; i < 3; i++) {
+INITSAVEBUF
+	for (int32 i = 0; i < 3; i++) {
 #ifdef COMPATIBLE_SAVES
 		WriteSaveBuf(buf, aArray[i].m_numNodes);
 		ZeroSaveBuf(buf, 4);
@@ -1325,21 +1328,21 @@ void CScriptPaths::Save(uint8 *buf, uint32 *size) {
 		CScriptPath *pPath = WriteSaveBuf(buf, aArray[i]);
 #endif
 
-		for(int32 j = 0; j < 6; j++) {
+		for (int32 j = 0; j < 6; j++) {
 #ifdef COMPATIBLE_SAVES
 			WriteSaveBuf(buf, aArray[i].m_pObjects[j] != nil ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aArray[i].m_pObjects[j]) + 1 : 0);
 #else
-			if(pPath->m_pObjects[j] != nil)
-				pPath->m_pObjects[j] = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pPath->m_pObjects[j]) + 1);
+			if (pPath->m_pObjects[j] != nil)
+				pPath->m_pObjects[j] = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pPath->m_pObjects[j]) + 1);
 #endif
 		}
 
-		for(int32 j = 0; j < aArray[i].m_numNodes; j++) {
+		for (int32 j = 0; j < aArray[i].m_numNodes; j++) {
 			WriteSaveBuf(buf, aArray[i].m_pNode[j]);
 			*size += sizeof(aArray[i].m_pNode[j]);
 		}
 	}
-	VALIDATESAVEBUF(*size);
+VALIDATESAVEBUF(*size);
 }
 
 CObject *g_pScriptPathObjects[18];

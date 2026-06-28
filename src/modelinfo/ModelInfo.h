@@ -2,6 +2,7 @@
 
 #include "2dEffect.h"
 #include "SimpleModelInfo.h"
+#include "MloModelInfo.h"
 #include "TimeModelInfo.h"
 #include "WeaponModelInfo.h"
 #include "ClumpModelInfo.h"
@@ -38,6 +39,9 @@ public:
 		return ms_modelInfoPtrs[id];
 	}
 	static CBaseModelInfo *GetModelInfo(const char *name, int minIndex, int maxIndex);
+	static CColModel *GetColModel(int id){
+		return ms_modelInfoPtrs[id]->GetColModel();
+	}
 
 	static bool IsBoatModel(int32 id);
 	static bool IsBikeModel(int32 id);

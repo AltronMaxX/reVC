@@ -1,4 +1,5 @@
 #include <time.h>
+#include <limits.h>
 
 // This is the common include for platform/renderer specific skeletons(glfw.cpp, win.cpp etc.) and using cross platform things (like Windows directories wrapper, platform specific global arrays etc.) 
 // Functions that's different on glfw and win but have same signature, should be located on platform.h.
@@ -24,7 +25,6 @@ char *_strdate(char *buf);
 	#ifndef __MWERKS__
 		#include <IntSafe.h>
 	#else
-        #define NOMINMAX
 		#include <Windows.h>
 	#endif
 #endif
@@ -151,7 +151,7 @@ typedef void* HANDLE;
 
 struct WIN32_FIND_DATA {
     char extension[32]; // for searching
-    char folder[32];	// for searching
+    char folder[MAX_PATH];	// for searching
     char cFileName[256]; // because tSkinInfo has it 256
     time_t ftLastWriteTime;
 };
@@ -160,4 +160,29 @@ HANDLE FindFirstFile(const char*, WIN32_FIND_DATA*);
 bool FindNextFile(HANDLE, WIN32_FIND_DATA*);
 void FileTimeToSystemTime(time_t*, SYSTEMTIME*);
 void GetDateFormat(int, int, SYSTEMTIME*, int, char*, int);
+#endif
+
+#ifdef __SWITCH__
+
+// tweak glfw values for switch to match expected pc bindings
+#ifdef GLFW_GAMEPAD_BUTTON_A
+    #undef GLFW_GAMEPAD_BUTTON_A
+#endif
+#define GLFW_GAMEPAD_BUTTON_A 1
+
+#ifdef GLFW_GAMEPAD_BUTTON_B
+    #undef GLFW_GAMEPAD_BUTTON_B
+#endif
+#define GLFW_GAMEPAD_BUTTON_B 0
+
+#ifdef GLFW_GAMEPAD_BUTTON_X
+    #undef GLFW_GAMEPAD_BUTTON_X
+#endif
+#define GLFW_GAMEPAD_BUTTON_X 3
+
+#ifdef GLFW_GAMEPAD_BUTTON_Y
+    #undef GLFW_GAMEPAD_BUTTON_Y
+#endif
+#define GLFW_GAMEPAD_BUTTON_Y 2
+
 #endif

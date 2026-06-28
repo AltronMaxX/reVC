@@ -15,6 +15,9 @@
 
 #define MENUACTION_SCALE_MULT 0.9f
 
+#define MENUSLIDER_BARS 16
+#define MENUSLIDER_LOGICAL_BARS MENUSLIDER_BARS
+
 #define MENULABEL_X_MARGIN 80.0f
 #define MENULABEL_POS_X 100.0f
 #define MENULABEL_POS_Y 97.0f
@@ -26,9 +29,17 @@
 #define RIGHT_ALIGNED_TEXT_RIGHT_MARGIN(xMargin) (xMargin + 30.0f)
 
 #define MENURADIO_ICON_FIRST_X 238.f
+#ifdef EXTERNAL_3D_SOUND
 #define MENURADIO_ICON_Y 288.0f
+#else
+#define MENURADIO_ICON_Y 248.0f
+#endif
 #define MENURADIO_ICON_SIZE 60.0f
+#ifdef EXTERNAL_3D_SOUND
 #define MENURADIO_SELECTOR_START_Y 285.f // other options should leave room on the screen
+#else
+#define MENURADIO_SELECTOR_START_Y 245.0f
+#endif
 #define MENURADIO_SELECTOR_HEIGHT 65.f
 
 #define MENUSLIDER_X 500.0f
@@ -229,8 +240,11 @@ enum eMenuScreen
 #ifdef DETECT_JOYSTICK_MENU
 	MENUPAGE_DETECT_JOYSTICK,
 #endif
-
 #endif
+#ifdef MISSION_REPLAY
+	MENUPAGE_MISSION_RETRY,
+#endif
+
 	MENUPAGE_OUTRO, // Originally 34, but CFO needs last screen to be empty to count number of menu pages
 	MENUPAGES
 };
@@ -238,6 +252,7 @@ enum eMenuScreen
 enum eMenuAction
 {
 #ifdef CUSTOM_FRONTEND_OPTIONS
+	MENUACTION_CFO_SLIDER = -3,
 	MENUACTION_CFO_SELECT = -2,
 	MENUACTION_CFO_DYNAMIC = -1,
 #endif
@@ -299,6 +314,10 @@ enum eMenuAction
 	MENUACTION_CTRLVIBRATION,
 	MENUACTION_CTRLCONFIG,
 #endif
+#ifdef MISSION_REPLAY
+	MENUACTION_REJECT_RETRY,
+	MENUACTION_UNK114
+#endif
 };
 
 enum eCheckHover
@@ -339,6 +358,10 @@ enum eCheckHover
 	HOVEROPTION_DECREASE_MOUSESENS,
 	HOVEROPTION_INCREASE_MP3BOOST,
 	HOVEROPTION_DECREASE_MP3BOOST,
+#ifdef CUSTOM_FRONTEND_OPTIONS
+	HOVEROPTION_INCREASE_CFO_SLIDER,
+	HOVEROPTION_DECREASE_CFO_SLIDER,
+#endif
 	HOVEROPTION_NOT_HOVERING,
 };
 
@@ -411,7 +434,7 @@ struct CCustomScreenLayout {
 
 struct CCFO
 {
-	int8 *value;
+	void *value;
 	const char *saveCat;
 	const char *save;
 };
@@ -439,6 +462,24 @@ struct CCFOSelect : CCFO
 		this->onlyApplyOnEnter = onlyApplyOnEnter;
 		this->changeFunc = changeFunc;
 		this->disableIfGameLoaded = disableIfGameLoaded;
+	}
+};
+
+// Value is float in here
+struct CCFOSlider : CCFO
+{
+	ChangeFuncFloat changeFunc;
+	float min;
+	float max;
+
+	CCFOSlider() {};
+	CCFOSlider(float* value, const char* saveCat, const char* save, float min, float max, ChangeFuncFloat changeFunc = nil){
+		this->value = value;
+		this->saveCat = saveCat;
+		this->save = save;
+		this->changeFunc = changeFunc;
+		this->min = min;
+		this->max = max;
 	}
 };
 
@@ -473,6 +514,7 @@ struct CMenuScreenCustom
 				CCFO *m_CFO; // for initializing
 				CCFOSelect *m_CFOSelect;
 				CCFODynamic *m_CFODynamic;
+				CCFOSlider *m_CFOSlider;
 			};
 			int32 m_SaveSlot; // eSaveSlot
 			int32 m_TargetMenu; // eMenuScreen
@@ -688,6 +730,10 @@ public:
 	int8 m_nDisplayMSAALevel;
 #endif
 
+#ifdef MISSION_REPLAY
+	bool m_bAttemptingMissionRetry;
+#endif
+
 #ifdef GAMEPAD_MENU
 	enum
 	{
@@ -696,6 +742,7 @@ public:
 		CONTROLLER_DUALSHOCK4,
 		CONTROLLER_XBOX360,
 		CONTROLLER_XBOXONE,
+		CONTROLLER_NINTENDO_SWITCH,
 	};
 
 	int8 m_PrefsControllerType;
@@ -746,7 +793,7 @@ public:
 
 #ifdef XBOX_MESSAGE_SCREEN
 	static uint32 m_nDialogHideTimer;
-	static PauseModeTime m_nDialogHideTimerPauseMode;
+	static uint32 m_nDialogHideTimerPauseMode;
 	static bool m_bDialogOpen;
 	static wchar *m_pDialogText;
 	static bool m_bSaveWasSuccessful;
@@ -767,7 +814,7 @@ public:
 	void CheckCodesForControls(int);
 	bool CheckHover(int x1, int x2, int y1, int y2);
 	void CheckSliderMovement(int);
-	void DisplayHelperText(const char*);
+	void DisplayHelperText(char*);
 	int DisplaySlider(float, float, float, float, float, float, float);
 	void DoSettingsBeforeStartingAGame();
 	void DrawStandardMenus(bool);

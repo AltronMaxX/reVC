@@ -74,7 +74,7 @@ int32 CStreaming::ms_lastImageRead;
 int32 CStreaming::ms_imageSize;
 size_t CStreaming::ms_memoryAvailable;
 
-int32 desiredNumVehiclesLoaded = 20;
+int32 desiredNumVehiclesLoaded = 12;
 
 CEntity *pIslandLODmainlandEntity;
 CEntity *pIslandLODbeachEntity;
@@ -931,7 +931,7 @@ CStreaming::RequestIslands(eLevelName level)
 	}
 }
 
-static const char *IGnames[] = {
+static char *IGnames[] = {
 	"player",
 	"player2",
 	"player3",
@@ -956,7 +956,7 @@ static const char *IGnames[] = {
 	""
 };
 
-static const char *CSnames[] = {
+static char *CSnames[] = {
 	"csplay",
 	"csplay2",
 	"csplay3",
@@ -1631,7 +1631,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 
 	if(CRecordDataForGame::IsRecording() ||
 	   CRecordDataForGame::IsPlayingBack()
-#if(defined FIX_BUGS)
+#ifdef FIX_BUGS
 	   || CReplay::IsPlayingBack()
 #endif
 		)
@@ -1724,7 +1724,13 @@ CStreaming::StreamVehiclesAndPeds(void)
 		for(i = 0; i < CCarCtrl::TOTAL_CUSTOM_CLASSES; i++){
 			if(CCarCtrl::NumRequestsOfCarRating[i] > maxReq &&
 				((i == 0 && zone.carThreshold[0] != 0) ||
+#ifdef FIX_BUGS
+				(i < CCarCtrl::NUM_CAR_CLASSES && zone.carThreshold[i] != zone.carThreshold[i-1]) ||
+				(i == CCarCtrl::NUM_CAR_CLASSES && zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES] != 0) ||
+				(i > CCarCtrl::NUM_CAR_CLASSES && i < CCarCtrl::TOTAL_CUSTOM_CLASSES && zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES] != zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES - 1]))) {
+#else
 				(i != 0 && zone.carThreshold[i] != zone.carThreshold[i-1]))) {
+#endif
 				maxReq = CCarCtrl::NumRequestsOfCarRating[i];
 				mostRequestedRating = i;
 			}
@@ -1867,8 +1873,7 @@ CStreaming::RemoveCurrentZonesModels(void)
 	if (ms_currentPedGrp != -1)
 		for (i = 0; i < NUMMODELSPERPEDGROUP; i++) {
 			ms_bIsPedFromPedGroupLoaded[i] = false;
-			if (CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i] != -1 &&
-			    CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i] != MI_MALE01) {
+			if (CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i] != -1) {
 				SetModelIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
 				SetModelTxdIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
 			}
@@ -2615,7 +2620,6 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
-
 			}
 		}
 	}

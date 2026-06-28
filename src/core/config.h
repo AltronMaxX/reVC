@@ -1,7 +1,9 @@
 #pragma once
 
-// disables (most) stuff that wasn't in original gta-vc.exe - check section at the bottom of this file
-//#define VANILLA_DEFINES
+// disables (most) stuff that wasn't in original gta-vc.exe
+#ifdef __MWERKS__
+#define VANILLA_DEFINES
+#endif
 
 enum Config {
 	NUMPLAYERS = 1,
@@ -127,14 +129,11 @@ enum Config {
 	NUMINVISIBLEENTITIES = 150,
 
 	NUM_AUDIOENTITY_EVENTS = 4,
-	NUM_PED_COMMENTS_BANKS = 2,
 	NUM_PED_COMMENTS_SLOTS = 20,
 
-	NUM_SOUNDS_SAMPLES_BANKS = 2,
-	NUM_SOUNDS_SAMPLES_SLOTS = 27,
+	NUM_SOUND_QUEUES = 2,
 	NUM_AUDIOENTITIES = 250,
 
-	NUM_AUDIO_REFLECTIONS = 8,
 	NUM_SCRIPT_MAX_ENTITIES = 40,
 
 	NUM_GARAGE_STORED_CARS = 4,
@@ -152,9 +151,48 @@ enum Config {
 // We don't expect to compile for PS2 or Xbox
 // but it might be interesting for documentation purposes
 #define GTA_PC
+//#define GTA_PS2
+//#define GTA_XBOX
 
-// This enables things from the PS2 version on PC
-#define GTA_PS2_STUFF
+// Version defines
+#define GTAVC_PS2	400
+#define GTAVC_PC_10	410
+#define GTAVC_PC_11	411
+#define GTAVC_PC_JAP	412
+// TODO? maybe something for xbox or android?
+
+#define GTA_VERSION	GTAVC_PC_11
+
+// Enable configuration for handheld console ports
+#if defined(__SWITCH__) || defined(PSP2)
+	#define GTA_HANDHELD
+#endif
+
+// TODO(MIAMI): someone ought to find and check out uses of these defines:
+//#define GTA3_STEAM_PATCH
+//#define GTAVC_JP_PATCH
+
+#if defined GTA_PS2
+#	define GTA_PS2_STUFF
+#	define RANDOMSPLASH
+//#	define USE_CUSTOM_ALLOCATOR
+#	define VU_COLLISION
+#	define PS2_MENU
+#elif defined GTA_PC
+#	define EXTERNAL_3D_SOUND
+#	define AUDIO_REVERB
+#	ifndef GTA_HANDHELD
+#		define PC_PLAYER_CONTROLS	// mouse player/cam mode
+#	endif
+#	define GTA_REPLAY
+#	define GTA_SCENE_EDIT
+#	define PC_MENU
+#	define PC_WATER
+#elif defined GTA_XBOX
+#elif defined GTA_MOBILE
+#	define MISSION_REPLAY
+#	define SIMPLER_MISSIONS
+#endif
 
 // This is enabled for all released games.
 // any debug stuff that isn't left in any game is not in FINAL
@@ -173,28 +211,36 @@ enum Config {
 #define FINAL
 #endif
 
-// Version defines
-#define GTAVC_PS2	400
-#define GTAVC_PC_10	410
-#define GTAVC_PC_11	411
-#define GTAVC_PC_JAP	412
-// TODO? maybe something for xbox or android?
+// these are placed here to work with VANILLA_DEFINES for compatibility
+#define NO_CDCHECK // skip audio CD check
+#define DEFAULT_NATIVE_RESOLUTION // Set default video mode to your native resolution (fixes Windows 10 launch)
 
-#define GTA_VERSION	GTAVC_PC_11
+#ifdef VANILLA_DEFINES
+#if !defined(_WIN32) || defined(__LP64__) || defined(_WIN64)
+#error Vanilla can only be built for win-x86
+#endif
 
-// TODO(MIAMI): someone ought to find and check out uses of these defines:
-//#define GTA3_STEAM_PATCH
-//#define GTAVC_JP_PATCH
+#define FINAL
+#define MASTER
+//#define USE_MY_DOCUMENTS
+#define THIS_IS_STUPID
+#define DONT_FIX_REPLAY_BUGS
+#define USE_TXD_CDIMAGE // generate and load textures from txd.img
+//#define USE_TEXTURE_POOL // not possible because R* used custom RW33
+#define AUDIO_REFLECTIONS
+#else
+// This enables things from the PS2 version on PC
+#define GTA_PS2_STUFF
 
 // quality of life fixes that should also be in FINAL
 #define NASTY_GAME	// nasty game for all languages
-#define NO_CDCHECK
 
 // those infamous texts
 #define DRAW_GAME_VERSION_TEXT
 #ifdef DRAW_GAME_VERSION_TEXT
 	// unlike R* development builds, ours has runtime switch on debug menu & .ini, and disabled as default.
-	#define USE_OUR_VERSIONING // If you disable this then game will fetch version from peds.col, as R* did while in development
+	// If you disable this then game will fetch version from peds.col, as R* did while in development.
+	//#define USE_OUR_VERSIONING // enabled from buildfiles by default
 #endif
 
 // Memory allocation and compression
@@ -202,15 +248,10 @@ enum Config {
 //#define COMPRESSED_COL_VECTORS	// use compressed vectors for collision vertices
 //#define ANIM_COMPRESSION	// only keep most recently used anims uncompressed
 
-#if defined GTA_PC
-#	ifdef GTA_PS2_STUFF
-#		define USE_PS2_RAND
-#		define RANDOMSPLASH	// use random splash as on PS2
-#		define PS2_MATFX
-#	endif
-#	define PC_PLAYER_CONTROLS	// mouse player/cam mode
-#	define GTA_REPLAY
-#	define GTA_SCENE_EDIT
+#if defined GTA_PC && defined GTA_PS2_STUFF
+#	define USE_PS2_RAND
+#	define RANDOMSPLASH	// use random splash as on PS2
+#	define PS2_MATFX
 #endif
 
 #ifdef VU_COLLISION
@@ -238,12 +279,14 @@ enum Config {
 
 #define FIX_BUGS		// fixes bugs that we've came across during reversing. You can undefine this only on release builds.
 #define MORE_LANGUAGES		// Add more translations to the game
-#define COMPATIBLE_SAVES // this allows changing structs while keeping saves compatible
-#define FIX_INCOMPATIBLE_SAVES  // try to fix incompatible saves, requires COMPATIBLE_SAVES
+#define COMPATIBLE_SAVES // this allows changing structs while keeping saves compatible, and keeps saves compatible between platforms
+#define FIX_INCOMPATIBLE_SAVES // try to fix incompatible saves, requires COMPATIBLE_SAVES
 #define LOAD_INI_SETTINGS // as the name suggests. fundamental for CUSTOM_FRONTEND_OPTIONS
-#define FIX_HIGH_FPS_BUGS_ON_FRONTEND
 
 #define NO_MOVIES	// add option to disable intro videos
+
+#define EXTENDED_OFFSCREEN_DESPAWN_RANGE // Use onscreen despawn range for offscreen peds and vehicles to avoid them despawning in the distance when you look
+                                         // away
 
 #if defined(__LP64__) || defined(_WIN64)
 #define FIX_BUGS_64 // Must have fixes to be able to run 64 bit build
@@ -251,7 +294,7 @@ enum Config {
 
 #define ASCII_STRCMP // use faster ascii str comparisons
 
-#if !defined _WIN32 || defined __MWERKS__ || defined __MINGW32__ || defined VANILLA_DEFINES
+#if !defined _WIN32 || defined __MINGW32__
 #undef ASCII_STRCMP
 #endif
 
@@ -259,7 +302,7 @@ enum Config {
 #ifdef DEBUGMENU
 #define RELOADABLES			// some debug menu options to reload TXD files
 #define MISSION_SWITCHER // from debug menu
-#define UNLOCK_BRIDGES // unlock bridges without complition phnom penh 86
+// #define UNLOCK_BRIDGES // unlock bridges without complition phnom penh 86 TOFO: FIXME
 #endif
 
 // Rendering/display
@@ -287,17 +330,17 @@ enum Config {
 #endif
 
 // Water & Particle
-// #define PC_WATER
+#undef PC_WATER
 #define WATER_CHEATS
 
-//#define USE_CUTSCENE_SHADOW_FOR_PED
-#define DISABLE_CUTSCENE_SHADOWS
+//#define USE_CUTSCENE_SHADOW_FOR_PED // requires COMPATIBLE_SAVES
+//#define DISABLE_CUTSCENE_SHADOWS
 
 // Pad
 #if !defined(RW_GL3) && defined(_WIN32)
 #define XINPUT
 #endif
-#if defined XINPUT || (defined RW_GL3 && !defined LIBRW_SDL2 && !defined __SWITCH__)
+#if defined XINPUT || (defined RW_GL3 && !defined LIBRW_SDL2 && !defined GTA_HANDHELD)
 #define DETECT_JOYSTICK_MENU // Then we'll expect user to enter Controller->Detect joysticks if his joystick isn't detected at the start.
 #endif
 #define DETECT_PAD_INPUT_SWITCH // Adds automatic switch of pad related stuff between controller and kb/m
@@ -319,7 +362,7 @@ enum Config {
 //#	define PS2_MENU_USEALLPAGEICONS
 #else
 #	define MAP_ENHANCEMENTS			// Adding waypoint and better mouse support
-#	ifdef XINPUT
+#	if defined(XINPUT) || defined(GTA_HANDHELD)
 #		define GAMEPAD_MENU		// Add gamepad menu
 #	endif
 #	define TRIANGLE_BACK_BUTTON
@@ -335,6 +378,7 @@ enum Config {
 #		define CUTSCENE_BORDERS_SWITCH
 #		define MULTISAMPLING		// adds MSAA option
 #		define INVERT_LOOK_FOR_PAD // enable the hidden option
+#		define PED_CAR_DENSITY_SLIDERS
 #	endif
 #endif
 
@@ -344,14 +388,16 @@ enum Config {
 #define USE_PRECISE_MEASUREMENT_CONVERTION // makes game convert feet to meeters more precisely
 #define SUPPORT_JAPANESE_SCRIPT
 //#define SUPPORT_XBOX_SCRIPT
-//#define SUPPORT_MOBILE_SCRIPT
+#define SUPPORT_MOBILE_SCRIPT
+#define SUPPORT_GINPUT_SCRIPT
 #if (defined SUPPORT_XBOX_SCRIPT && defined SUPPORT_MOBILE_SCRIPT)
 static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually exclusive");
 #endif
 #ifdef PC_MENU
-//#define MISSION_REPLAY // mobile feature
+#define MISSION_REPLAY // mobile feature
+//#define SIMPLER_MISSIONS // apply simplifications from mobile
+#define USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
 #endif
-//#define SIMPLIER_MISSIONS // apply simplifications from mobile
 #define USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 #ifdef DEBUG
 #define SCRIPT_LOG_FILE_LEVEL 2
@@ -374,6 +420,10 @@ static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually
 #undef USE_BASIC_SCRIPT_DEBUG_OUTPUT
 #endif
 
+#ifndef MISSION_REPLAY
+#undef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+#endif
+
 // Replay
 #define DONT_FIX_REPLAY_BUGS // keeps various bugs in CReplay, some of which are fairly cool!
 //#define USE_BETA_REPLAY_MODE // adds another replay mode, a few seconds slomo (caution: buggy!)
@@ -394,11 +444,20 @@ static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually
 #define FREE_CAM		// Rotating cam
 
 // Audio
+#define EXTERNAL_3D_SOUND // use external engine to simulate 3d audio spatialization. OpenAL would not work without it (because it works in a 3d space
+                          // originally and making it work in 2d only requires more resource). Will not work on PS2
+#define AUDIO_REFLECTIONS // Enable audio reflections. This is enabled in all vanilla versions
+#define AUDIO_REVERB // Enable audio reverb. It was disabled in PS2 and mobile versions
 #define RADIO_SCROLL_TO_PREV_STATION // Won't work without FIX_BUGS
 #define AUDIO_CACHE // cache sound lengths to speed up the cold boot
-//#define PS2_AUDIO_PATHS // changes audio paths for cutscenes and radio to PS2 paths (needs vbdec on MSS builds)
+#define PS2_AUDIO_CHANNELS // increases the maximum number of audio channels to PS2 value of 43 (PC has 28 originally)
+#define PS2_AUDIO_PATHS // changes audio paths for cutscenes and radio to PS2 paths (needs vbdec on MSS builds)
 //#define AUDIO_OAL_USE_SNDFILE // use libsndfile to decode WAVs instead of our internal decoder
 #define AUDIO_OAL_USE_MPG123 // use mpg123 to support mp3 files
+#define PAUSE_RADIO_IN_FRONTEND // pause radio when game is paused
+#define ATTACH_RELEASING_SOUNDS_TO_ENTITIES // sounds would follow ped and vehicles coordinates if not being queued otherwise
+#define USE_TIME_SCALE_FOR_AUDIO // slow down/speed up sounds according to the speed of the game
+#define MULTITHREADED_AUDIO // for streams. requires C++11 or later
 
 #ifdef AUDIO_OPUS
 #define AUDIO_OAL_USE_OPUS // enable support of opus files
@@ -423,94 +482,28 @@ static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually
 #ifdef SQUEEZE_PERFORMANCE
 	#undef PS2_ALPHA_TEST
 	#undef NO_ISLAND_LOADING
+	#undef PS2_AUDIO_CHANNELS
+	#undef EXTENDED_OFFSCREEN_DESPAWN_RANGE
 #endif
 
-// -------
-
-#if defined __MWERKS__ || defined VANILLA_DEFINES
-#define FINAL
-#undef CHATTYSPLASH
-#undef TIMEBARS
-
-#define MASTER
-#undef VALIDATE_SAVE_SIZE
-#undef NO_MOVIES
-#undef DEBUGMENU
-
-#undef DRAW_GAME_VERSION_TEXT
-
-//#undef NASTY_GAME
-//#undef NO_CDCHECK
-
-#undef GTA_PS2_STUFF
-#undef USE_PS2_RAND
-#undef RANDOMSPLASH
-#undef PS2_MATFX
-
-#undef FIX_BUGS
-#define THIS_IS_STUPID
-#undef MORE_LANGUAGES
-#undef COMPATIBLE_SAVES
-#undef LOAD_INI_SETTINGS
-#undef FIX_HIGH_FPS_BUGS_ON_FRONTEND
-
-#undef ASPECT_RATIO_SCALE
-#undef PROPER_SCALING
-//#undef DEFAULT_NATIVE_RESOLUTION
-#undef PS2_ALPHA_TEST
-#undef IMPROVED_VIDEOMODE
-#undef DISABLE_LOADING_SCREEN
-#undef DISABLE_VSYNC_ON_TEXTURE_CONVERSION
-
-#undef FIX_SPRITES
-
-#define PC_WATER
-#undef WATER_CHEATS
-
+// if these defines are enabled saves are not vanilla compatible without COMPATIBLE_SAVES
+#ifndef COMPATIBLE_SAVES
 #undef USE_CUTSCENE_SHADOW_FOR_PED
-#undef DISABLE_CUTSCENE_SHADOWS
+#endif
 
-#undef XINPUT
-#undef DETECT_PAD_INPUT_SWITCH
-#undef KANGAROO_CHEAT
-#undef RESTORE_ALLCARSHELI_CHEAT
-#undef BETTER_ALLCARSAREDODO_CHEAT
-#undef WALLCLIMB_CHEAT
-#undef REGISTER_START_BUTTON
-#undef BIND_VEHICLE_FIREWEAPON
-#undef BUTTON_ICONS
+#ifdef GTA_HANDHELD
+	#define IGNORE_MOUSE_KEYBOARD // ignore mouse & keyboard input
+#endif
 
-#undef FIX_RADAR
-#undef RADIO_OFF_TEXT
+#ifdef __SWITCH__
+	#define USE_UNNAMED_SEM // named semaphores are unsupported on the switch
+#endif
 
-#undef MAP_ENHANCEMENTS
-#undef GAMEPAD_MENU
-#undef MUCH_SHORTER_OUTRO_SCREEN
-#undef CUSTOM_FRONTEND_OPTIONS
+#endif // VANILLA_DEFINES
 
-#undef GRAPHICS_MENU_OPTIONS
-#undef NO_ISLAND_LOADING
-#undef CUTSCENE_BORDERS_SWITCH
-#undef MULTISAMPLING
-#undef INVERT_LOOK_FOR_PAD
-
-#undef USE_DEBUG_SCRIPT_LOADER
-#undef USE_MEASUREMENTS_IN_METERS
-#undef USE_PRECISE_MEASUREMENT_CONVERTION
-#undef SUPPORT_JAPANESE_SCRIPT
-#undef MISSION_REPLAY
-#undef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
-#undef USE_BASIC_SCRIPT_DEBUG_OUTPUT
-
-#define DONT_FIX_REPLAY_BUGS
-
-#undef EXPLODING_AIRTRAIN
-#undef CPLANE_ROTORS
-#undef CAMERA_PICKUP
-#undef CANCELLABLE_CAR_ENTER
-#undef IMPROVED_CAMERA
-#undef FREE_CAM
-#undef BIG_IMG
-
-#undef RADIO_SCROLL_TO_PREV_STATION
+#if defined(AUDIO_OAL) && !defined(EXTERNAL_3D_SOUND)
+#error AUDIO_OAL cannot work without EXTERNAL_3D_SOUND
+#endif
+#if defined(GTA_PS2) && defined(EXTERNAL_3D_SOUND)
+#error EXTERNAL_3D_SOUND cannot work on PS2
 #endif

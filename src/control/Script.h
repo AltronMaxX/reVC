@@ -372,6 +372,13 @@ public:
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 	int CollectParameterForDebug(char* buf, bool& var);
 	void GetStoredParameterForDebug(char* buf);
+	void LogOnStartProcessing();
+	void LogBeforeProcessingCommand(int32 command);
+	void LogAfterProcessingCommand(int32 command);
+
+	static char commandInfo[];
+	static uint32 storedIp;
+
 #endif
 
 	float LimitAngleOnCircle(float angle) { return angle < 0.0f ? angle + 360.0f : angle; }
@@ -575,13 +582,26 @@ public:
 	static void SetObjectiveForAllPedsInCollective(int, eObjective);
 #endif
 
-};
+#ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+	static bool MissionSupportsMissionReplay(int index)
+	{
+		return index >= 3 && index <= 35 || index >= 51 && index <= 65 || index >= 67 && index <= 74 || index >= 83 && index <= 87;
+	}
+#endif
 
 #ifdef USE_DEBUG_SCRIPT_LOADER
-extern int scriptToLoad;
+	static int ScriptToLoad;
+	static int OpenScript();
 #endif
+
+#ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
+	static void LogAfterScriptInitializing();
+	static void LogBeforeScriptProcessing();
+	static void LogAfterScriptProcessing();
+#endif
+};
+
 #ifdef MISSION_REPLAY
-static_assert(false, "Mission replay is not supported");
 extern int AllowMissionReplay;
 extern uint32 WaitForMissionActivate;
 extern uint32 WaitForSave;
@@ -592,10 +612,28 @@ extern bool gbTryingPorn4Again;
 extern int IsInAmmunation;
 extern int MissionSkipLevel;
 
-uint32 AddExtraDeathDelay();
-void RetryMission(int, int);
+#ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
+extern bool UsingMobileScript;
+extern bool AlreadySavedGame;
 #endif
 
-#ifdef USE_DEBUG_SCRIPT_LOADER
-extern int scriptToLoad;
+uint32 AddExtraDeathDelay();
+void RetryMission(int, int unk = 0);
+
+enum {
+	MISSION_RETRY_TYPE_SUGGEST_TO_PLAYER = 0,
+	MISSION_RETRY_TYPE_1,
+	MISSION_RETRY_TYPE_BEGIN_RESTARTING
+};
+
+enum {
+	MISSION_RETRY_STAGE_NORMAL = 0,
+	MISSION_RETRY_STAGE_WAIT_FOR_SCRIPT_TO_TERMINATE,
+	MISSION_RETRY_STAGE_START_PROCESSING,
+	MISSION_RETRY_STAGE_WAIT_FOR_DELAY,
+	MISSION_RETRY_STAGE_WAIT_FOR_MENU,
+	MISSION_RETRY_STAGE_WAIT_FOR_USER,
+	MISSION_RETRY_STAGE_START_RESTARTING,
+	MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART,
+};
 #endif

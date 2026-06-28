@@ -423,7 +423,7 @@ ScreenDroplets::ProcessCameraMovement(void)
 	ms_movingEnabled = !isTopDown && !isLookingInDirection;
 
 	// 0 when looking stright up, 180 when looking up or down
-	ms_camUpAngle = RADTODEG(Acos(CLAMP(camUp.z, -1.0f, 1.0f)));
+	ms_camUpAngle = RADTODEG(Acos(Clamp(camUp.z, -1.0f, 1.0f)));
 }
 
 void
@@ -741,7 +741,7 @@ uint32 im2D_UV2_Vao;
 void
 openim2d_uv2(void)
 {
-	u_xform = rw::gl3::registerUniform("u_xform", rw::gl3::UNIFORM_VEC4);
+	u_xform = rw::gl3::registerUniform("u_xform", rw::gl3::UNIFORM_VEC4);	// this doesn't add a new one, so it's safe
 
 	glGenBuffers(1, &im2D_UV2_Ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, im2D_UV2_Ibo);
@@ -803,7 +803,7 @@ RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, Rw
 	setAttribPointers(im2d_UV2_attribDesc, 4);
 #endif
 
-	glUniform4fv(currentShader->uniformLocations[u_xform], 1, xform);
+	setUniform(u_xform, xform);
 
 	flushCache();
 	glDrawElements(primTypeMap[primType], numIndices,

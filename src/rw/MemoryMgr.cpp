@@ -9,8 +9,12 @@ void
 InitMemoryMgr(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
+#ifdef GTA_PS2
+#error "finish this"
+#else
 	// randomly allocate 128mb
 	gMainHeap.Init(128*1024*1024);
+#endif
 #endif
 }
 
@@ -24,10 +28,10 @@ RwMemoryFunctions memFuncs = {
 
 #ifdef USE_CUSTOM_ALLOCATOR
 // game seems to be using heap directly here, but this is nicer
-void *operator new(size_t sz) { return MemoryMgrMalloc(sz); }
-void *operator new[](size_t sz) { return MemoryMgrMalloc(sz); }
-void operator delete(void *ptr) noexcept { MemoryMgrFree(ptr); }
-void operator delete[](void *ptr) noexcept { MemoryMgrFree(ptr); }
+void *operator new(size_t sz) throw() { return MemoryMgrMalloc(sz); }
+void *operator new[](size_t sz) throw() { return MemoryMgrMalloc(sz); }
+void operator delete(void *ptr) throw() { MemoryMgrFree(ptr); }
+void operator delete[](void *ptr) throw() { MemoryMgrFree(ptr); }
 #endif
 
 void*

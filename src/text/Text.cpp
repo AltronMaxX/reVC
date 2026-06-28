@@ -109,14 +109,14 @@ wchar*
 CText::Get(const char *key)
 {
 	uint8 result = false;
-#if defined(FIX_BUGS) || defined(FIX_BUGS_64)
+#if defined (FIX_BUGS) || defined(FIX_BUGS_64)
 	wchar *outstr = keyArray.Search(key, data.chars, &result);
 #else
 	wchar *outstr = keyArray.Search(key, &result);
 #endif
 
-	if(!result && bHasMissionTextOffsets && bIsMissionTextLoaded)
-#if defined(FIX_BUGS) || defined(FIX_BUGS_64)
+	if (!result && bHasMissionTextOffsets && bIsMissionTextLoaded)
+#if defined (FIX_BUGS) || defined(FIX_BUGS_64)
 		outstr = mission_keyArray.Search(key, mission_data.chars, &result);
 #else
 		outstr = mission_keyArray.Search(key, &result);
@@ -463,7 +463,7 @@ UnicodeToAscii(wchar *src)
 	int len;
 	for(len = 0; *src != '\0' && len < 256-1; len++, src++)
 #ifdef MORE_LANGUAGES
-		if(*src < 128 || (( CGame::russianGame || CGame::japaneseGame) && *src < 256))
+		if(*src < 128 || ((CGame::russianGame || CGame::japaneseGame) && *src < 256))
 #else
 		if(*src < 128)
 #endif

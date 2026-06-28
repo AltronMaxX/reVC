@@ -24,13 +24,7 @@
 #include "Wanted.h"
 #include "World.h"
 #include "VarConsole.h"
-
-#define CRUSHER_GARAGE_X1 (1135.5f)
-#define CRUSHER_GARAGE_Y1 (57.0f)
-#define CRUSHER_GARAGE_Z1 (-1.0f)
-#define CRUSHER_GARAGE_X2 (1149.5f)
-#define CRUSHER_GARAGE_Y2 (63.7f)
-#define CRUSHER_GARAGE_Z2 (3.5f)
+#include "SaveBuf.h"
 
 #define ROTATED_DOOR_OPEN_SPEED (0.015f)
 #define ROTATED_DOOR_CLOSE_SPEED (0.02f)
@@ -158,7 +152,7 @@ void CGarages::Init(void)
 	}
 	hGarages = DMAudio.CreateEntity(AUDIOTYPE_GARAGE, (void*)1);
 	if (hGarages >= 0)
-		DMAudio.SetEntityStatus(hGarages, true);
+		DMAudio.SetEntityStatus(hGarages, TRUE);
 }
 
 void CGarages::Shutdown(void)
@@ -354,6 +348,24 @@ void CGarage::Update()
 	if (m_bDeactivated && m_eGarageState == GS_FULLYCLOSED)
 		return;
 	if (m_bRotatedDoor) {
+#ifdef GTA_PS2
+		if (m_eGarageState == GS_OPENING) {
+			if (m_pDoor1) {
+				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor1)
+					m_pDoor1->bUsesCollision = false;
+			}
+			if (m_pDoor2) {
+				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor2)
+					m_pDoor2->bUsesCollision = false;
+			}
+		}
+		else if (m_eGarageState == GS_OPENED) {
+			if (m_pDoor1)
+				m_pDoor1->bUsesCollision = true;
+			if (m_pDoor2)
+				m_pDoor2->bUsesCollision = true;
+		}
+#else
 		if (m_eGarageState == GS_OPENING || m_eGarageState == GS_OPENED) {
 			if (m_pDoor1) {
 				if (FindPlayerPed()->m_pCurrentPhysSurface == m_pDoor1 || FindPlayerPed()->GetPedState() == PED_JUMP || FindPlayerPed()->GetPedState() == PED_FALL || !FindPlayerPed()->bIsStanding)
@@ -370,6 +382,7 @@ void CGarage::Update()
 			if (m_pDoor2)
 				m_pDoor2->bUsesCollision = true;
 		}
+#endif
 	}
 	switch (m_eGarageType) {
 	case GARAGE_RESPRAY:
@@ -1824,11 +1837,12 @@ void CStoredCar::StoreCar(CVehicle* pVehicle)
 	m_nRadioStation = pVehicle->m_nRadioStation;
 	m_nVariationA = pVehicle->m_aExtras[0];
 	m_nVariationB = pVehicle->m_aExtras[1];
-	m_bBulletproof = pVehicle->bBulletProof;
-	m_bFireproof = pVehicle->bFireProof;
-	m_bExplosionproof = pVehicle->bExplosionProof;
-	m_bCollisionproof = pVehicle->bCollisionProof;
-	m_bMeleeproof = pVehicle->bMeleeProof;
+	m_nFlags = 0;
+	if (pVehicle->bBulletProof) m_nFlags |= FLAG_BULLETPROOF;
+	if (pVehicle->bFireProof) m_nFlags |= FLAG_FIREPROOF;
+	if (pVehicle->bExplosionProof) m_nFlags |= FLAG_EXPLOSIONPROOF;
+	if (pVehicle->bCollisionProof) m_nFlags |= FLAG_COLLISIONPROOF;
+	if (pVehicle->bMeleeProof) m_nFlags |= FLAG_MELEEPROOF;
 	if (pVehicle->IsCar() || pVehicle->IsBike())
 		m_nCarBombType = ((CAutomobile*)pVehicle)->m_bombType; // NB: cast to CAutomobile is original behaviour
 }
@@ -1877,11 +1891,11 @@ CVehicle* CStoredCar::RestoreCar()
 	}
 	pVehicle->bHasBeenOwnedByPlayer = true;
 	pVehicle->m_nDoorLock = CARLOCK_UNLOCKED;
-	pVehicle->bBulletProof = m_bBulletproof;
-	pVehicle->bFireProof = m_bFireproof;
-	pVehicle->bExplosionProof = m_bExplosionproof;
-	pVehicle->bCollisionProof = m_bCollisionproof;
-	pVehicle->bMeleeProof = m_bMeleeproof;
+	if (m_nFlags & FLAG_BULLETPROOF) pVehicle->bBulletProof = true;
+	if (m_nFlags & FLAG_FIREPROOF) pVehicle->bFireProof = true;
+	if (m_nFlags & FLAG_EXPLOSIONPROOF) pVehicle->bExplosionProof = true;
+	if (m_nFlags & FLAG_COLLISIONPROOF) pVehicle->bCollisionProof = true;
+	if (m_nFlags & FLAG_MELEEPROOF) pVehicle->bMeleeProof = true;
 	return pVehicle;
 }
 
@@ -1972,7 +1986,7 @@ void CGarages::GivePlayerDetonator()
 
 float CGarages::FindDoorHeightForMI(int32 mi)
 {
-	return CModelInfo::GetModelInfo(mi)->GetColModel()->boundingBox.max.z - CModelInfo::GetModelInfo(mi)->GetColModel()->boundingBox.min.z - 0.1f;
+	return CModelInfo::GetColModel(mi)->boundingBox.max.z - CModelInfo::GetColModel(mi)->boundingBox.min.z - 0.1f;
 }
 
 void CGarage::TidyUpGarage()
@@ -2245,6 +2259,9 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 //INITSAVEBUF
 	*size = 7876; // for some reason it's not actual size again
 	//*size = (6 * sizeof(uint32) + TOTAL_COLLECTCARS_GARAGES * sizeof(*CarTypesCollected) + sizeof(uint32) + TOTAL_HIDEOUT_GARAGES * NUM_GARAGE_STORED_CARS * sizeof(CStoredCar) + NUM_GARAGES * sizeof(CGarage));
+#if !defined THIS_IS_STUPID && defined COMPATIBLE_SAVES
+	memset(buf + 7340, 0, *size - 7340); // garbage data is written otherwise
+#endif
 	CloseHideOutGaragesBeforeSave();
 	WriteSaveBuf(buf, NumGarages);
 	WriteSaveBuf(buf, (uint32)BombsAreFree);
@@ -2260,8 +2277,8 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 			WriteSaveBuf(buf, aCarsInSafeHouses[j][i]);
 		}
 	}
-	for(int i = 0; i < NUM_GARAGES; i++) { 
-	#ifdef COMPATIBLE_SAVES
+	for (int i = 0; i < NUM_GARAGES; i++) {
+#ifdef COMPATIBLE_SAVES
 		WriteSaveBuf(buf, aGarages[i].m_eGarageType);
 		WriteSaveBuf(buf, aGarages[i].m_eGarageState);
 		WriteSaveBuf(buf, aGarages[i].m_nMaxStoredCars);
@@ -2304,10 +2321,10 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 		ZeroSaveBuf(buf, 3 + 4);
 		ZeroSaveBuf(buf, sizeof(aGarages[i].m_sStoredCar));
 #else
-		WriteSaveBuf(buf, aGarages[i]); 
+		WriteSaveBuf(buf, aGarages[i]);
 #endif
 	}
-	//VALIDATESAVEBUF(*size);
+//VALIDATESAVEBUF(*size);
 }
 
 const CStoredCar &CStoredCar::operator=(const CStoredCar & other)
@@ -2315,11 +2332,7 @@ const CStoredCar &CStoredCar::operator=(const CStoredCar & other)
 	m_nModelIndex = other.m_nModelIndex;
 	m_vecPos = other.m_vecPos;
 	m_vecAngle = other.m_vecAngle;
-	m_bBulletproof = other.m_bBulletproof;
-	m_bFireproof = other.m_bFireproof;
-	m_bExplosionproof = other.m_bExplosionproof;
-	m_bCollisionproof = other.m_bCollisionproof;
-	m_bMeleeproof = other.m_bMeleeproof;
+	m_nFlags = other.m_nFlags;
 	m_nPrimaryColor = other.m_nPrimaryColor;
 	m_nSecondaryColor = other.m_nSecondaryColor;
 	m_nRadioStation = other.m_nRadioStation;
@@ -2332,7 +2345,7 @@ const CStoredCar &CStoredCar::operator=(const CStoredCar & other)
 void CGarages::Load(uint8* buf, uint32 size)
 {
 //INITSAVEBUF
-	assert(size = 7876);
+	assert(size == 7876);
 	//assert(size == (6 * sizeof(uint32) + TOTAL_COLLECTCARS_GARAGES * sizeof(*CarTypesCollected) + sizeof(uint32) + TOTAL_HIDEOUT_GARAGES * NUM_GARAGE_STORED_CARS * sizeof(CStoredCar) + NUM_GARAGES * sizeof(CGarage)));
 	CloseHideOutGaragesBeforeSave();
 	ReadSaveBuf(&NumGarages, buf);
@@ -2344,11 +2357,11 @@ void CGarages::Load(uint8* buf, uint32 size)
 	ReadSaveBuf(&CarsCollected, buf);
 	ReadSaveBuf(&BankVansCollected, buf);
 	ReadSaveBuf(&PoliceCarsCollected, buf);
-	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++) 
+	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
 		ReadSaveBuf(&CarTypesCollected[i], buf);
 	ReadSaveBuf(&LastTimeHelpMessage, buf);
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
-		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) { 
+		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
 			ReadSaveBuf(&aCarsInSafeHouses[j][i], buf);
 		}
 	}

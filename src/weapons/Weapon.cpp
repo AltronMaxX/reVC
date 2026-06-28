@@ -35,6 +35,7 @@
 #include "Glass.h"
 #include "Sprite.h"
 #include "Pickups.h"
+#include "SaveBuf.h"
 
 float fReloadAnimSampleFraction[5] = {  0.5f,  0.7f,  0.75f,  0.75f,  0.7f };
 float fSeaSparrowAimingAngle = 10.0f;
@@ -46,6 +47,29 @@ bool CWeapon::bPhotographHasBeenTaken;
 
 #ifdef SECUROM
 int32 sniperPirateCheck = 0x00797743; // 'Cwy\0' ???
+#endif
+
+#ifdef FREE_CAM
+static bool
+Find3rdPersonCamTargetVectorFromCachedVectors(float dist, CVector pos, CVector& source, CVector& target, CVector camSource, CVector camFront, CVector camUp)
+{
+	if (CPad::GetPad(0)->GetLookBehindForPed()) {
+		source = pos;
+		target = dist * FindPlayerPed()->GetForward() + source;
+		return false;
+	} else {
+		float angleX = DEGTORAD((CCamera::m_f3rdPersonCHairMultX - 0.5f) * 1.8f * 0.5f * TheCamera.Cams[TheCamera.ActiveCam].FOV * CDraw::GetAspectRatio());
+		float angleY = DEGTORAD((0.5f - CCamera::m_f3rdPersonCHairMultY) * 1.8f * 0.5f * TheCamera.Cams[TheCamera.ActiveCam].FOV);
+		source = camSource;
+		target = camFront;
+		target += camUp * Tan(angleY);
+		target += CrossProduct(camFront, camUp) * Tan(angleX);
+		target.Normalise();
+		source += DotProduct(pos - source, target) * target;
+		target = dist * target + source;
+		return true;
+	}
+}
 #endif
 
 CWeaponInfo *
@@ -251,7 +275,7 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 				else if ( shooter->IsPed() && ((CPed*)shooter)->m_pSeekTarget != nil )
 				{
 					float distToTarget = (shooter->GetPosition() - ((CPed*)shooter)->m_pSeekTarget->GetPosition()).Magnitude();
-					float power = CLAMP((distToTarget-10.0f)*0.02f, 0.2f, 1.0f);
+					float power = Clamp((distToTarget-10.0f)*0.02f, 0.2f, 1.0f);
 
 					fired = FireProjectile(shooter, source, power);
 				}
@@ -931,11 +955,43 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 			ProcessLineOfSight(*fireSource, target, point, victim, m_eWeaponType, shooter, true, true, true, true, true, false, false);
 			CWorld::bIncludeBikers = false;
 		}
+#ifdef FIX_BUGS
+		// fix muzzleflash rotation
+		heading = CGeneral::GetAngleBetweenPoints(source.x, source.y, target.x, target.y);
+		angle = DEGTORAD(heading);
+
+		ahead = CVector2D(-Sin(angle), Cos(angle));
+		ahead.Normalise();
+#endif
 	}
 	else if ( shooter == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam()  )
 	{
-		TheCamera.Find3rdPersonCamTargetVector(info->m_fRange, *fireSource, source, target);
+#ifdef FREE_CAM
+		if (CCamera::bFreeCam) {
+			CPlayerPed* shooterPed = (CPlayerPed*)shooter;
+			Find3rdPersonCamTargetVectorFromCachedVectors(info->m_fRange, *fireSource, source, target, shooterPed->m_cachedCamSource, shooterPed->m_cachedCamFront, shooterPed->m_cachedCamUp);
 
+			if ((shooterPed->m_pedIK.m_flags & CPedIK::GUN_POINTED_SUCCESSFULLY) == 0) {
+				target.x = info->m_fRange;
+				target.y = 0.0f;
+				target.z = 0.0f;
+
+				shooterPed->TransformToNode(target, PED_HANDR);
+			}
+		} else
+#endif
+		{
+			TheCamera.Find3rdPersonCamTargetVector(info->m_fRange, *fireSource, source, target);
+		}
+
+#ifdef FIX_BUGS
+		// fix muzzleflash rotation
+		heading = CGeneral::GetAngleBetweenPoints(source.x, source.y, target.x, target.y);
+		angle = DEGTORAD(heading);
+
+		ahead = CVector2D(-Sin(angle), Cos(angle));
+		ahead.Normalise();
+#endif
 		CWorld::bIncludeBikers = true;
 		CWorld::bIncludeDeadPeds = true;
 		CWorld::bIncludeCarTyres = true;
@@ -1066,7 +1122,11 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 
 			if ( info->m_nFiringRate >= 50 || !(++counter & 1) )
 			{
+#ifdef FIX_BUGS
+				AddGunFlashBigGuns(*fireSource, target);
+#else
 				AddGunFlashBigGuns(*fireSource, *fireSource + target);
+#endif
 
 				CVector gunshellPos = *fireSource;
 				gunshellPos -= CVector(0.65f*ahead.x, 0.65f*ahead.y, 0.0f);
@@ -1677,8 +1737,19 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 
 		if ( shooter == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam() )
 		{
-			TheCamera.Find3rdPersonCamTargetVector(1.0f, *fireSource, source, target);
-			CVector Left = CrossProduct(TheCamera.Cams[TheCamera.ActiveCam].Front, TheCamera.Cams[TheCamera.ActiveCam].Up);
+			CVector Left;
+#ifdef FREE_CAM
+			if (CCamera::bFreeCam) {
+				CPlayerPed* shooterPed = (CPlayerPed*)shooter;
+				Find3rdPersonCamTargetVectorFromCachedVectors(1.0f, *fireSource, source, target, shooterPed->m_cachedCamSource, shooterPed->m_cachedCamFront, shooterPed->m_cachedCamUp);
+				Left = CrossProduct(shooterPed->m_cachedCamFront, shooterPed->m_cachedCamUp);
+			}
+			else
+#endif
+			{
+				TheCamera.Find3rdPersonCamTargetVector(1.0f, *fireSource, source, target);
+				Left = CrossProduct(TheCamera.Cams[TheCamera.ActiveCam].Front, TheCamera.Cams[TheCamera.ActiveCam].Up);
+			}
 
 			float f = (i - (shootsAtOnce / 2)) * angleBetweenTwoShot;
 			target  = f * Left + target - source;
@@ -2120,7 +2191,16 @@ CWeapon::FireAreaEffect(CEntity *shooter, CVector *fireSource)
 
 	if ( shooter == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam() )
 	{
-		TheCamera.Find3rdPersonCamTargetVector(info->m_fRange, *fireSource, source, target);
+#ifdef FREE_CAM
+		if (CCamera::bFreeCam) {
+			CPlayerPed* shooterPed = (CPlayerPed*)shooter;
+			Find3rdPersonCamTargetVectorFromCachedVectors(info->m_fRange, *fireSource, source, target, shooterPed->m_cachedCamSource, shooterPed->m_cachedCamFront, shooterPed->m_cachedCamUp);
+		}
+		else
+#endif
+		{
+			TheCamera.Find3rdPersonCamTargetVector(info->m_fRange, *fireSource, source, target);
+		}
 		float norm = (1.0f / info->m_fRange);
 		dir = (target - source) * norm;
 	}
@@ -3132,7 +3212,11 @@ CWeapon::HitsGround(CEntity *holder, CVector *fireSource, CEntity *aimingTo)
 void
 CWeapon::BlowUpExplosiveThings(CEntity *thing)
 {
+#ifdef FIX_BUGS
+	if ( thing && thing->IsObject() )
+#else
 	if ( thing )
+#endif
 	{
 		CObject *object = (CObject*)thing;
 		int32 mi = object->GetModelIndex();
@@ -3177,7 +3261,7 @@ bool
 CPed::IsPedDoingDriveByShooting(void)
 {
 #ifdef FIX_BUGS
-	if (FindPlayerPed() == this && CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nWeaponSlot == 5) {
+	if (FindPlayerPed() == this && CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nWeaponSlot == WEAPONSLOT_SUBMACHINEGUN) {
 #else
 	if (FindPlayerPed() == this && GetWeapon()->m_eWeaponType == WEAPONTYPE_UZI) {
 #endif
@@ -3269,14 +3353,10 @@ CWeapon::CheckForShootingVehicleOccupant(CEntity **victim, CColPoint *point, eWe
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data)                                                                                                                                 \
-	memcpy(&data, buf, sizeof(data));                                                                                                                      \
-	SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data)                                                                                                                                   \
-	memcpy(buf, &data, sizeof(data));                                                                                                                      \
-	SkipSaveBuf(buf, sizeof(data));
+#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
 void
-CWeapon::Save(uint8 *&buf)
+CWeapon::Save(uint8*& buf)
 {
 	CopyToBuf(buf, m_eWeaponType);
 	CopyToBuf(buf, m_eWeaponState);
@@ -3288,7 +3368,7 @@ CWeapon::Save(uint8 *&buf)
 }
 
 void
-CWeapon::Load(uint8 *&buf)
+CWeapon::Load(uint8*& buf)
 {
 	CopyFromBuf(buf, m_eWeaponType);
 	CopyFromBuf(buf, m_eWeaponState);

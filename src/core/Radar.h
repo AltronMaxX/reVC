@@ -1,5 +1,6 @@
 #pragma once
 #include "Sprite2d.h"
+#include "Draw.h"
 
 #define CARBLIP_MARKER_COLOR_R 252
 #define CARBLIP_MARKER_COLOR_G 138
@@ -92,6 +93,9 @@ enum eRadarSprite
 	RADAR_SPRITE_RADIO_ESPANTOSO,
 	RADAR_SPRITE_RADIO_EMOTION,
 	RADAR_SPRITE_RADIO_WAVE,
+#ifdef MAP_ENHANCEMENTS
+	RADAR_SPRITE_WAYPOINT,
+#endif
 
 	RADAR_SPRITE_COUNT
 };
@@ -232,6 +236,7 @@ public:
 	static int16 MapLegendCounter;
 
 #ifdef MAP_ENHANCEMENTS
+	static CSprite2d WaypointSprite;
 	static int TargetMarkerId;
 	static CVector TargetMarkerPos;
 #endif

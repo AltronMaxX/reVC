@@ -30,11 +30,32 @@ CObject *CObject::NT_ROADBLOCKGF = nullptr;
 CObject *CObject::WSH_ROADBLOCK = nullptr;
 CObject *CObject::COMGATE1CLOSED = nullptr;
 CObject *CObject::COMGATE2CLOSED = nullptr;
+// Object pools tends to be full sometimes, let's free a temp. object in this case.
+#ifdef FIX_BUGS
+void *CObject::operator new(size_t sz) throw() {
+	CObject *obj = CPools::GetObjectPool()->New();
+	if (!obj) {
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				delete existing;
+				obj = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	return obj;
+}
+#else
+void *CObject::operator new(size_t sz) throw() { return CPools::GetObjectPool()->New(); }
+#endif
+void *CObject::operator new(size_t sz, int handle) throw() { return CPools::GetObjectPool()->New(handle); };
 
-void *CObject::operator new(size_t sz) { return CPools::GetObjectPool()->New();  }
-void *CObject::operator new(size_t sz, int handle) { return CPools::GetObjectPool()->New(handle);};
-void CObject::operator delete(void *p, size_t sz) { CPools::GetObjectPool()->Delete((CObject*)p); }
-void CObject::operator delete(void *p, int handle) { CPools::GetObjectPool()->Delete((CObject*)p); }
+void CObject::operator delete(void *p, size_t sz) throw() { CPools::GetObjectPool()->Delete((CObject*)p); }
+void CObject::operator delete(void *p, int handle) throw() { CPools::GetObjectPool()->Delete((CObject*)p); }
 
 CObject::CObject(void)
 {
@@ -83,7 +104,7 @@ CObject::CObject(CDummyObject *dummy)
 	if (dummy->m_rwObject)
 		AttachToRwObject(dummy->m_rwObject);
 	else
-		GetMatrix() = dummy->GetMatrix();
+		SetMatrix(dummy->GetMatrix());
 
 	m_objectMatrix = dummy->GetMatrix();
 	dummy->DetachFromRwObject();
@@ -196,8 +217,8 @@ void
 CObject::Teleport(CVector vecPos)
 {
 	CWorld::Remove(this);
-	m_matrix.GetPosition() = vecPos;
-	m_matrix.UpdateRW();
+	GetMatrix().GetPosition() = vecPos;
+	GetMatrix().UpdateRW();
 	UpdateRwFrame();
 	CWorld::Add(this);
 }
@@ -218,9 +239,9 @@ CObject::Render(void)
 	float green = (0.8f * CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen_Obj()) * 165.75f;
 	float blue = (0.8f * CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue_Obj()) * 165.75f;
 
-	red = CLAMP(red, 0.0f, 255.0f);
-	green = CLAMP(green, 0.0f, 255.0f);
-	blue = CLAMP(blue, 0.0f, 255.0f);
+	red = Clamp(red, 0.0f, 255.0f);
+	green = Clamp(green, 0.0f, 255.0f);
+	blue = Clamp(blue, 0.0f, 255.0f);
 
 	int alpha = CGeneral::GetRandomNumberInRange(196, 225);
 
@@ -362,7 +383,7 @@ CObject::ObjectDamage(float amount)
 	}
 #endif
 	if ((amount * m_fCollisionDamageMultiplier > 150.0f || bBodyCastDamageEffect) && m_nCollisionDamageEffect) {
-		const CVector &vecPos = m_matrix.GetPosition();
+		const CVector& vecPos = GetMatrix().GetPosition();
 		const float fDirectionZ = 0.0002f * amount;
 		switch (m_nCollisionDamageEffect) {
 			case DAMAGE_EFFECT_CHANGE_MODEL:
@@ -659,7 +680,7 @@ CObject::ObjectDamage(float amount)
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, particlePos, particleDir, nil, fSize, particleColor, nRotationSpeed, 0, nCurFrame, 0);
 					if ((i % 7) == 0) {
 						static RwRGBA secondaryColor = { 0x9A, 0x99, 0x99, 0x3E };
-						CParticle::AddParticle(PARTICLE_DEBRIS, particlePos, particleDir, nil, 0.3, secondaryColor, nRotationSpeed, 0, 0, 0);
+						CParticle::AddParticle(PARTICLE_DEBRIS, particlePos, particleDir, nil, 0.3f, secondaryColor, nRotationSpeed);
 					}
 				}
 				PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, vecPos);
@@ -752,7 +773,7 @@ CObject::Init(void)
 	m_pCollidingEntity = nil;
 	CColPoint point;
 	CEntity *outEntity = nil;
-	const CVector &vecPos = m_matrix.GetPosition();
+	const CVector& vecPos = GetMatrix().GetPosition();
 	if (CWorld::ProcessVerticalLine(vecPos, vecPos.z - 10.0f, point, outEntity, true, false, false, false, false, false, nil))
 		m_pCurSurface = outEntity;
 	else

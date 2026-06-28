@@ -30,7 +30,6 @@ uint8 GetSaveType(char *savename);
 bool FixSave(int32 slot, uint8 save_type);
 #endif
 
-
 extern char DefaultPCSaveFileName[260];
 extern char ValidSaveName[260];
 extern char LoadFileName[256];
@@ -54,4 +53,14 @@ const char TopLineEmptyFile[] = "THIS FILE IS NOT VALID YET";
 extern int8 IsQuickSave; // originally int
 
 bool SaveGameForPause(int);
+
+enum {
+	SAVE_TYPE_NORMAL,
+	SAVE_TYPE_QUICKSAVE,
+	SAVE_TYPE_2,
+	SAVE_TYPE_QUICKSAVE_FOR_MISSION_REPLAY,
+	SAVE_TYPE_QUICKSAVE_FOR_SCRIPT,
+	SAVE_TYPE_QUICKSAVE_FOR_SCRIPT_ON_A_MISSION
+};
+
 #endif

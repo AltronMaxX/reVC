@@ -10,10 +10,12 @@
 #endif
 #include "Population.h"
 #include "ProjectileInfo.h"
+#include "SaveBuf.h"
 #include "Streaming.h"
 #include "Wanted.h"
 #include "World.h"
 #include "MemoryHeap.h"
+#include "SaveBuf.h"
 
 CCPtrNodePool *CPools::ms_pPtrNodePool;
 CEntryInfoNodePool *CPools::ms_pEntryInfoNodePool;
@@ -105,7 +107,7 @@ CPools::CheckPoolsEmpty()
 	printf("pools have been cleared\n");
 }
 
-
+// Thankfully unused, it would break the game!
 void
 CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 {
@@ -136,12 +138,12 @@ CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 
 void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	int nNumCars, nNumBoats, nNumBikes;
 	ReadSaveBuf(&nNumCars, buf);
 	ReadSaveBuf(&nNumBoats, buf);
 	ReadSaveBuf(&nNumBikes, buf);
-	for(int i = 0; i < nNumCars + nNumBoats + nNumBikes; i++) {
+	for (int i = 0; i < nNumCars + nNumBoats + nNumBikes; i++) {
 		uint32 type;
 		int16 model;
 		int32 slot;
@@ -151,13 +153,13 @@ void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 		CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
 		CStreaming::LoadAllRequestedModels(false);
 		ReadSaveBuf(&slot, buf);
-		CVehicle *pVehicle;
+		CVehicle* pVehicle;
 #ifdef COMPATIBLE_SAVES
-		if(type == VEHICLE_TYPE_BOAT)
+		if (type == VEHICLE_TYPE_BOAT)
 			pVehicle = new(slot) CBoat(model, RANDOM_VEHICLE);
-		else if(type == VEHICLE_TYPE_CAR)
+		else if (type == VEHICLE_TYPE_CAR)
 			pVehicle = new(slot) CAutomobile(model, RANDOM_VEHICLE);
-		else if(type == VEHICLE_TYPE_BIKE)
+		else if (type == VEHICLE_TYPE_BIKE)
 			pVehicle = new(slot) CBike(model, RANDOM_VEHICLE);
 		else
 			assert(0);
@@ -165,36 +167,39 @@ void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 		pVehicle->Load(buf);
 		CWorld::Add(pVehicle);
 #else
-		char *vbuf = new char[Max(CBike::nSaveStructSize, Max(CAutomobile::nSaveStructSize, CBoat::nSaveStructSize))];
-		if(type == VEHICLE_TYPE_BOAT) {
+		char* vbuf = new char[Max(CBike::nSaveStructSize, Max(CAutomobile::nSaveStructSize, CBoat::nSaveStructSize))];
+		if (type == VEHICLE_TYPE_BOAT) {
 			memcpy(vbuf, buf, sizeof(CBoat));
 			SkipSaveBuf(buf, sizeof(CBoat));
-			CBoat *pBoat = new(slot) CBoat(model, RANDOM_VEHICLE);
+			CBoat* pBoat = new(slot) CBoat(model, RANDOM_VEHICLE);
 			pVehicle = pBoat;
 			--CCarCtrl::NumRandomCars;
-		} else if(type == VEHICLE_TYPE_CAR) {
+		}
+		else if (type == VEHICLE_TYPE_CAR) {
 			memcpy(vbuf, buf, sizeof(CAutomobile));
 			SkipSaveBuf(buf, sizeof(CAutomobile));
 			CStreaming::RequestModel(model, 0); // is it needed?
 			CStreaming::LoadAllRequestedModels(false);
-			CAutomobile *pAutomobile = new(slot) CAutomobile(model, RANDOM_VEHICLE);
+			CAutomobile* pAutomobile = new(slot) CAutomobile(model, RANDOM_VEHICLE);
 			pVehicle = pAutomobile;
 			CCarCtrl::NumRandomCars--; // why?
-			pAutomobile->Damage = ((CAutomobile *)vbuf)->Damage;
+			pAutomobile->Damage = ((CAutomobile*)vbuf)->Damage;
 			pAutomobile->SetupDamageAfterLoad();
-		} else if(type == VEHICLE_TYPE_BIKE) {
+		}
+		else if (type == VEHICLE_TYPE_BIKE) {
 #ifdef FIX_BUGS
 			memcpy(vbuf, buf, sizeof(CBike));
 #else
 			memcpy(vbuf, buf, sizeof(CAutomobile));
 #endif
 			SkipSaveBuf(buf, sizeof(CBike));
-			CBike *pBike = new(slot) CBike(model, RANDOM_VEHICLE);
+			CBike* pBike = new(slot) CBike(model, RANDOM_VEHICLE);
 			pVehicle = pBike;
 			--CCarCtrl::NumRandomCars;
-		} else
+		}
+		else
 			assert(0);
-		CVehicle *pBufferVehicle = (CVehicle *)vbuf;
+		CVehicle* pBufferVehicle = (CVehicle*)vbuf;
 		pVehicle->GetMatrix() = pBufferVehicle->GetMatrix();
 		pVehicle->VehicleCreatedBy = pBufferVehicle->VehicleCreatedBy;
 		pVehicle->m_currentColour1 = pBufferVehicle->m_currentColour1;
@@ -218,7 +223,7 @@ void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 		pVehicle->m_nCurrentGear = pBufferVehicle->m_nCurrentGear;
 		pVehicle->m_fChangeGearTime = pBufferVehicle->m_fChangeGearTime;
 		pVehicle->m_nTimeOfDeath = pBufferVehicle->m_nTimeOfDeath;
-#ifdef FIX_BUGS // must be copypaste
+#ifdef FIX_BUGS //must be copypaste
 		pVehicle->m_nBombTimer = pBufferVehicle->m_nBombTimer;
 #else
 		pVehicle->m_nTimeOfDeath = pBufferVehicle->m_nTimeOfDeath;
@@ -234,67 +239,77 @@ void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 		delete[] vbuf;
 #endif
 	}
-	VALIDATESAVEBUF(size)
+VALIDATESAVEBUF(size)
 }
 
 void CPools::SaveVehiclePool(uint8* buf, uint32* size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	int nNumCars = 0;
 	int nNumBoats = 0;
 	int nNumBikes = 0;
 	int nPoolSize = GetVehiclePool()->GetSize();
-	for(int i = 0; i < nPoolSize; i++) {
-		CVehicle *pVehicle = GetVehiclePool()->GetSlot(i);
-		if(!pVehicle) continue;
+	for (int i = 0; i < nPoolSize; i++) {
+		CVehicle* pVehicle = GetVehiclePool()->GetSlot(i);
+		if (!pVehicle)
+			continue;
 		bool bHasPassenger = false;
-		for(int j = 0; j < ARRAY_SIZE(pVehicle->pPassengers); j++) {
-			if(pVehicle->pPassengers[j]) bHasPassenger = true;
+		for (int j = 0; j < ARRAY_SIZE(pVehicle->pPassengers); j++) {
+			if (pVehicle->pPassengers[j])
+				bHasPassenger = true;
 		}
 #ifdef MISSION_REPLAY
 		bool bForceSaving = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle == pVehicle && IsQuickSave;
 #ifdef FIX_BUGS
-		if((!pVehicle->pDriver && !bHasPassenger) || bForceSaving) {
+		if ((!pVehicle->pDriver && !bHasPassenger) || bForceSaving) {
 #else
-		if(!pVehicle->pDriver && !bHasPassenger) {
+		if (!pVehicle->pDriver && !bHasPassenger) {
 #endif
-			if(pVehicle->IsCar() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) ++nNumCars;
-			if(pVehicle->IsBoat() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) ++nNumBoats;
-			if(pVehicle->IsBike() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) ++nNumBikes;
+			if (pVehicle->IsCar() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving))
+				++nNumCars;
+			if (pVehicle->IsBoat() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving))
+				++nNumBoats;
+			if (pVehicle->IsBike() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving))
+				++nNumBikes;
 #else
-		if(!pVehicle->pDriver && !bHasPassenger) {
-			if(pVehicle->IsCar() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) ++nNumCars;
-			if(pVehicle->IsBoat() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) ++nNumBoats;
-			if(pVehicle->IsBike() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) ++nNumBikes;
+		if (!pVehicle->pDriver && !bHasPassenger) {
+			if (pVehicle->IsCar() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE)
+				++nNumCars;
+			if (pVehicle->IsBoat() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE)
+				++nNumBoats;
+			if (pVehicle->IsBike() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE)
+				++nNumBikes;
 #endif
 		}
 	}
 	*size = nNumCars * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CAutomobile::nSaveStructSize) + sizeof(int) +
-	        nNumBoats * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBoat::nSaveStructSize) + sizeof(int) +
-	        nNumBikes * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBike::nSaveStructSize) + sizeof(int);
+		nNumBoats * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBoat::nSaveStructSize) + sizeof(int) +
+		nNumBikes * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBike::nSaveStructSize) + sizeof(int);
 	WriteSaveBuf(buf, nNumCars);
 	WriteSaveBuf(buf, nNumBoats);
 	WriteSaveBuf(buf, nNumBikes);
-	for(int i = 0; i < nPoolSize; i++) {
-		CVehicle *pVehicle = GetVehiclePool()->GetSlot(i);
-		if(!pVehicle) continue;
+	for (int i = 0; i < nPoolSize; i++) {
+		CVehicle* pVehicle = GetVehiclePool()->GetSlot(i);
+		if (!pVehicle)
+			continue;
 		bool bHasPassenger = false;
-		for(int j = 0; j < ARRAY_SIZE(pVehicle->pPassengers); j++) {
-			if(pVehicle->pPassengers[j]) bHasPassenger = true;
+		for (int j = 0; j < ARRAY_SIZE(pVehicle->pPassengers); j++) {
+			if (pVehicle->pPassengers[j])
+				bHasPassenger = true;
 		}
 #ifdef MISSION_REPLAY
 		bool bForceSaving = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle == pVehicle && IsQuickSave;
 #endif
 #if defined FIX_BUGS && defined MISSION_REPLAY
-		if((!pVehicle->pDriver && !bHasPassenger) || bForceSaving) {
+		if ((!pVehicle->pDriver && !bHasPassenger) || bForceSaving) {
 #else
-		if(!pVehicle->pDriver && !bHasPassenger) {
+		if (!pVehicle->pDriver && !bHasPassenger) {
 #endif
 #ifdef COMPATIBLE_SAVES
 #ifdef MISSION_REPLAY
-			if((pVehicle->IsCar() || pVehicle->IsBoat() || pVehicle->IsBike()) && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
+			if ((pVehicle->IsCar() || pVehicle->IsBoat() || pVehicle->IsBike()) && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
-			if((pVehicle->IsCar() || pVehicle->IsBoat() || pVehicle->IsBike()) && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
+			if ((pVehicle->IsCar() || pVehicle->IsBoat() || pVehicle->IsBike()) && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
 				WriteSaveBuf(buf, pVehicle->m_vehType);
 				WriteSaveBuf(buf, pVehicle->GetModelIndex());
@@ -303,9 +318,9 @@ void CPools::SaveVehiclePool(uint8* buf, uint32* size)
 			}
 #else
 #ifdef MISSION_REPLAY
-			if(pVehicle->IsCar() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
+			if (pVehicle->IsCar() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
-			if(pVehicle->IsCar() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
+			if (pVehicle->IsCar() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
 				WriteSaveBuf(buf, pVehicle->m_vehType);
 				WriteSaveBuf(buf, pVehicle->GetModelIndex());
@@ -314,9 +329,9 @@ void CPools::SaveVehiclePool(uint8* buf, uint32* size)
 				SkipSaveBuf(buf, sizeof(CAutomobile));
 			}
 #ifdef MISSION_REPLAY
-			if(pVehicle->IsBoat() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
+			if (pVehicle->IsBoat() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
-			if(pVehicle->IsBoat() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
+			if (pVehicle->IsBoat() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
 				WriteSaveBuf(buf, pVehicle->m_vehType);
 				WriteSaveBuf(buf, pVehicle->GetModelIndex());
@@ -325,9 +340,9 @@ void CPools::SaveVehiclePool(uint8* buf, uint32* size)
 				SkipSaveBuf(buf, sizeof(CBoat));
 			}
 #ifdef MISSION_REPLAY
-			if(pVehicle->IsBike() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
+			if (pVehicle->IsBike() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
-			if(pVehicle->IsBike() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
+			if (pVehicle->IsBike() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
 				WriteSaveBuf(buf, pVehicle->m_vehType);
 				WriteSaveBuf(buf, pVehicle->GetModelIndex());
@@ -338,30 +353,33 @@ void CPools::SaveVehiclePool(uint8* buf, uint32* size)
 #endif
 		}
 	}
-	VALIDATESAVEBUF(*size)
+VALIDATESAVEBUF(*size)
 }
 
 void CPools::SaveObjectPool(uint8* buf, uint32* size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	CProjectileInfo::RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	int nObjects = 0;
 	int nPoolSize = GetObjectPool()->GetSize();
-	for(int i = 0; i < nPoolSize; i++) {
-		CObject *pObject = GetObjectPool()->GetSlot(i);
-		if(!pObject) continue;
-		if(pObject->ObjectCreatedBy == MISSION_OBJECT) ++nObjects;
+	for (int i = 0; i < nPoolSize; i++) {
+		CObject* pObject = GetObjectPool()->GetSlot(i);
+		if (!pObject)
+			continue;
+		if (pObject->ObjectCreatedBy == MISSION_OBJECT)
+			++nObjects;
 	}
-	*size =
-	    nObjects * (sizeof(int16) + sizeof(int) + sizeof(CCompressedMatrix) + sizeof(float) + sizeof(CCompressedMatrix) + sizeof(int8) + 7 * sizeof(bool) +
-	                sizeof(int16) + +sizeof(int8) * 2 + sizeof(float) + sizeof(int8) + sizeof(int8) + sizeof(uint32) + 2 * sizeof(uint32)) +
-	    sizeof(int);
+	*size = nObjects * (sizeof(int16) + sizeof(int) + sizeof(CCompressedMatrix) +
+		sizeof(float) + sizeof(CCompressedMatrix) + sizeof(int8) + 7 * sizeof(bool) + sizeof(int16) +
+		+ sizeof(int8) * 2 + sizeof(float) + sizeof(int8) + sizeof(int8) +
+		sizeof(uint32) + 2 * sizeof(uint32)) + sizeof(int);
 	CopyToBuf(buf, nObjects);
-	for(int i = 0; i < nPoolSize; i++) {
-		CObject *pObject = GetObjectPool()->GetSlot(i);
-		if(!pObject) continue;
-		if(pObject->ObjectCreatedBy == MISSION_OBJECT) {
+	for (int i = 0; i < nPoolSize; i++) {
+		CObject* pObject = GetObjectPool()->GetSlot(i);
+		if (!pObject)
+			continue;
+		if (pObject->ObjectCreatedBy == MISSION_OBJECT) {
 			bool bIsPickup = pObject->bIsPickup;
 			bool bPickupObjWithMessage = pObject->bPickupObjWithMessage;
 			bool bOutOfStock = pObject->bOutOfStock;
@@ -401,21 +419,21 @@ void CPools::SaveObjectPool(uint8* buf, uint32* size)
 #endif
 		}
 	}
-	VALIDATESAVEBUF(*size)
+VALIDATESAVEBUF(*size)
 }
 
 void CPools::LoadObjectPool(uint8* buf, uint32 size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	int nObjects;
 	CopyFromBuf(buf, nObjects);
-	for(int i = 0; i < nObjects; i++) {
+	for (int i = 0; i < nObjects; i++) {
 		int16 mi;
 		CopyFromBuf(buf, mi);
 		int ref;
 		CopyFromBuf(buf, ref);
-		char *obuf = new char[sizeof(CObject)];
-		CObject *pBufferObject = (CObject *)obuf;
+		char* obuf = new char[sizeof(CObject)];
+		CObject* pBufferObject = (CObject*)obuf;
 		CCompressedMatrix tmp;
 		CopyFromBuf(buf, tmp);
 		tmp.DecompressIntoFullMatrix(pBufferObject->GetMatrix());
@@ -449,8 +467,9 @@ void CPools::LoadObjectPool(uint8* buf, uint32 size)
 		CopyFromBuf(buf, (pBufferObject->GetAddressOfEntityProperties())[0]);
 		CopyFromBuf(buf, (pBufferObject->GetAddressOfEntityProperties())[1]);
 #endif
-		if(GetObjectPool()->GetSlot(ref >> 8)) CPopulation::ConvertToDummyObject(GetObjectPool()->GetSlot(ref >> 8));
-		CObject *pObject = new(ref) CObject(mi, false);
+		if (GetObjectPool()->GetSlot(ref >> 8))
+			CPopulation::ConvertToDummyObject(GetObjectPool()->GetSlot(ref >> 8));
+		CObject* pObject = new(ref) CObject(mi, false);
 		pObject->GetMatrix() = pBufferObject->GetMatrix();
 #ifdef COMPATIBLE_SAVES
 		pObject->LoadEntityFlags(buf);
@@ -479,34 +498,36 @@ void CPools::LoadObjectPool(uint8* buf, uint32 size)
 		CWorld::Add(pObject);
 		delete[] obuf;
 	}
-	VALIDATESAVEBUF(size)
+VALIDATESAVEBUF(size)
 }
 
 void CPools::SavePedPool(uint8* buf, uint32* size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	int nNumPeds = 0;
 	int nPoolSize = GetPedPool()->GetSize();
-	for(int i = 0; i < nPoolSize; i++) {
-		CPed *pPed = GetPedPool()->GetSlot(i);
-		if(!pPed) continue;
+	for (int i = 0; i < nPoolSize; i++) {
+		CPed* pPed = GetPedPool()->GetSlot(i);
+		if (!pPed)
+			continue;
 #ifdef MISSION_REPLAY
-		if((!pPed->bInVehicle || (pPed == CWorld::Players[CWorld::PlayerInFocus].m_pPed && IsQuickSave)) && pPed->m_nPedType == PEDTYPE_PLAYER1)
+		if ((!pPed->bInVehicle || (pPed == CWorld::Players[CWorld::PlayerInFocus].m_pPed && IsQuickSave)) && pPed->m_nPedType == PEDTYPE_PLAYER1)
 #else
-		if(!pPed->bInVehicle && pPed->m_nPedType == PEDTYPE_PLAYER1)
+		if (!pPed->bInVehicle && pPed->m_nPedType == PEDTYPE_PLAYER1)
 #endif
 			nNumPeds++;
 	}
-	*size = sizeof(int) + nNumPeds * (sizeof(uint32) + sizeof(int16) + sizeof(int) + CPlayerPed::nSaveStructSize + sizeof(CWanted::MaximumWantedLevel) +
-	                                  sizeof(CWanted::nMaximumWantedLevel) + MAX_MODEL_NAME);
+	*size = sizeof(int) + nNumPeds * (sizeof(uint32) + sizeof(int16) + sizeof(int) + CPlayerPed::nSaveStructSize +
+		sizeof(CWanted::MaximumWantedLevel) + sizeof(CWanted::nMaximumWantedLevel) + MAX_MODEL_NAME);
 	CopyToBuf(buf, nNumPeds);
-	for(int i = 0; i < nPoolSize; i++) {
-		CPed *pPed = GetPedPool()->GetSlot(i);
-		if(!pPed) continue;
+	for (int i = 0; i < nPoolSize; i++) {
+		CPed* pPed = GetPedPool()->GetSlot(i);
+		if (!pPed)
+			continue;
 #ifdef MISSION_REPLAY
-		if((!pPed->bInVehicle || (pPed == CWorld::Players[CWorld::PlayerInFocus].m_pPed && IsQuickSave)) && pPed->m_nPedType == PEDTYPE_PLAYER1) {
+		if ((!pPed->bInVehicle || (pPed == CWorld::Players[CWorld::PlayerInFocus].m_pPed && IsQuickSave)) && pPed->m_nPedType == PEDTYPE_PLAYER1) {
 #else
-		if(!pPed->bInVehicle && pPed->m_nPedType == PEDTYPE_PLAYER1) {
+		if (!pPed->bInVehicle && pPed->m_nPedType == PEDTYPE_PLAYER1) {
 #endif
 			CopyToBuf(buf, pPed->m_nPedType);
 			CopyToBuf(buf, pPed->m_modelIndex);
@@ -524,16 +545,16 @@ void CPools::SavePedPool(uint8* buf, uint32* size)
 			SkipSaveBuf(buf, MAX_MODEL_NAME);
 		}
 	}
-	VALIDATESAVEBUF(*size);
+VALIDATESAVEBUF(*size);
 #undef CopyToBuf
 }
 
 void CPools::LoadPedPool(uint8* buf, uint32 size)
 {
-	INITSAVEBUF
+INITSAVEBUF
 	int nPeds;
 	CopyFromBuf(buf, nPeds);
-	for(int i = 0; i < nPeds; i++) {
+	for (int i = 0; i < nPeds; i++) {
 		uint32 pedtype;
 		int16 model;
 		int ref;
@@ -542,7 +563,7 @@ void CPools::LoadPedPool(uint8* buf, uint32 size)
 		CopyFromBuf(buf, model);
 		CopyFromBuf(buf, ref);
 #ifdef COMPATIBLE_SAVES
-		CPed *pPed;
+		CPed* pPed;
 
 		char name[MAX_MODEL_NAME];
 		// Unfortunate hack: player model is stored after ped structure.
@@ -551,30 +572,30 @@ void CPools::LoadPedPool(uint8* buf, uint32 size)
 		CStreaming::RequestSpecialModel(model, name, STREAMFLAGS_DONT_REMOVE);
 		CStreaming::LoadAllRequestedModels(false);
 
-		if(pedtype == PEDTYPE_PLAYER1)
+		if (pedtype == PEDTYPE_PLAYER1)
 			pPed = new(ref) CPlayerPed();
 		else
 			assert(0);
 
 		pPed->Load(buf);
-		if(pedtype == PEDTYPE_PLAYER1) {
+		if (pedtype == PEDTYPE_PLAYER1) {
 			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
 			CopyFromBuf(buf, CWanted::nMaximumWantedLevel);
 			SkipSaveBuf(buf, MAX_MODEL_NAME);
 		}
 
-		if(pedtype == PEDTYPE_PLAYER1) {
+		if (pedtype == PEDTYPE_PLAYER1) {
 			pPed->m_wepAccuracy = 100;
-			CWorld::Players[0].m_pPed = (CPlayerPed *)pPed;
+			CWorld::Players[0].m_pPed = (CPlayerPed*)pPed;
 		}
 		CWorld::Add(pPed);
 #else
-		char *pbuf = new char[sizeof(CPlayerPed)];
-		CPlayerPed *pBufferPlayer = (CPlayerPed *)pbuf;
-		CPed *pPed;
+		char* pbuf = new char[sizeof(CPlayerPed)];
+		CPlayerPed* pBufferPlayer = (CPlayerPed*)pbuf;
+		CPed* pPed;
 		char name[MAX_MODEL_NAME];
 		// the code implies that there was idea to load non-player ped
-		if(pedtype == PEDTYPE_PLAYER1) { // always true
+		if (pedtype == PEDTYPE_PLAYER1) { // always true
 			memcpy(pbuf, buf, sizeof(CPlayerPed));
 			SkipSaveBuf(buf, sizeof(CPlayerPed));
 			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
@@ -583,9 +604,9 @@ void CPools::LoadPedPool(uint8* buf, uint32 size)
 		}
 		CStreaming::RequestSpecialModel(model, name, STREAMFLAGS_DONT_REMOVE);
 		CStreaming::LoadAllRequestedModels(false);
-		if(pedtype == PEDTYPE_PLAYER1) {
-			CPlayerPed *pPlayerPed = new(ref) CPlayerPed();
-			for(int i = 0; i < ARRAY_SIZE(pPlayerPed->m_nTargettableObjects); i++)
+		if (pedtype == PEDTYPE_PLAYER1) {
+			CPlayerPed* pPlayerPed = new(ref) CPlayerPed();
+			for (int i = 0; i < ARRAY_SIZE(pPlayerPed->m_nTargettableObjects); i++)
 				pPlayerPed->m_nTargettableObjects[i] = pBufferPlayer->m_nTargettableObjects[i];
 			pPlayerPed->m_fMaxStamina = pBufferPlayer->m_fMaxStamina;
 			pPed = pPlayerPed;
@@ -596,13 +617,14 @@ void CPools::LoadPedPool(uint8* buf, uint32 size)
 		pPed->CharCreatedBy = pBufferPlayer->CharCreatedBy;
 		pPed->m_currentWeapon = 0;
 		pPed->m_maxWeaponTypeAllowed = pBufferPlayer->m_maxWeaponTypeAllowed;
-		for(int i = 0; i < TOTAL_WEAPON_SLOTS; i++) {
-			if(pBufferPlayer->HasWeaponSlot(i)) {
+		for (int i = 0; i < TOTAL_WEAPON_SLOTS; i++) {
+			if (pBufferPlayer->HasWeaponSlot(i)) {
 				int modelId = CWeaponInfo::GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModelId;
-				if(modelId != -1) {
+				if (modelId != -1) {
 					CStreaming::RequestModel(modelId, STREAMFLAGS_DEPENDENCY);
 					int modelId2 = CWeaponInfo::GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModel2Id;
-					if(modelId2 != -1) CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+					if (modelId2 != -1)
+						CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
 
 					CStreaming::LoadAllRequestedModels(false);
 				}
@@ -610,15 +632,15 @@ void CPools::LoadPedPool(uint8* buf, uint32 size)
 			}
 		}
 
-		if(pedtype == PEDTYPE_PLAYER1) {
+		if (pedtype == PEDTYPE_PLAYER1) {
 			pPed->m_wepAccuracy = 100;
-			CWorld::Players[0].m_pPed = (CPlayerPed *)pPed;
+			CWorld::Players[0].m_pPed = (CPlayerPed*)pPed;
 		}
 		CWorld::Add(pPed);
 		delete[] pbuf;
 #endif
 	}
-	VALIDATESAVEBUF(size)
+VALIDATESAVEBUF(size)
 }
 
 #undef CopyFromBuf

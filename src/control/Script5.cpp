@@ -12,10 +12,12 @@
 #include "Pools.h"
 #include "Population.h"
 #include "RpAnimBlend.h"
+#include "SaveBuf.h"
 #include "Shadows.h"
 #include "SpecialFX.h"
 #include "World.h"
 #include "main.h"
+#include "SaveBuf.h"
 
 void CRunningScript::UpdateCompareFlag(bool flag)
 {
@@ -1006,10 +1008,10 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 		initAngle -= TWOPI;
 	// it looks like the idea is to use a rectangle using the diagonal of the rectangle as
 	// the side of new rectangle, with "length" being the length of second side
-	float rotatedSupX = supX + side2length * sin(initAngle);
-	float rotatedSupY = supY - side2length * cos(initAngle);
-	float rotatedInfX = infX + side2length * sin(initAngle);
-	float rotatedInfY = infY - side2length * cos(initAngle);
+	float rotatedSupX = supX + side2length * Sin(initAngle);
+	float rotatedSupY = supY - side2length * Cos(initAngle);
+	float rotatedInfX = infX + side2length * Sin(initAngle);
+	float rotatedInfY = infY - side2length * Cos(initAngle);
 	float side1X = supX - infX;
 	float side1Y = supY - infY;
 	float side1Length = CVector2D(side1X, side1Y).Magnitude();
@@ -1378,10 +1380,12 @@ void CRunningScript::DoDeatharrestCheck()
 	if (!pPlayer->IsRestartingAfterDeath() && !pPlayer->IsRestartingAfterArrest())
 		return;
 #ifdef MISSION_REPLAY
-	if (AllowMissionReplay != 0)
+	if (AllowMissionReplay != MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART && AllowMissionReplay != MISSION_RETRY_STAGE_NORMAL)
 		return;
+	if (AllowMissionReplay == MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART)
+		AllowMissionReplay = MISSION_RETRY_STAGE_NORMAL;
 	if (CanAllowMissionReplay())
-		AllowMissionReplay = 1;
+		AllowMissionReplay = MISSION_RETRY_STAGE_WAIT_FOR_SCRIPT_TO_TERMINATE;
 #endif
 	script_assert(m_nStackPointer > 0);
 	while (m_nStackPointer > 1)
@@ -1912,7 +1916,7 @@ bool CRunningScript::CheckDamagedWeaponType(int32 actual, int32 type)
 	if (type == WEAPONTYPE_ANYMELEE) {
 		if (actual <= WEAPONTYPE_CHAINSAW)
 			return true;
-		if (actual - WEAPONTYPE_GRENADE <= WEAPONTYPE_MINIGUN)
+		if (actual >= WEAPONTYPE_GRENADE && actual <= WEAPONTYPE_UNIDENTIFIED)
 			return false;
 		return false;
 	}
@@ -2182,42 +2186,63 @@ VALIDATESAVEBUF(*size)
 void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
 {
 	Init();
-	INITSAVEBUF
+INITSAVEBUF
 	CheckSaveHeader(buf, 'S', 'C', 'R', '\0', size - SAVE_HEADER_SIZE);
 	uint32 varSpace, type, handle;
 	uint32 tmp;
 
 	ReadSaveBuf(&varSpace, buf);
-	for(uint32 i = 0; i < varSpace; i++) ReadSaveBuf(&ScriptSpace[i], buf);
+	for (uint32 i = 0; i < varSpace; i++)
+		ReadSaveBuf(&ScriptSpace[i], buf);
 	ReadSaveBuf(&tmp, buf);
 	script_assert(tmp == SCRIPT_DATA_SIZE);
 	ReadSaveBuf(&OnAMissionFlag, buf);
 	ReadSaveBuf(&LastMissionPassedTime, buf);
-	for(uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
+	for (uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
 		ReadSaveBuf(&type, buf);
 		ReadSaveBuf(&handle, buf);
-		switch(type) {
-		case 0: BuildingSwapArray[i].m_pBuilding = nil; break;
-		case 1: BuildingSwapArray[i].m_pBuilding = CPools::GetTreadablePool()->GetSlot(handle - 1); break;
-		case 2: BuildingSwapArray[i].m_pBuilding = CPools::GetBuildingPool()->GetSlot(handle - 1); break;
-		default: script_assert(false);
+		switch (type) {
+		case 0:
+			BuildingSwapArray[i].m_pBuilding = nil;
+			break;
+		case 1:
+			BuildingSwapArray[i].m_pBuilding = CPools::GetTreadablePool()->GetSlot(handle - 1);
+			break;
+		case 2:
+			BuildingSwapArray[i].m_pBuilding = CPools::GetBuildingPool()->GetSlot(handle - 1);
+			break;
+		default:
+			script_assert(false);
 		}
 		ReadSaveBuf(&BuildingSwapArray[i].m_nNewModel, buf);
 		ReadSaveBuf(&BuildingSwapArray[i].m_nOldModel, buf);
-		if(BuildingSwapArray[i].m_pBuilding) BuildingSwapArray[i].m_pBuilding->ReplaceWithNewModel(BuildingSwapArray[i].m_nNewModel);
+		if (BuildingSwapArray[i].m_pBuilding)
+			BuildingSwapArray[i].m_pBuilding->ReplaceWithNewModel(BuildingSwapArray[i].m_nNewModel);
 	}
-	for(uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
+	for (uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
 		ReadSaveBuf(&type, buf);
 		ReadSaveBuf(&handle, buf);
-		switch(type) {
-		case 0: InvisibilitySettingArray[i] = nil; break;
-		case 1: InvisibilitySettingArray[i] = CPools::GetTreadablePool()->GetSlot(handle - 1); break;
-		case 2: InvisibilitySettingArray[i] = CPools::GetBuildingPool()->GetSlot(handle - 1); break;
-		case 3: InvisibilitySettingArray[i] = CPools::GetObjectPool()->GetSlot(handle - 1); break;
-		case 4: InvisibilitySettingArray[i] = CPools::GetDummyPool()->GetSlot(handle - 1); break;
-		default: script_assert(false);
+		switch (type) {
+		case 0:
+			InvisibilitySettingArray[i] = nil;
+			break;
+		case 1:
+			InvisibilitySettingArray[i] = CPools::GetTreadablePool()->GetSlot(handle - 1);
+			break;
+		case 2:
+			InvisibilitySettingArray[i] = CPools::GetBuildingPool()->GetSlot(handle - 1);
+			break;
+		case 3:
+			InvisibilitySettingArray[i] = CPools::GetObjectPool()->GetSlot(handle - 1);
+			break;
+		case 4:
+			InvisibilitySettingArray[i] = CPools::GetDummyPool()->GetSlot(handle - 1);
+			break;
+		default:
+			script_assert(false);
 		}
-		if(InvisibilitySettingArray[i]) InvisibilitySettingArray[i]->bIsVisible = false;
+		if (InvisibilitySettingArray[i])
+			InvisibilitySettingArray[i]->bIsVisible = false;
 	}
 	bool tmpBool;
 	ReadSaveBuf(&tmpBool, buf);
@@ -2235,8 +2260,9 @@ void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
 	script_assert(tmp16 == NumberOfExclusiveMissionScripts);
 	uint32 runningScripts;
 	ReadSaveBuf(&runningScripts, buf);
-	for(uint32 i = 0; i < runningScripts; i++) StartNewScript(0)->Load(buf);
-	VALIDATESAVEBUF(size)
+	for (uint32 i = 0; i < runningScripts; i++)
+		StartNewScript(0)->Load(buf);
+VALIDATESAVEBUF(size)
 }
 
 #undef SCRIPT_DATA_SIZE
@@ -2244,33 +2270,33 @@ void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
 void CRunningScript::Save(uint8*& buf)
 {
 #ifdef COMPATIBLE_SAVES
-	SkipSaveBuf(buf, 8);
+	ZeroSaveBuf(buf, 8);
 	for (int i = 0; i < 8; i++)
-		WriteSaveBuf<char>(buf, m_abScriptName[i]);
-	WriteSaveBuf<uint32>(buf, m_nIp);
+		WriteSaveBuf(buf, m_abScriptName[i]);
+	WriteSaveBuf(buf, m_nIp);
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(MAX_STACK_DEPTH == 6, "Compatibility loss: MAX_STACK_DEPTH != 6");
 #endif
 	for (int i = 0; i < MAX_STACK_DEPTH; i++)
-		WriteSaveBuf<uint32>(buf, m_anStack[i]);
-	WriteSaveBuf<uint16>(buf, m_nStackPointer);
-	SkipSaveBuf(buf, 2);
+		WriteSaveBuf(buf, m_anStack[i]);
+	WriteSaveBuf(buf, m_nStackPointer);
+	ZeroSaveBuf(buf, 2);
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(NUM_LOCAL_VARS + NUM_TIMERS == 18, "Compatibility loss: NUM_LOCAL_VARS + NUM_TIMERS != 18");
 #endif
 	for (int i = 0; i < NUM_LOCAL_VARS + NUM_TIMERS; i++)
-		WriteSaveBuf<int32>(buf, m_anLocalVariables[i]);
-	WriteSaveBuf<bool>(buf, m_bIsActive);
-	WriteSaveBuf<bool>(buf, m_bCondResult);
-	WriteSaveBuf<bool>(buf, m_bIsMissionScript);
-	WriteSaveBuf<bool>(buf, m_bSkipWakeTime);
-	WriteSaveBuf<uint32>(buf, m_nWakeTime);
-	WriteSaveBuf<uint16>(buf, m_nAndOrState);
-	WriteSaveBuf<bool>(buf, m_bNotFlag);
-	WriteSaveBuf<bool>(buf, m_bDeatharrestEnabled);
-	WriteSaveBuf<bool>(buf, m_bDeatharrestExecuted);
-	WriteSaveBuf<bool>(buf, m_bMissionFlag);
-	SkipSaveBuf(buf, 2);
+		WriteSaveBuf(buf, m_anLocalVariables[i]);
+	WriteSaveBuf(buf, m_bIsActive);
+	WriteSaveBuf(buf, m_bCondResult);
+	WriteSaveBuf(buf, m_bIsMissionScript);
+	WriteSaveBuf(buf, m_bSkipWakeTime);
+	WriteSaveBuf(buf, m_nWakeTime);
+	WriteSaveBuf(buf, m_nAndOrState);
+	WriteSaveBuf(buf, m_bNotFlag);
+	WriteSaveBuf(buf, m_bDeatharrestEnabled);
+	WriteSaveBuf(buf, m_bDeatharrestExecuted);
+	WriteSaveBuf(buf, m_bMissionFlag);
+	ZeroSaveBuf(buf, 2);
 #else
 	WriteSaveBuf(buf, *this);
 #endif
@@ -2280,18 +2306,21 @@ void CRunningScript::Load(uint8*& buf)
 {
 #ifdef COMPATIBLE_SAVES
 	SkipSaveBuf(buf, 8);
-	for(int i = 0; i < 8; i++) ReadSaveBuf(&m_abScriptName[i], buf);
+	for (int i = 0; i < 8; i++)
+		ReadSaveBuf(&m_abScriptName[i], buf);
 	ReadSaveBuf(&m_nIp, buf);
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(MAX_STACK_DEPTH == 6, "Compatibility loss: MAX_STACK_DEPTH != 6");
 #endif
-	for(int i = 0; i < MAX_STACK_DEPTH; i++) ReadSaveBuf(&m_anStack[i], buf);
+	for (int i = 0; i < MAX_STACK_DEPTH; i++)
+		ReadSaveBuf(&m_anStack[i], buf);
 	ReadSaveBuf(&m_nStackPointer, buf);
 	SkipSaveBuf(buf, 2);
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(NUM_LOCAL_VARS + NUM_TIMERS == 18, "Compatibility loss: NUM_LOCAL_VARS + NUM_TIMERS != 18");
 #endif
-	for(int i = 0; i < NUM_LOCAL_VARS + NUM_TIMERS; i++) ReadSaveBuf(&m_anLocalVariables[i], buf);
+	for (int i = 0; i < NUM_LOCAL_VARS + NUM_TIMERS; i++)
+		ReadSaveBuf(&m_anLocalVariables[i], buf);
 	ReadSaveBuf(&m_bIsActive, buf);
 	ReadSaveBuf(&m_bCondResult, buf);
 	ReadSaveBuf(&m_bIsMissionScript, buf);
@@ -2304,8 +2333,8 @@ void CRunningScript::Load(uint8*& buf)
 	ReadSaveBuf(&m_bMissionFlag, buf);
 	SkipSaveBuf(buf, 2);
 #else
-	CRunningScript *n = next;
-	CRunningScript *p = prev;
+	CRunningScript* n = next;
+	CRunningScript* p = prev;
 	ReadSaveBuf(this, buf);
 	next = n;
 	prev = p;

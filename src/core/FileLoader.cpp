@@ -1074,7 +1074,7 @@ CFileLoader::Load2dEffect(const char *line)
 			&probability);
 		effect->attractor.type = flags;
 #ifdef FIX_BUGS
-		effect->attractor.probability = CLAMP(probability, 0, 255);
+		effect->attractor.probability = Clamp(probability, 0, 255);
 #else
 		effect->attractor.probability = probability;
 #endif
@@ -1206,7 +1206,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 	if(!CStreaming::IsObjectInCdImage(id))
 		debug("Not in cdimage %s\n", mi->GetModelName());
 
-	angle = -RADTODEG(2.0f * acosf(angle));
+	angle = -RADTODEG(2.0f * Acos(angle));
 	xform = RwMatrixCreate();
 	RwMatrixRotate(xform, &axis, angle, rwCOMBINEREPLACE);
 	RwMatrixTranslate(xform, &trans, rwCOMBINEPOSTCONCAT);

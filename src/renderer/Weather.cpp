@@ -137,7 +137,7 @@ void CWeather::Init(void)
 	ForcedWeatherType = WEATHER_RANDOM;
 	SoundHandle = DMAudio.CreateEntity(AUDIOTYPE_WEATHER, (void*)1);
 	if (SoundHandle >= 0)
-		DMAudio.SetEntityStatus(SoundHandle, true);
+		DMAudio.SetEntityStatus(SoundHandle, TRUE);
 }
 
 void CWeather::Update(void)
@@ -281,7 +281,7 @@ void CWeather::Update(void)
 
 	if (SunGlare > 0.0f) {
 		SunGlare *= Min(1.0f, 7.0 * CTimeCycle::GetSunDirection().z);
-		SunGlare = CLAMP(SunGlare, 0.0f, 1.0f);
+		SunGlare = Clamp(SunGlare, 0.0f, 1.0f);
 		if (!CSpecialFX::bSnapShotActive)
 			SunGlare *= (1.0f - (CGeneral::GetRandomNumber()&0x1F)*0.007f);
 	}

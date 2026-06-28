@@ -179,10 +179,10 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 			int32 t = WATER_HUGE_Y(ms_aWaterRects[i].top);
 			int32 b = WATER_HUGE_Y(ms_aWaterRects[i].bottom) + 1.0f;
 
-			l = CLAMP(l, 0, MAX_SMALL_SECTORS - 1);
-			r = CLAMP(r, 0, MAX_SMALL_SECTORS - 1);
-			t = CLAMP(t, 0, MAX_SMALL_SECTORS - 1);
-			b = CLAMP(b, 0, MAX_SMALL_SECTORS - 1);
+			l = Clamp(l, 0, MAX_SMALL_SECTORS - 1);
+			r = Clamp(r, 0, MAX_SMALL_SECTORS - 1);
+			t = Clamp(t, 0, MAX_SMALL_SECTORS - 1);
+			b = Clamp(b, 0, MAX_SMALL_SECTORS - 1);
 
 			for (int32 x = l; x <= r; x++)
 			{
@@ -991,10 +991,10 @@ CWaterLevel::RenderWater()
 	if ( bUseCamEndY )                             
 		nEndY   = WATER_TO_HUGE_SECTOR_Y(camPos.y);
 
-	nStartX = CLAMP(nStartX, 0, MAX_HUGE_SECTORS - 1);
-	nEndX   = CLAMP(nEndX,   0, MAX_HUGE_SECTORS - 1);
-	nStartY = CLAMP(nStartY, 0, MAX_HUGE_SECTORS - 1);
-	nEndY   = CLAMP(nEndY,   0, MAX_HUGE_SECTORS - 1);
+	nStartX = Clamp(nStartX, 0, MAX_HUGE_SECTORS - 1);
+	nEndX   = Clamp(nEndX,   0, MAX_HUGE_SECTORS - 1);
+	nStartY = Clamp(nStartY, 0, MAX_HUGE_SECTORS - 1);
+	nEndY   = Clamp(nEndY,   0, MAX_HUGE_SECTORS - 1);
 	
 	for ( int32 x = nStartX; x <= nEndX; x++ )
 	{
@@ -1014,7 +1014,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fHugeSectorMaxRenderDistSqr > fHugeSectorDistToCamSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) )
 					{
 #ifndef PC_WATER
 						WavesCalculatedThisFrame = true;
@@ -1088,7 +1088,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1107,7 +1107,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1136,7 +1136,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1155,7 +1155,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.x, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.x, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1259,10 +1259,10 @@ CWaterLevel::RenderTransparentWater(void)
 	if ( bUseCamEndY )                                      
 		nEndY   = WATER_TO_HUGE_SECTOR_Y(camPos.y         );
 	
-	nStartX = CLAMP(nStartX, 0, MAX_HUGE_SECTORS - 1);
-	nEndX   = CLAMP(nEndX,   0, MAX_HUGE_SECTORS - 1);
-	nStartY = CLAMP(nStartY, 0, MAX_HUGE_SECTORS - 1);
-	nEndY   = CLAMP(nEndY,   0, MAX_HUGE_SECTORS - 1);
+	nStartX = Clamp(nStartX, 0, MAX_HUGE_SECTORS - 1);
+	nEndX   = Clamp(nEndX,   0, MAX_HUGE_SECTORS - 1);
+	nStartY = Clamp(nStartY, 0, MAX_HUGE_SECTORS - 1);
+	nEndY   = Clamp(nEndY,   0, MAX_HUGE_SECTORS - 1);
 	
 	
 	for ( int32 x = nStartX; x <= nEndX; x++ )
@@ -1287,7 +1287,7 @@ CWaterLevel::RenderTransparentWater(void)
 				
 				if ( fHugeSectorMaxRenderDistSqr > fHugeSectorDistToCamSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) )
 					{
 						if ( fHugeSectorDistToCamSqr >= SQR(500.0f) )
 						{
@@ -1311,7 +1311,7 @@ CWaterLevel::RenderTransparentWater(void)
 										
 										if ( fLargeSectorDistToCamSqr < fHugeSectorMaxRenderDistSqr )
 										{
-											if ( TheCamera.IsSphereVisible(CVector(vecLargeSectorCentre.x, vecLargeSectorCentre.y, 0.0f), SectorRadius(LARGE_SECTOR_SIZE), &TheCamera.GetCameraMatrix()) )
+											if ( TheCamera.IsSphereVisible(CVector(vecLargeSectorCentre.x, vecLargeSectorCentre.y, 0.0f), SectorRadius(LARGE_SECTOR_SIZE)) )
 											{
 												// Render four small(32x32) sectors, or one large(64x64).
 
@@ -2161,10 +2161,10 @@ CWaterLevel::PreCalcWaterGeometry(void)
 	float signX = CamFwdDir.x * 1.4144272f;
 	float signY = CamFwdDir.y * 1.4144272f;
 	
-	signX = CLAMP(signX, -1.0f, 1.0f);
+	signX = Clamp(signX, -1.0f, 1.0f);
 	fCamX += 0.4f * signX * float(SMALL_SECTOR_SIZE * 2.0f);
 
-	signY = CLAMP(signY, -1.0f, 1.0f);
+	signY = Clamp(signY, -1.0f, 1.0f);
 	fCamY += 0.4f * signY * float(SMALL_SECTOR_SIZE * 2.0f);
 	
 	int32 nBlock;
@@ -2578,7 +2578,7 @@ CWaterLevel::RenderBoatWakes(void)
 				float val = 500.0f - (CBoat::WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[wake])
 						* 600.0f / CBoat::WAKE_LIFETIME;
 						
-				fAplhaB = CLAMP(val, 0.0f, 255.0f);
+				fAplhaB = Clamp(val, 0.0f, 255.0f);
 			}
 
 			CVector2D vecDistB = pBoat->m_avec2dWakePoints[wake - 1] - pBoat->m_avec2dWakePoints[wake];
@@ -2888,10 +2888,10 @@ CWaterLevel::CalcDistanceToWater(float fX, float fY)
 	int32 nStartY = WATER_TO_SMALL_SECTOR_Y(fY - fSectorMaxRenderDist) - 1;
 	int32 nEndY   = WATER_TO_SMALL_SECTOR_Y(fY + fSectorMaxRenderDist) + 1;
 	
-	nStartX = CLAMP(nStartX, 0, MAX_SMALL_SECTORS - 1);
-	nEndX   = CLAMP(nEndX,   0, MAX_SMALL_SECTORS - 1);
-	nStartY = CLAMP(nStartY, 0, MAX_SMALL_SECTORS - 1);
-	nEndY   = CLAMP(nEndY,   0, MAX_SMALL_SECTORS - 1);
+	nStartX = Clamp(nStartX, 0, MAX_SMALL_SECTORS - 1);
+	nEndX   = Clamp(nEndX,   0, MAX_SMALL_SECTORS - 1);
+	nStartY = Clamp(nStartY, 0, MAX_SMALL_SECTORS - 1);
+	nEndY   = Clamp(nEndY,   0, MAX_SMALL_SECTORS - 1);
 	
 	float fDistSqr = 1.0e10f;
 	
@@ -2915,7 +2915,7 @@ CWaterLevel::CalcDistanceToWater(float fX, float fY)
 		}
 	}
 
-	return CLAMP(Sqrt(fDistSqr) - 23.0f, 0.0f, fSectorMaxRenderDist);
+	return Clamp(Sqrt(fDistSqr) - 23.0f, 0.0f, fSectorMaxRenderDist);
 }
 
 void
@@ -3197,7 +3197,7 @@ CWaterLevel::HandleBeachToysStuff(void)
 					vecPos.x += (fCos - fSin) * fAngle;
 					vecPos.y += (fSin + fCos) * fAngle;
 					
-					if ( TheCamera.IsSphereVisible(vecPos, 1.0f, &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(vecPos, 1.0f) )
 					{
 						float fWaterLevel;
 						
@@ -3241,7 +3241,7 @@ CWaterLevel::HandleBeachToysStuff(void)
 					vecPos.x += (fCos - fSin) * fAngle;
 					vecPos.y += (fSin + fCos) * fAngle;
 					
-					if ( TheCamera.IsSphereVisible(vecPos, 2.0f, &TheCamera.GetCameraMatrix()) )
+					if ( TheCamera.IsSphereVisible(vecPos, 2.0f) )
 					{
 						float fWaterLevel;
 						

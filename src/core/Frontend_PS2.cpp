@@ -1375,7 +1375,7 @@ CMenuManager::DrawFrontEndNormal(void)
 		if ((m_nStartPauseTimer - CTimer::GetTimeInMillisecondsPauseMode()) <= 1600)
 			alpha = float(m_nStartPauseTimer - CTimer::GetTimeInMillisecondsPauseMode()) / 400.0f;
 
-		m_someAlpha = 255 - CLAMP(alpha, 0.0f, 1.0f) * 255.0f;
+		m_someAlpha = 255 - Clamp(alpha, 0.0f, 1.0f) * 255.0f;
 
 		switch ( m_nSlidingDir )
 		{
@@ -1392,7 +1392,7 @@ CMenuManager::DrawFrontEndNormal(void)
 		float slide = float(m_nEndPauseTimer - CTimer::GetTimeInMillisecondsPauseMode()) / 800.0f;
 		float alpha = float((int32)(m_nEndPauseTimer - CTimer::GetTimeInMillisecondsPauseMode()) + -266) / 533.0f;
 
-		m_someAlpha = CLAMP(alpha, 0.0f, 1.0f) * 255.0f;
+		m_someAlpha = Clamp(alpha, 0.0f, 1.0f) * 255.0f;
 
 		switch ( m_nSlidingDir )
 		{
@@ -2858,7 +2858,7 @@ CMenuManager::ProcessDPadCrossJustDown(void)
 							{
 								if ( !gMusicPlaying )
 								{
-									DMAudio.PlayFrontEndTrack(m_PrefsRadioStation, 1);
+									DMAudio.PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
 									gMusicPlaying = true;
 								}
 							}

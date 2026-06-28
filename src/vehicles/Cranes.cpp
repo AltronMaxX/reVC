@@ -11,6 +11,7 @@
 #include "Replay.h"
 #include "Object.h"
 #include "World.h"
+#include "SaveBuf.h"
 
 #define MAX_DISTANCE_TO_FIND_CRANE (10.0f)
 #define CRANE_UPDATE_RADIUS (300.0f)
@@ -630,7 +631,7 @@ void CCranes::Save(uint8* buf, uint32* size)
 	*size = 2 * sizeof(uint32) + CRANES_SAVE_SIZE;
 	WriteSaveBuf(buf, NumCranes);
 	WriteSaveBuf(buf, CarsCollectedMilitaryCrane);
-	for(int i = 0; i < NUM_CRANES; i++) {
+	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
 		int32 tmp = aCranes[i].m_pCraneEntity != nil ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(aCranes[i].m_pCraneEntity) + 1 : 0;
 		WriteSaveBuf(buf, tmp);
@@ -667,11 +668,12 @@ void CCranes::Save(uint8* buf, uint32* size)
 		ZeroSaveBuf(buf, 1);
 #else
 		CCrane *pCrane = WriteSaveBuf(buf, aCranes[i]);
-		if(pCrane->m_pCraneEntity != nil)
-			pCrane->m_pCraneEntity = (CBuilding *)(CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pCrane->m_pCraneEntity) + 1);
-		if(pCrane->m_pHook != nil) pCrane->m_pHook = (CObject *)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pCrane->m_pHook) + 1);
-		if(pCrane->m_pVehiclePickedUp != nil)
-			pCrane->m_pVehiclePickedUp = (CVehicle *)(CPools::GetVehiclePool()->GetJustIndex_NoFreeAssert(pCrane->m_pVehiclePickedUp) + 1);
+		if (pCrane->m_pCraneEntity != nil)
+			pCrane->m_pCraneEntity = (CBuilding*)(CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pCrane->m_pCraneEntity) + 1);
+		if (pCrane->m_pHook != nil)
+			pCrane->m_pHook = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pCrane->m_pHook) + 1);
+		if (pCrane->m_pVehiclePickedUp != nil)
+			pCrane->m_pVehiclePickedUp = (CVehicle*)(CPools::GetVehiclePool()->GetJustIndex_NoFreeAssert(pCrane->m_pVehiclePickedUp) + 1);
 #endif
 	}
 
@@ -684,7 +686,7 @@ void CCranes::Load(uint8* buf, uint32 size)
 
 	ReadSaveBuf(&NumCranes, buf);
 	ReadSaveBuf(&CarsCollectedMilitaryCrane, buf);
-	for(int i = 0; i < NUM_CRANES; i++) {
+	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
 		int32 tmp;
 		ReadSaveBuf(&tmp, buf);
@@ -723,11 +725,14 @@ void CCranes::Load(uint8* buf, uint32 size)
 #else
 		ReadSaveBuf(&aCranes[i], buf);
 	}
-	for(int i = 0; i < NUM_CRANES; i++) {
+	for (int i = 0; i < NUM_CRANES; i++) {
 		CCrane *pCrane = &aCranes[i];
-		if(pCrane->m_pCraneEntity != nil) pCrane->m_pCraneEntity = CPools::GetBuildingPool()->GetSlot((uintptr)pCrane->m_pCraneEntity - 1);
-		if(pCrane->m_pHook != nil) pCrane->m_pHook = CPools::GetObjectPool()->GetSlot((uintptr)pCrane->m_pHook - 1);
-		if(pCrane->m_pVehiclePickedUp != nil) pCrane->m_pVehiclePickedUp = CPools::GetVehiclePool()->GetSlot((uintptr)pCrane->m_pVehiclePickedUp - 1);
+		if (pCrane->m_pCraneEntity != nil)
+			pCrane->m_pCraneEntity = CPools::GetBuildingPool()->GetSlot((uintptr)pCrane->m_pCraneEntity - 1);
+		if (pCrane->m_pHook != nil)
+			pCrane->m_pHook = CPools::GetObjectPool()->GetSlot((uintptr)pCrane->m_pHook - 1);
+		if (pCrane->m_pVehiclePickedUp != nil)
+			pCrane->m_pVehiclePickedUp = CPools::GetVehiclePool()->GetSlot((uintptr)pCrane->m_pVehiclePickedUp - 1);
 #endif
 	}
 

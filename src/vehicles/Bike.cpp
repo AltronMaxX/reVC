@@ -36,6 +36,7 @@
 #include "Automobile.h"
 #include "Bike.h"
 #include "Debug.h"
+#include "SaveBuf.h"
 
 const uint32 CBike::nSaveStructSize =
 #ifdef COMPATIBLE_SAVES
@@ -532,7 +533,7 @@ CBike::ProcessControl(void)
 			m_fWheelAngle += DEGTORAD(1.0f)*CTimer::GetTimeStep();
 		if(bIsStanding){
 			float f = Pow(0.97f, CTimer::GetTimeStep());
-			m_fLeanLRAngle2 = m_fLeanLRAngle2*f - (Asin(CLAMP(GetRight().z,-1.0f,1.0f))+DEGTORAD(15.0f))*(1.0f-f);
+			m_fLeanLRAngle2 = m_fLeanLRAngle2*f - (Asin(Clamp(GetRight().z,-1.0f,1.0f))+DEGTORAD(15.0f))*(1.0f-f);
 			m_fLeanLRAngle = m_fLeanLRAngle2;
 		}
 	}else{
@@ -1027,9 +1028,9 @@ CBike::ProcessControl(void)
 				lean = DotProduct(m_vecMoveSpeed-initialMoveSpeed, m_vecAvgSurfaceRight);
 			lean /= GRAVITY*Max(CTimer::GetTimeStep(), 0.01f);
 			if(m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST)
-				lean = CLAMP(lean, -0.4f*pBikeHandling->fMaxLean, 0.4f*pBikeHandling->fMaxLean);
+				lean = Clamp(lean, -0.4f*pBikeHandling->fMaxLean, 0.4f*pBikeHandling->fMaxLean);
 			else
-				lean = CLAMP(lean, -pBikeHandling->fMaxLean, pBikeHandling->fMaxLean);
+				lean = Clamp(lean, -pBikeHandling->fMaxLean, pBikeHandling->fMaxLean);
 			float f = Pow(pBikeHandling->fDesLean, CTimer::GetTimeStep());
 			m_fLeanLRAngle2 = (Asin(lean) - idleAngle)*(1.0f-f) + m_fLeanLRAngle2*f;
 		}else{
@@ -1050,13 +1051,13 @@ CBike::ProcessControl(void)
 		   !bIsHandbrakeOn){
 			m_fBrakeDestabilization += CGeneral::GetRandomNumberInRange(0.5f, 1.0f)*0.2f*CTimer::GetTimeStep();
 			if(m_aSuspensionSpringRatio[BIKESUSP_R1] < 1.0f || m_aSuspensionSpringRatio[BIKESUSP_R2] < 1.0f){
-				// BUG: this CLAMP makes no sense and the arguments seem swapped too
+				// BUG: this clamp makes no sense and the arguments seem swapped too
 				ApplyTurnForce(contactPoints[BIKESUSP_R1],
-					m_fTurnMass*Sin(m_fBrakeDestabilization)*CLAMP(fwdSpeed, 0.5f, 0.2f)*0.013f*GetRight()*CTimer::GetTimeStep());
+					m_fTurnMass*Sin(m_fBrakeDestabilization)*Clamp(fwdSpeed, 0.5f, 0.2f)*0.013f*GetRight()*CTimer::GetTimeStep());
 			}else{
-				// BUG: this CLAMP makes no sense and the arguments seem swapped too
+				// BUG: this clamp makes no sense and the arguments seem swapped too
 				ApplyTurnForce(contactPoints[BIKESUSP_R1],
-					m_fTurnMass*Sin(m_fBrakeDestabilization)*CLAMP(fwdSpeed, 0.5f, 0.2f)*0.003f*GetRight()*CTimer::GetTimeStep());
+					m_fTurnMass*Sin(m_fBrakeDestabilization)*Clamp(fwdSpeed, 0.5f, 0.2f)*0.003f*GetRight()*CTimer::GetTimeStep());
 			}
 		}else
 			m_fBrakeDestabilization = 0.0f;
@@ -1219,7 +1220,7 @@ CBike::ProcessControl(void)
 	// Balance bike
 	if(bBalancedByRider || bIsBeingPickedUp || bIsStanding){
 		float onSideness = DotProduct(GetRight(), m_vecAvgSurfaceNormal);
-		onSideness = CLAMP(onSideness, -1.0f, 1.0f);
+		onSideness = Clamp(onSideness, -1.0f, 1.0f);
 		CVector worldCOM = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 		// Keep bike upright
 		if(bBalancedByRider){
@@ -1839,7 +1840,7 @@ CBike::ProcessControlInputs(uint8 pad)
 			0.2f*CTimer::GetTimeStep();
 		nLastControlInput = 0;
 	}
-	m_fSteerInput = CLAMP(m_fSteerInput, -1.0f, 1.0f);
+	m_fSteerInput = Clamp(m_fSteerInput, -1.0f, 1.0f);
 
 	// Lean forward/backward
 	float updown;
@@ -1849,7 +1850,7 @@ CBike::ProcessControlInputs(uint8 pad)
 #endif
 	updown = -CPad::GetPad(pad)->GetSteeringUpDown()/128.0f + CPad::GetPad(pad)->GetCarGunUpDown()/128.0f;
 	m_fLeanInput += (updown - m_fLeanInput)*0.2f*CTimer::GetTimeStep();
-	m_fLeanInput = CLAMP(m_fLeanInput, -1.0f, 1.0f);
+	m_fLeanInput = Clamp(m_fLeanInput, -1.0f, 1.0f);
 
 	// Accelerate/Brake
 	float acceleration = (CPad::GetPad(pad)->GetAccelerate() - CPad::GetPad(pad)->GetBrake())/255.0f;
@@ -2546,7 +2547,7 @@ CBike::GetHeightAboveRoad(void)
 void
 CBike::PlayCarHorn(void)
 {
-	int r;
+	uint32 r;
 
 	if (IsAlarmOn() || m_nCarHornTimer != 0)
 		return;
@@ -2946,14 +2947,14 @@ CBike::ReduceHornCounter(void)
 
 #ifdef COMPATIBLE_SAVES
 void
-CBike::Save(uint8 *&buf)
+CBike::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
 	ZeroSaveBuf(buf, 1260 - 672);
 }
 
 void
-CBike::Load(uint8 *&buf)
+CBike::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
 	SkipSaveBuf(buf, 1260 - 672);

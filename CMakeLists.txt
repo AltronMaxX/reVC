@@ -1,21 +1,27 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
 
 set(EXECUTABLE reVC)
 set(PROJECT REVC)
 
 project(${EXECUTABLE} C CXX)
-
-# ── C++ standard (matches premake cppdialect "C++23") ─────────────────────────
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
+set(${PROJECT}_AUTHOR "${PROJECT} Team")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1 "ALLOW_LOOKING_ABOVE_CMAKE_SOURCE_DIR")
 message(STATUS "Building ${CMAKE_PROJECT_NAME} GIT SHA1: ${GIT_SHA1}")
 
-# ── Audio options ──────────────────────────────────────────────────────────────
+
+if(NINTENDO_SWITCH)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/nx")
+    include(NXFunctions)
+endif()
+
+if(NOT COMMAND reVC_platform_target)
+    function(reVC_platform_target)
+    endfunction()
+endif()
+
 if(WIN32)
     set(${PROJECT}_AUDIOS "OAL" "MSS")
 else()
@@ -23,6 +29,10 @@ else()
 endif()
 
 set(${PROJECT}_AUDIO "OAL" CACHE STRING "Audio")
+
+option(${PROJECT}_WITH_OPUS "Build ${EXECUTABLE} with opus support" OFF)
+option(${PROJECT}_WITH_LIBSNDFILE "Build ${EXECUTABLE} with libsndfile (instead of internal decoder)" OFF)
+
 set_property(CACHE ${PROJECT}_AUDIO PROPERTY STRINGS ${${PROJECT}_AUDIOS})
 message(STATUS "${PROJECT}_AUDIO = ${${PROJECT}_AUDIO} (choices=${${PROJECT}_AUDIOS})")
 set("${PROJECT}_AUDIO_${${PROJECT}_AUDIO}" ON)
@@ -30,13 +40,6 @@ set("${PROJECT}_AUDIO_${${PROJECT}_AUDIO}" ON)
 if(NOT ${PROJECT}_AUDIO IN_LIST ${PROJECT}_AUDIOS)
     message(FATAL_ERROR "Illegal ${PROJECT}_AUDIO=${${PROJECT}_AUDIO}")
 endif()
-
-# ── Extra feature options (mirrors premake newoption) ─────────────────────────
-option(${PROJECT}_WITH_OPUS        "Build ${EXECUTABLE} with opus support"                         OFF)
-option(${PROJECT}_WITH_LIBSNDFILE  "Build ${EXECUTABLE} with libsndfile (instead of internal decoder)" OFF)
-option(${PROJECT}_WITH_ASAN        "Build ${EXECUTABLE} with AddressSanitizer"                     OFF)
-option(${PROJECT}_WITH_LTO         "Build ${EXECUTABLE} with Link Time Optimization"               OFF)
-option(${PROJECT}_VANILLA          "Build ${EXECUTABLE} with VANILLA_DEFINES"                      OFF)
 
 # ── Discord RPC ────────────────────────────────────────────────────────────────
 option(${PROJECT}_WITH_DISCORD_RPC "Build ${EXECUTABLE} with Discord Rich Presence"                OFF)
@@ -95,31 +98,6 @@ if(${PROJECT}_WITH_DISCORD_RPC)
     message(STATUS "Discord RPC enabled (${DISCORD_RPC_DIR})")
 endif()
 
-# ── ASAN ──────────────────────────────────────────────────────────────────────
-if(${PROJECT}_WITH_ASAN)
-    add_compile_options(-fsanitize=address -g3 -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address)
-    message(STATUS "AddressSanitizer enabled")
-endif()
-
-# ── LTO ───────────────────────────────────────────────────────────────────────
-if(${PROJECT}_WITH_LTO)
-    include(CheckIPOSupported)
-    check_ipo_supported(RESULT _ipo_ok OUTPUT _ipo_msg)
-    if(_ipo_ok)
-        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-        message(STATUS "Link Time Optimization enabled")
-    else()
-        message(WARNING "LTO not supported: ${_ipo_msg}")
-    endif()
-endif()
-
-# ── Vanilla defines ───────────────────────────────────────────────────────────
-if(${PROJECT}_VANILLA)
-    add_compile_definitions(VANILLA_DEFINES)
-    message(STATUS "VANILLA_DEFINES enabled")
-endif()
-
 # ── librw ─────────────────────────────────────────────────────────────────────
 option(${PROJECT}_VENDORED_LIBRW "Use vendored librw" ON)
 
@@ -167,9 +145,11 @@ if(${PROJECT}_INSTALL)
             set(os "-apple")
         elseif(UNIX)
             set(os "-linux")
+        elseif(NINTENDO_SWITCH)
+            set(os "-switch")
         else()
             set(compiler "-UNK")
-            message(WARNING "Unknown OS. CPack package name will be wrong.")
+            message(WARNING "Unknown os. Created cpack package will be wrong. (override using cpack -P)")
         endif()
     endif()
 

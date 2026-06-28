@@ -383,7 +383,7 @@ public:
 	static bool IsPlayingBackFromFile() { return false; }
 #else
 	static bool ShouldStandardCameraBeProcessed(void);
-	static bool IsPlayingBack() { return Mode == MODE_PLAYBACK || bPlayingBackFromFile; }
+	static bool IsPlayingBack() { return Mode == MODE_PLAYBACK; }
 	static bool IsPlayingBackFromFile() { return bPlayingBackFromFile; }
 private:
 	static void RecordThisFrame(void);

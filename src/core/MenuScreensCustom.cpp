@@ -27,6 +27,10 @@
 #include "ModelInfo.h"
 #include "Pad.h"
 #include "ControllerConfig.h"
+#include "DMAudio.h"
+#include "IniFile.h"
+#include "CarCtrl.h"
+#include "Population.h"
 
 // Menu screens array is at the bottom of the file.
 
@@ -34,7 +38,7 @@
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
 
-#ifdef IMPROVED_VIDEOMODE
+#if defined(IMPROVED_VIDEOMODE) && !defined(GTA_HANDHELD)
 	#define VIDEOMODE_SELECTOR MENUACTION_CFO_SELECT, "FEM_SCF", { new CCFOSelect((int8*)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, ARRAY_SIZE(screenModes), true, ScreenModeAfterChange, true) }, 0, 0, MENUALIGN_LEFT,
 #else
 	#define VIDEOMODE_SELECTOR
@@ -62,6 +66,15 @@
 	#define DUALPASS_SELECTOR MENUACTION_CFO_SELECT, "FEM_2PR", { new CCFOSelect((int8*)&gPS2alphaTest, "Graphics", "PS2AlphaTest", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
 #else
 	#define DUALPASS_SELECTOR 
+#endif
+
+#ifdef PED_CAR_DENSITY_SLIDERS
+	// 0.2f - 3.4f makes it possible to have 1.0f somewhere inbetween
+	#define DENSITY_SLIDERS \
+		MENUACTION_CFO_SLIDER, "FEM_PED", { new CCFOSlider(&CIniFile::PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange) }, 0, 0, MENUALIGN_LEFT, \
+		MENUACTION_CFO_SLIDER, "FEM_CAR", { new CCFOSlider(&CIniFile::CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange) }, 0, 0, MENUALIGN_LEFT, 
+#else
+	#define DENSITY_SLIDERS 
 #endif
 
 #ifdef NO_ISLAND_LOADING
@@ -136,6 +149,9 @@ void RestoreDefDisplay(int8 action) {
 	#ifdef FREE_CAM
 		TheCamera.bFreeCam = false;
 	#endif
+	#ifdef PED_CAR_DENSITY_SLIDERS
+		CIniFile::LoadIniFile();
+	#endif
 	#ifdef GRAPHICS_MENU_OPTIONS // otherwise Frontend will handle those
 		FrontEndMenuManager.m_PrefsBrightness = 256;
 		FrontEndMenuManager.m_PrefsLOD = 1.2f;
@@ -182,6 +198,17 @@ void IslandLoadingAfterChange(int8 before, int8 after) {
 }
 #endif
 
+#ifdef PED_CAR_DENSITY_SLIDERS
+void PedDensityChange(float before, float after) {
+	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * after;
+	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * after;
+}
+
+void CarDensityChange(float before, float after) {
+	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * after;
+}
+#endif
+
 #ifndef MULTISAMPLING
 void GraphicsGoBack() {
 }
@@ -195,6 +222,8 @@ void MultiSamplingButtonPress(int8 action) {
 		if (FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
 			FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel;
 			_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
+			DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+			DMAudio.Service();
 			FrontEndMenuManager.SetHelperText(0);
 			FrontEndMenuManager.SaveSettings();
 		}
@@ -256,6 +285,8 @@ const char* screenModes[] = { "FED_FLS", "FED_WND", "FED_BDL" };
 void ScreenModeAfterChange(int8 before, int8 after)
 {
 	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
+	DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+	DMAudio.Service();
 	FrontEndMenuManager.SetHelperText(0);
 }
 
@@ -350,7 +381,7 @@ void DetectJoystickGoBack() {
 #endif
 
 #ifdef GAMEPAD_MENU
-const char* controllerTypes[] = { "FEC_DS2", "FEC_DS3", "FEC_DS4", "FEC_360", "FEC_ONE" };
+const char* controllerTypes[] = { "FEC_DS2", "FEC_DS3", "FEC_DS4", "FEC_360", "FEC_ONE", "FEC_NSW" };
 void ControllerTypeAfterChange(int8 before, int8 after)
 {
 	FrontEndMenuManager.LoadController(after);
@@ -381,11 +412,17 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_MUSICVOLUME,		"FEA_MUS", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 40, 76, MENUALIGN_LEFT,
 		MENUACTION_SFXVOLUME,		"FEA_SFX", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_MP3VOLUMEBOOST,	"FEA_MPB", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
+#ifdef EXTERNAL_3D_SOUND
 		MENUACTION_AUDIOHW,			"FEA_3DH", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_SPEAKERCONF,		"FEA_SPK", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
+#endif
 		MENUACTION_DYNAMICACOUSTIC,	"FET_DAM", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_RADIO,			"FEA_RSS", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_LEFT,
+#ifdef EXTERNAL_3D_SOUND
 		MENUACTION_RESTOREDEF,		"FET_DEF", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 320, 367, MENUALIGN_CENTER,
+#else
+		MENUACTION_RESTOREDEF,		"FET_DEF", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 320, 327, MENUALIGN_CENTER,
+#endif
 		MENUACTION_GOBACK,			"FEDS_TB", {nil, SAVESLOT_NONE, MENUPAGE_NONE}, 0, 0, MENUALIGN_CENTER,
 	},
 
@@ -394,6 +431,7 @@ CMenuScreenCustom aScreens[] = {
 	{ "FEH_DIS", MENUPAGE_OPTIONS, new CCustomScreenLayout({40, 78, 25, true}), nil,
 		MENUACTION_BRIGHTNESS,	"FED_BRI", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_DRAWDIST,	"FEM_LOD", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
+		DENSITY_SLIDERS
 #ifdef LEGACY_MENU_OPTIONS
 		MENUACTION_FRAMESYNC,	"FEM_VSC", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 #endif
@@ -422,6 +460,7 @@ CMenuScreenCustom aScreens[] = {
 	{ "FEH_DIS", MENUPAGE_OPTIONS, new CCustomScreenLayout({40, 78, 25, true}), nil,
 		MENUACTION_BRIGHTNESS,	"FED_BRI", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_DRAWDIST,	"FEM_LOD", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
+		DENSITY_SLIDERS
 		CUTSCENE_BORDERS_TOGGLE
 		FREE_CAM_TOGGLE
 		MENUACTION_LEGENDS,		"MAP_LEG", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
@@ -479,7 +518,7 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_CHECKSAVE,	"FEM_SL6",	{nil, SAVESLOT_6,		0}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_CHECKSAVE,	"FEM_SL7",	{nil, SAVESLOT_7,		0}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_CHECKSAVE,	"FEM_SL8",	{nil, SAVESLOT_8,		0}, 0, 0, MENUALIGN_LEFT,
-		MENUACTION_GOBACK,		"FEDS_TB",	{nil, SAVESLOT_NONE,	0}, 320, 365, MENUALIGN_CENTER,
+		MENUACTION_GOBACK,		"FEDS_TB",	{nil, SAVESLOT_NONE,	0}, 320, 345, MENUALIGN_CENTER,
 	},
 
 	// MENUPAGE_LOAD_SLOT_CONFIRM = 10
@@ -601,7 +640,11 @@ CMenuScreenCustom aScreens[] = {
 
 	// MENUPAGE_OPTIONS = 27
 	{ "FET_OPT", MENUPAGE_NONE, nil, nil,
+#ifdef GTA_HANDHELD
+		 MENUACTION_CHANGEMENU,		"FEO_CON", {nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_SETTINGS}, 320, 132, MENUALIGN_CENTER,
+#else
 		 MENUACTION_CHANGEMENU,		"FEO_CON", {nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_PC}, 320, 132, MENUALIGN_CENTER,
+#endif
 		 MENUACTION_LOADRADIO,		"FEO_AUD", {nil, SAVESLOT_NONE, MENUPAGE_SOUND_SETTINGS}, 0, 0, MENUALIGN_CENTER,
 		 MENUACTION_CHANGEMENU,		"FEO_DIS", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_CENTER,
 #ifdef GRAPHICS_MENU_OPTIONS
@@ -657,7 +700,11 @@ CMenuScreenCustom aScreens[] = {
 	{ "", 0, nil, nil, },
 
 #ifdef GAMEPAD_MENU
+#ifdef GTA_HANDHELD
+	{ "FET_AGS", MENUPAGE_OPTIONS, new CCustomScreenLayout({40, 78, 25, true, true}), nil,
+#else
 	{ "FET_AGS", MENUPAGE_CONTROLLER_PC, new CCustomScreenLayout({40, 78, 25, true, true}), nil,
+#endif
 		MENUACTION_CTRLCONFIG,		"FEC_CCF", { nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_SETTINGS }, 40, 76, MENUALIGN_LEFT,
 		MENUACTION_CTRLDISPLAY,		"FEC_CDP", { nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		INVERT_PAD_SELECTOR
@@ -723,7 +770,9 @@ CMenuScreenCustom aScreens[] = {
 	// MENUPAGE_GRAPHICS_SETTINGS
 	{ "FET_GFX", MENUPAGE_OPTIONS, new CCustomScreenLayout({40, 78, 25, true, true}), GraphicsGoBack,
 
+#ifndef GTA_HANDHELD
 		MENUACTION_SCREENRES,	"FED_RES", { nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS }, 0, 0, MENUALIGN_LEFT,
+#endif
 		MENUACTION_WIDESCREEN,	"FED_WIS", { nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		VIDEOMODE_SELECTOR
 #ifdef LEGACY_MENU_OPTIONS
@@ -750,6 +799,17 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_LABEL,	"FEC_JPR", { nil, SAVESLOT_NONE, MENUPAGE_NONE }, 0, 0, 0,
 		MENUACTION_CFO_DYNAMIC,	"FEC_JDE", { new CCFODynamic(nil, nil, nil, DetectJoystickDraw, nil) }, 80, 200, MENUALIGN_LEFT,
 		MENUACTION_GOBACK,		"FEDS_TB", {nil, SAVESLOT_NONE, MENUPAGE_NONE}, 320, 225, MENUALIGN_CENTER,
+	},
+#endif
+
+		
+#ifdef MISSION_REPLAY
+	// MENUPAGE_MISSION_RETRY = 57 on mobile
+
+	{ "M_FAIL", MENUPAGE_DISABLED, nil, nil,
+		MENUACTION_LABEL,			"FESZ_RM",  { nil, SAVESLOT_NONE, MENUPAGE_NONE }, 0, 0, 0,
+		MENUACTION_CHANGEMENU,		"FEM_YES",  { nil, SAVESLOT_NONE, MENUPAGE_LOADING_IN_PROGRESS }, 320, 200, MENUALIGN_CENTER,
+		MENUACTION_REJECT_RETRY,	"FEM_NO",   { nil, SAVESLOT_NONE, MENUPAGE_NONE }, 320, 225, MENUALIGN_CENTER,
 	},
 #endif
 

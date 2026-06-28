@@ -30,16 +30,40 @@
 inline int
 GetVUresult(void)
 {
+#ifdef GTA_PS2
+	int ret;
+	__asm__ volatile (
+		"cfc2.i	%0,vi01\n"	// .i important! wait for VU0 to finish
+		: "=r" (ret)
+	);
+	return ret;
+#else
 	return vi01;
+#endif
 }
 
 inline int
 GetVUresult(CVuVector &point, CVuVector &normal, float &dist)
 {
+#ifdef GTA_PS2
+	int ret;
+	__asm__ volatile (
+		"cfc2.i	%0,vi01\n"	// .i important! wait for VU0 to finish
+		"sqc2	vf01,(%1)\n"
+		"sqc2	vf02,(%2)\n"
+		"qmfc2	$12,vf03\n"
+		"sw	$12,(%3)\n"
+		: "=r" (ret)
+		: "r" (&point), "r" (&normal), "r" (&dist)
+		: "$12"
+	);
+	return ret;
+#else
 	point = vf01;
 	normal = vf02;
 	dist = vf03.x;
 	return vi01;
+#endif
 }
 
 #endif
@@ -77,7 +101,7 @@ GetCollisionInSectorList(CPtrList &list)
 
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
-		level = CModelInfo::GetModelInfo(e->GetModelIndex())->GetColModel()->level;
+		level = CModelInfo::GetColModel(e->GetModelIndex())->level;
 		if(level != LEVEL_GENERIC)
 			return (eLevelName)level;
 	}
@@ -120,11 +144,10 @@ CCollision::SortOutCollisionAfterLoad(void)
 void
 CCollision::LoadCollisionScreen(eLevelName level)
 {
-	static Const char *levelNames[4] = {
+	static Const char *levelNames[] = {
 		"",
 		"IND_ZON",
 		"COM_ZON",
-		"SUB_ZON"
 	};
 
 	// Why twice?
@@ -596,7 +619,7 @@ CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CCol
 	CVector dist = s1.center - s2.center;
 	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
 	float depth = s1.radius - d;	// sphere overlap
-	if(d < 0.0f) d = 0.0f;		// CLAMP to zero, i.e. if s1's center is inside s2
+	if(d < 0.0f) d = 0.0f;		// clamp to zero, i.e. if s1's center is inside s2
 	// no collision if sphere is not close enough
 	if(d*d < mindistsq && d < s1.radius){
 		dist.Normalise();
@@ -1618,8 +1641,12 @@ enum {
 };
 
 #ifdef VU_COLLISION
+#ifdef GTA_PS2
+#define SPR(off) ((uint8*)(0x70000000 + (off)))
+#else
 static uint8 fakeSPR[16*1024];
 #define SPR(off) ((uint8*)(fakeSPR + (off)))
+#endif
 #endif
 
 // This checks model A's spheres and lines against model B's spheres, boxes and triangles.

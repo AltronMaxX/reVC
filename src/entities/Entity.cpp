@@ -1,5 +1,6 @@
 #include "common.h"
 
+#include "VuVector.h"
 #include "General.h"
 #include "RwHelper.h"
 #include "ModelIndices.h"
@@ -25,6 +26,7 @@
 #include "Ped.h"
 #include "Dummy.h"
 #include "WindModifiers.h"
+#include "SaveBuf.h"
 
 int gBuildings;
 
@@ -70,7 +72,7 @@ CEntity::CEntity(void)
 	bDistanceFade = false;
 
 	m_flagE1 = false;
-	m_flagE2 = false;
+	bDontCastShadowsOn = false;
 	bOffscreen = false;
 	bIsStaticWaitingForCollision = false;
 	bDontStream = false;
@@ -121,9 +123,9 @@ CEntity::CreateRwObject(void)
 		if(IsBuilding())
 			gBuildings++;
 		if(RwObjectGetType(m_rwObject) == rpATOMIC)
-			m_matrix.AttachRW(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic*)m_rwObject)), false);
+			GetMatrix().AttachRW(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic *)m_rwObject)), false);
 		else if(RwObjectGetType(m_rwObject) == rpCLUMP)
-			m_matrix.AttachRW(RwFrameGetMatrix(RpClumpGetFrame((RpClump*)m_rwObject)), false);
+			GetMatrix().AttachRW(RwFrameGetMatrix(RpClumpGetFrame((RpClump *)m_rwObject)), false);
 
 		mi->AddRef();
 	}
@@ -135,9 +137,9 @@ CEntity::AttachToRwObject(RwObject *obj)
 	m_rwObject = obj;
 	if(m_rwObject){
 		if(RwObjectGetType(m_rwObject) == rpATOMIC)
-			m_matrix.Attach(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic*)m_rwObject)), false);
+			GetMatrix().Attach(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic *)m_rwObject)), false);
 		else if(RwObjectGetType(m_rwObject) == rpCLUMP)
-			m_matrix.Attach(RwFrameGetMatrix(RpClumpGetFrame((RpClump*)m_rwObject)), false);
+			GetMatrix().Attach(RwFrameGetMatrix(RpClumpGetFrame((RpClump *)m_rwObject)), false);
 
 		CModelInfo::GetModelInfo(m_modelIndex)->AddRef();
 	}
@@ -149,7 +151,7 @@ CEntity::DetachFromRwObject(void)
 	if(m_rwObject)
 		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
 	m_rwObject = nil;
-	m_matrix.Detach();
+	GetMatrix().Detach();
 }
 
 RpAtomic*
@@ -177,7 +179,7 @@ CEntity::DeleteRwObject(void)
 {
 	RwFrame *f;
 
-	m_matrix.Detach();
+	GetMatrix().Detach();
 	if(m_rwObject){
 		if(RwObjectGetType(m_rwObject) == rpATOMIC){
 			f = RpAtomicGetFrame((RpAtomic*)m_rwObject);
@@ -200,18 +202,18 @@ CEntity::GetBoundRect(void)
 {
 	CRect rect;
 	CVector v;
-	CColModel *col = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
+	CColModel *col = CModelInfo::GetColModel(m_modelIndex);
 
-	rect.ContainPoint(m_matrix * col->boundingBox.min);
-	rect.ContainPoint(m_matrix * col->boundingBox.max);
+	rect.ContainPoint(GetMatrix() * col->boundingBox.min);
+	rect.ContainPoint(GetMatrix() * col->boundingBox.max);
 
 	v = col->boundingBox.min;
 	v.x = col->boundingBox.max.x;
-	rect.ContainPoint(m_matrix * v);
+	rect.ContainPoint(GetMatrix() * v);
 
 	v = col->boundingBox.max;
 	v.x = col->boundingBox.min.x;
-	rect.ContainPoint(m_matrix * v);
+	rect.ContainPoint(GetMatrix() * v);
 
 	return rect;
 }
@@ -219,21 +221,27 @@ CEntity::GetBoundRect(void)
 CVector
 CEntity::GetBoundCentre(void)
 {
-	CVector v;
-	GetBoundCentre(v);
-	return v;
+	return GetMatrix() * CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center;
 }
 
+#ifdef GTA_PS2
+void
+CEntity::GetBoundCentre(CVuVector &out)
+{
+	TransformPoint(out, GetMatrix(), CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
+}
+#else
 void
 CEntity::GetBoundCentre(CVector &out)
 {
-	out = m_matrix * CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.center;
+	out = GetMatrix() * CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center;
 }
+#endif
 
 float
 CEntity::GetBoundRadius(void)
 {
-	return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingSphere.radius;
+	return CModelInfo::GetColModel(m_modelIndex)->boundingSphere.radius;
 }
 
 void
@@ -372,7 +380,7 @@ CEntity::PreRender(void)
 			CVector pos = GetPosition();
 			CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK,
 				gpShadowPedTex, &pos,
-				0.4f, 0.0f, 0.0f, -0.4f,
+				0.4f, 0.0f, 0.0f, 0.4f,
 				CTimeCycle::GetShadowStrength(),
 				CTimeCycle::GetShadowStrength(),
 				CTimeCycle::GetShadowStrength(),
@@ -418,9 +426,11 @@ CEntity::Render(void)
 }
 
 bool
-CEntity::GetIsTouching(CVector const &center, float radius)
+CEntity::GetIsTouching(CVUVECTOR const &center, float radius)
 {
-	return sq(GetBoundRadius()+radius) > (GetBoundCentre()-center).MagnitudeSqr();
+	CVUVECTOR boundCenter;
+	GetBoundCentre(boundCenter);
+	return sq(GetBoundRadius()+radius) > (boundCenter-center).MagnitudeSqr();
 }
 
 bool
@@ -438,20 +448,23 @@ CEntity::IsVisibleComplex(void)
 bool
 CEntity::GetIsOnScreen(void)
 {
-	return TheCamera.IsSphereVisible(GetBoundCentre(), GetBoundRadius(),
-		&TheCamera.GetCameraMatrix());
+	return TheCamera.IsSphereVisible(GetBoundCentre(), GetBoundRadius());
 }
 
 bool
 CEntity::GetIsOnScreenComplex(void)
 {
+#ifdef GTA_PS2
+	CVuVector boundBox[8];
+#else
 	CVector boundBox[8];
+#endif
 
 	if(TheCamera.IsPointVisible(GetBoundCentre(), &TheCamera.GetCameraMatrix()))
 		return true;
 
 	CRect rect = GetBoundRect();
-	CColModel *colmodel = CModelInfo::GetModelInfo(m_modelIndex)->GetColModel();
+	CColModel *colmodel = CModelInfo::GetColModel(m_modelIndex);
 	float z = GetPosition().z;
 	float minz = z + colmodel->boundingBox.min.z;
 	float maxz = z + colmodel->boundingBox.max.z;
@@ -606,7 +619,7 @@ CEntity::Remove(void)
 float
 CEntity::GetDistanceFromCentreOfMassToBaseOfModel(void)
 {
-	return -CModelInfo::GetModelInfo(m_modelIndex)->GetColModel()->boundingBox.min.z;
+	return -CModelInfo::GetColModel(m_modelIndex)->boundingBox.min.z;
 }
 
 void
@@ -727,11 +740,6 @@ CEntity::PreRenderForGlassWindow(void)
 	bIsVisible = false;
 }
 
-/*
-0x487A10 - SetAtomicAlphaCB
-0x4879E0 - SetClumpAlphaCB
-*/
-
 RpMaterial*
 SetAtomicAlphaCB(RpMaterial *material, void *data)
 {
@@ -830,7 +838,7 @@ CEntity::SaveEntityFlags(uint8*& buf)
 	if (bDistanceFade) tmp |= BIT(7);
 
 	if (m_flagE1) tmp |= BIT(8);
-	if (m_flagE2) tmp |= BIT(9);
+	if (bDontCastShadowsOn) tmp |= BIT(9);
 	if (bOffscreen) tmp |= BIT(10);
 	if (bIsStaticWaitingForCollision) tmp |= BIT(11);
 	if (bDontStream) tmp |= BIT(12);
@@ -887,7 +895,7 @@ CEntity::LoadEntityFlags(uint8*& buf)
 	bDistanceFade = !!(tmp & BIT(7));
 
 	m_flagE1 = !!(tmp & BIT(8));
-	m_flagE2 = !!(tmp & BIT(9));
+	bDontCastShadowsOn = !!(tmp & BIT(9));
 	bOffscreen = !!(tmp & BIT(10));
 	bIsStaticWaitingForCollision = !!(tmp & BIT(11));
 	bDontStream = !!(tmp & BIT(12));
@@ -896,4 +904,3 @@ CEntity::LoadEntityFlags(uint8*& buf)
 }
 
 #endif
-

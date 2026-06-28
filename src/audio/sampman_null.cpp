@@ -4,7 +4,7 @@
 #include "AudioManager.h"
 
 cSampleManager SampleManager;
-bool _bSampmanInitialised = false;
+bool8 _bSampmanInitialised = FALSE;
 
 uint32 BankStartOffset[MAX_SFX_BANKS];
 uint32     nNumMP3s;
@@ -19,6 +19,7 @@ cSampleManager::~cSampleManager(void)
 	
 }
 
+#ifdef EXTERNAL_3D_SOUND
 void cSampleManager::SetSpeakerConfig(int32 nConfig)
 {
 
@@ -59,8 +60,9 @@ int8 cSampleManager::SetCurrent3DProvider(uint8 nProvider)
 {
 	return 0;
 }
+#endif
 
-bool
+bool8
 cSampleManager::IsMP3RadioChannelAvailable(void)
 {
 	return nNumMP3s != 0;
@@ -75,10 +77,10 @@ void cSampleManager::ReacquireDigitalHandle(void)
 {
 }
 
-bool
+bool8
 cSampleManager::Initialise(void)
 {
-	return true;
+	return TRUE;
 }
 
 void
@@ -87,9 +89,9 @@ cSampleManager::Terminate(void)
 
 }
 
-bool cSampleManager::CheckForAnAudioFileOnCD(void)
+bool8 cSampleManager::CheckForAnAudioFileOnCD(void)
 {
-	return true;
+	return TRUE;
 }
 
 char cSampleManager::GetCDAudioDriveLetter(void)
@@ -114,7 +116,7 @@ cSampleManager::SetMusicMasterVolume(uint8 nVolume)
 }
 
 void
-cSampleManager::SetMusicMasterVolume(uint8 nVolume)
+cSampleManager::SetMP3BoostVolume(uint8 nVolume)
 {
 }
 
@@ -129,15 +131,15 @@ cSampleManager::SetMusicFadeVolume(uint8 nVolume)
 }
 
 void
-cSampleManager::SetMonoMode(uint8 nMode)
+cSampleManager::SetMonoMode(bool8 nMode)
 {
 }
 
-bool
+bool8
 cSampleManager::LoadSampleBank(uint8 nBank)
 {
 	ASSERT( nBank < MAX_SFX_BANKS );
-	return false;
+	return FALSE;
 }
 
 void
@@ -146,20 +148,36 @@ cSampleManager::UnloadSampleBank(uint8 nBank)
 	ASSERT( nBank < MAX_SFX_BANKS );
 }
 
-bool
+int8
 cSampleManager::IsSampleBankLoaded(uint8 nBank)
 {
 	ASSERT( nBank < MAX_SFX_BANKS );
 	
-	return false;
+	return LOADING_STATUS_NOT_LOADED;
 }
 
-bool
+uint8
+cSampleManager::IsMissionAudioLoaded(uint8 nSlot, uint32 nSample)
+{
+	ASSERT(nSlot < MISSION_AUDIO_COUNT);
+	
+	return LOADING_STATUS_NOT_LOADED;
+}
+
+bool8
+cSampleManager::LoadMissionAudio(uint8 nSlot, uint32 nSample)
+{
+	ASSERT(nSlot < MISSION_AUDIO_COUNT);
+	
+	return FALSE;
+}
+
+uint8
 cSampleManager::IsPedCommentLoaded(uint32 nComment)
 {
 	ASSERT( nComment < TOTAL_AUDIO_SAMPLES );
 
-	return false;
+	return LOADING_STATUS_NOT_LOADED;
 }
 
 
@@ -169,11 +187,11 @@ cSampleManager::_GetPedCommentSlot(uint32 nComment)
 	return -1;
 }
 
-bool
+bool8
 cSampleManager::LoadPedComment(uint32 nComment)
 {
 	ASSERT( nComment < TOTAL_AUDIO_SAMPLES );
-	return false;
+	return FALSE;
 }
 
 int32
@@ -182,14 +200,14 @@ cSampleManager::GetBankContainingSound(uint32 offset)
 	return INVALID_SFX_BANK;
 }
 
-int32
+uint32
 cSampleManager::GetSampleBaseFrequency(uint32 nSample)
 {
 	ASSERT( nSample < TOTAL_AUDIO_SAMPLES );
 	return 0;
 }
 
-int32
+uint32
 cSampleManager::GetSampleLoopStartOffset(uint32 nSample)
 {
 	ASSERT( nSample < TOTAL_AUDIO_SAMPLES );
@@ -210,56 +228,58 @@ cSampleManager::GetSampleLength(uint32 nSample)
 	return 0;
 }
 
-bool cSampleManager::UpdateReverb(void)
+bool8 cSampleManager::UpdateReverb(void)
 {
-	return false;
+	return FALSE;
 }
 
 void
-cSampleManager::SetChannelReverbFlag(uint32 nChannel, uint8 nReverbFlag)
+cSampleManager::SetChannelReverbFlag(uint32 nChannel, bool8 nReverbFlag)
 {
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
-bool
+bool8
 cSampleManager::InitialiseChannel(uint32 nChannel, uint32 nSfx, uint8 nBank)
 {
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
-	return false;
+	return FALSE;
 }
 
+#ifdef EXTERNAL_3D_SOUND
 void
 cSampleManager::SetChannelEmittingVolume(uint32 nChannel, uint32 nVolume)
 {
-	ASSERT( nChannel != CHANNEL2D );
+	ASSERT( nChannel < MAXCHANNELS );
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
 void
 cSampleManager::SetChannel3DPosition(uint32 nChannel, float fX, float fY, float fZ)
 {
-	ASSERT( nChannel != CHANNEL2D );
+	ASSERT( nChannel < MAXCHANNELS );
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
 void
 cSampleManager::SetChannel3DDistances(uint32 nChannel, float fMax, float fMin)
 {
-	ASSERT( nChannel != CHANNEL2D );
+	ASSERT( nChannel < MAXCHANNELS );
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
+#endif
 
 void
 cSampleManager::SetChannelVolume(uint32 nChannel, uint32 nVolume)
 {
-	ASSERT( nChannel == CHANNEL2D );
+	ASSERT( nChannel >= MAXCHANNELS );
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
 void
 cSampleManager::SetChannelPan(uint32 nChannel, uint32 nPan)
 {
-	ASSERT(nChannel == CHANNEL2D);
+	ASSERT( nChannel >= MAXCHANNELS );
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
@@ -281,12 +301,12 @@ cSampleManager::SetChannelLoopCount(uint32 nChannel, uint32 nLoopCount)
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 }
 
-bool
+bool8
 cSampleManager::GetChannelUsedFlag(uint32 nChannel)
 {
 	ASSERT( nChannel < MAXCHANNELS+MAX2DCHANNELS );
 
-	return false;
+	return FALSE;
 }
 
 void
@@ -308,7 +328,7 @@ cSampleManager::PreloadStreamedFile(uint32 nFile, uint8 nStream)
 }
 
 void
-cSampleManager::PauseStream(uint8 nPauseFlag, uint8 nStream)
+cSampleManager::PauseStream(bool8 nPauseFlag, uint8 nStream)
 {
 	ASSERT( nStream < MAX_STREAMS );
 }
@@ -319,12 +339,12 @@ cSampleManager::StartPreloadedStreamedFile(uint8 nStream)
 	ASSERT( nStream < MAX_STREAMS );
 }
 
-bool
+bool8
 cSampleManager::StartStreamedFile(uint32 nFile, uint32 nPos, uint8 nStream)
 {	
 	ASSERT( nStream < MAX_STREAMS );
 	
-	return false;
+	return FALSE;
 }
 
 void
@@ -342,7 +362,7 @@ cSampleManager::GetStreamedFilePosition(uint8 nStream)
 }
 
 void
-cSampleManager::SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, uint8 nEffectFlag, uint8 nStream)
+cSampleManager::SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, bool8 nEffectFlag, uint8 nStream)
 {
 	ASSERT( nStream < MAX_STREAMS );
 }
@@ -355,23 +375,23 @@ cSampleManager::GetStreamedFileLength(uint8 nStream)
 	return 1;
 }
 
-bool
+bool8
 cSampleManager::IsStreamPlaying(uint8 nStream)
 {
 	ASSERT( nStream < MAX_STREAMS );
 
-	return false;
+	return FALSE;
 }
 
-bool
+bool8
 cSampleManager::InitialiseSampleBanks(void)
 {
 	
-	return true;
+	return TRUE;
 }
 
 void
-cSampleManager::SetStreamedFileLoopFlag(uint8 nLoopFlag, uint8 nChannel)
+cSampleManager::SetStreamedFileLoopFlag(bool8 nLoopFlag, uint8 nChannel)
 {
 }
 
