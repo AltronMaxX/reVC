@@ -194,13 +194,15 @@ myfeof(int fd)
 }
 
 
-char CFileMgr::ms_rootDirName[128] = {'\0'};
-char CFileMgr::ms_dirName[128];
+char CFileMgr::ms_rootDirName[MAX_PATH] = {'\0'};
+char CFileMgr::ms_dirName[MAX_PATH];
 
 void
 CFileMgr::Initialise(void)
 {
-	_getcwd(ms_rootDirName, 128);
+	if(_getcwd(ms_rootDirName, MAX_PATH) == nil){
+		ms_rootDirName[0] = '\0';
+	}
 	strcat(ms_rootDirName, "\\");
 }
 
