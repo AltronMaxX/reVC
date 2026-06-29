@@ -1202,7 +1202,7 @@ void CPad::AddToCheatString(char c)
 }
 #endif
 
-int Cheat_strncmp(char* sourceStr, char* origCheatStr)
+int Cheat_strncmp(const char* sourceStr, const char* origCheatStr)
 {
 #define ccmp(n) if((uint8)sourceStr[i] != (uint8)origCheatStr[i] - n) return 1;
 	int i = 0;
