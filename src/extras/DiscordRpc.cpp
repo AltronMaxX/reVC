@@ -5,6 +5,7 @@
 #include <Zones.h>
 #include "PlayerPed.h"
 #include "Ped.h"
+#include "Script.h"
 
 #include <locale>
 
@@ -75,20 +76,28 @@ void DiscordRPC::Update()
 {
 	Discord_RunCallbacks();
 
-	//TODO
-	/* if(CTheScripts::IsPlayerOnAMission()) {
-		if(CurMissionName == nullptr) return;
-		discordPresence.state = WideToUtf8(CurMissionName);
-		discordPresence.details = "On mission ";
+	static std::string missionName;
+	static bool wasOnMission = false;
+	bool isOnMission = CTheScripts::IsPlayerOnAMission();
+
+	if(!wasOnMission && isOnMission)
+		CurMissionName = nullptr;
+
+	if(isOnMission) {
+		if(missionName.empty() && CurMissionName != nullptr)
+			missionName = WideToUtf8(CurMissionName);
+		discordPresence.details = "On mission";
+		discordPresence.state = missionName.c_str();
 		discordPresence.instance = 1;
-	} else {*/
+	} else {
+		missionName.clear();
 		auto player = CWorld::Players[CWorld::PlayerInFocus];
 		const auto z1 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), true, false);
-	        const auto z2 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), false, true);
+		const auto z2 = CTheZones::FindSmallestNavigationZoneForPosition(&player.GetPos(), false, true);
 		if(!z1 && !z2) return;
 		CZone *use = z2 ? z2 : z1;
 		if(!use) return;
-	        if(CPlayerPed *playerPed = player.m_pPed; playerPed->Driving() && playerPed->m_pMyVehicle) {
+		if(CPlayerPed *playerPed = player.m_pPed; playerPed->Driving() && playerPed->m_pMyVehicle) {
 			if(playerPed->m_pMyVehicle->IsBoat()) {
 				discordPresence.details = "Sailing in ";
 			} else if(playerPed->m_pMyVehicle->IsPlane() || playerPed->m_pMyVehicle->IsHeli()
@@ -102,7 +111,8 @@ void DiscordRPC::Update()
 		}
 		discordPresence.state = WideToUtf8(use->GetTranslatedName());
 		discordPresence.instance = 1;
-	//}
+	}
+	wasOnMission = isOnMission;
 
 	Discord_UpdatePresence(&discordPresence);
 }
