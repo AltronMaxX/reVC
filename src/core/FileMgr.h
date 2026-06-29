@@ -1,9 +1,16 @@
 #pragma once
+#ifndef MAX_PATH
+#ifdef _WIN32
+#define MAX_PATH 260
+#else
+#define MAX_PATH 4096
+#endif
+#endif
 
 class CFileMgr
 {
-	static char ms_rootDirName[128];
-	static char ms_dirName[128];
+	static char ms_rootDirName[MAX_PATH];
+	static char ms_dirName[MAX_PATH];
 public:
 	static void Initialise(void);
 	static void ChangeDir(const char *dir);

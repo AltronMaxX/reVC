@@ -2578,9 +2578,6 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_PRINT_BIG:
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
-#ifdef USE_DISCORD_RPC
-		DiscordRPC::CurMissionName = key;
-#endif
 #ifdef MISSION_REPLAY
 		if (strcmp((char*)&CTheScripts::ScriptSpace[m_nIp - KEY_LENGTH_IN_SCRIPT], "M_FAIL") == 0) {
 			if (AllowMissionReplay == MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART)
@@ -2590,6 +2587,9 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		}
 #endif
 		CollectParameters(&m_nIp, 2);
+#ifdef USE_DISCORD_RPC
+		DiscordRPC::CurMissionName = key;
+#endif
 		CMessages::AddBigMessage(key, ScriptParams[0], ScriptParams[1] - 1);
 		return 0;
 	}

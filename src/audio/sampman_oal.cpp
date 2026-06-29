@@ -37,9 +37,18 @@
 
 #include <utility>
 #ifdef MULTITHREADED_AUDIO
+#pragma push_macro("Const")
+#pragma push_macro("Min")
+#pragma push_macro("Max")
+#undef Const
+#undef Min
+#undef Max
 #include <mutex>
 #include <queue>
 #include <condition_variable>
+#pragma pop_macro("Max")
+#pragma pop_macro("Min")
+#pragma pop_macro("Const")
 #endif
 #include "oal/stream.h"
 

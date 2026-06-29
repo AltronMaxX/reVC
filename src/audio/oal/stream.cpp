@@ -24,10 +24,19 @@
 #include <utility>
 
 #ifdef MULTITHREADED_AUDIO
+#pragma push_macro("Const")
+#pragma push_macro("Min")
+#pragma push_macro("Max")
+#undef Const
+#undef Min
+#undef Max
 #include <iostream>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#pragma pop_macro("Max")
+#pragma pop_macro("Min")
+#pragma pop_macro("Const")
 #include "MusicManager.h"
 #include "stream.h"
 
@@ -1258,15 +1267,17 @@ bool CStream::Open(const char* filename, uint32 overrideSampleRate)
 #if !defined(_WIN32)
 	char *real = casepath(filename);
 	if (real) {
-		strcpy(m_aFilename, real);
+		strncpy(m_aFilename, real, MAX_PATH - 1);
+		m_aFilename[MAX_PATH - 1] = '\0';
 		free(real);
 	} else {
 #else
 	{
 #endif
-		strcpy(m_aFilename, filename);
+		strncpy(m_aFilename, filename, MAX_PATH - 1);
+		m_aFilename[MAX_PATH - 1] = '\0';
 	}
-		
+
 	DEV("Stream %s\n", m_aFilename);
 
 	if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".wav")], ".wav"))
@@ -1287,7 +1298,7 @@ bool CStream::Open(const char* filename, uint32 overrideSampleRate)
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".opus")], ".opus"))
 		m_pSoundFile = new COpusFile(m_aFilename);
 #endif
-	else 
+	else
 		m_pSoundFile = nil;
 
 	if ( m_pSoundFile && m_pSoundFile->IsOpened() )
@@ -1371,7 +1382,7 @@ bool CStream::IsOpened()
 bool CStream::IsPlaying()
 {
 	if ( !HasSource() || !IsOpened() ) return false;
-	
+
 	if ( !m_bPaused )
 	{
 		ALint sourceState[2];
@@ -1388,7 +1399,7 @@ bool CStream::IsPlaying()
 			return true;
 #endif
 	}
-	
+
 	return false;
 }
 
@@ -1461,7 +1472,7 @@ void CStream::SetPan(uint8 nPan)
 void CStream::SetPosMS(uint32 nPos)
 {
 	if ( !IsOpened() ) return;
-	
+
 #ifdef MULTITHREADED_AUDIO
 	std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -1472,12 +1483,12 @@ void CStream::SetPosMS(uint32 nPos)
 		m_bDoSeek = true;
 		m_SeekPos = nPos;
 	} else
-#endif	
+#endif
 	{
 		m_pSoundFile->Seek(nPos);
-	}	
+	}
 	ClearBuffers();
-	
+
 	// adding to gStreamsToProcess not needed, someone always calls Start() / BuffersShouldBeFilled() after SetPosMS
 }
 
@@ -1485,7 +1496,7 @@ uint32 CStream::GetPosMS()
 {
 	if ( !HasSource() ) return 0;
 	if ( !IsOpened() ) return 0;
-	
+
 	// Deferred init causes division by zero
 	if (m_pSoundFile->GetChannels() == 0)
 		return 0;
@@ -1525,7 +1536,7 @@ bool CStream::FillBuffer(ALuint *alBuffer)
 		return false;
 
 	uint32 channelSize = size / m_pSoundFile->GetChannels();
-	
+
 	alBufferData(alBuffer[0], AL_FORMAT_MONO16, m_pBuffer, channelSize, m_pSoundFile->GetSampleRate());
 	// TODO: use just one buffer if we play mono
 	if (m_pSoundFile->GetChannels() == 1)
@@ -1550,7 +1561,7 @@ bool CStream::QueueBuffers()
 
 		buffersQueued = true;
 	}
-	return buffersQueued;	
+	return buffersQueued;
 }
 #endif
 
@@ -1565,14 +1576,14 @@ int32 CStream::FillBuffers()
 		alSourceQueueBuffers(m_pAlSources[0], 1, &m_alBuffers[i*2]);
 		alSourceQueueBuffers(m_pAlSources[1], 1, &m_alBuffers[i*2+1]);
 	}
-	
+
 	return i;
 }
 
 void CStream::ClearBuffers()
 {
 	if ( !HasSource() ) return;
-	
+
 	ALint buffersQueued[2];
 	alGetSourcei(m_pAlSources[0], AL_BUFFERS_QUEUED, &buffersQueued[0]);
 	alGetSourcei(m_pAlSources[1], AL_BUFFERS_QUEUED, &buffersQueued[1]);
@@ -1616,7 +1627,7 @@ bool CStream::Setup(bool imSureQueueIsEmpty, bool lock)
 		//SetPan(m_nPan);
 		//SetVolume(100);
 	}
-	
+
 	return IsOpened();
 }
 
@@ -1663,7 +1674,7 @@ void CStream::SetPlay(bool state)
 void CStream::Start()
 {
 	if ( !HasSource() ) return;
-	
+
 #ifdef MULTITHREADED_AUDIO
 	std::lock_guard<std::mutex> lock(m_mutex);
 	tsQueue<std::pair<ALuint, ALuint>>().swapNts(m_queueBuffers); // TSness not required, second thread always access it when stream mutex acquired
@@ -1681,16 +1692,16 @@ void CStream::Update()
 {
 	if ( !IsOpened() )
 		return;
-	
+
 	if ( !HasSource() )
 		return;
-	
+
 	if ( m_bReset )
 		return;
-	
+
 	if ( !m_bPaused )
 	{
-		
+
 		bool buffersQueuedAndStarted = false;
 		bool buffersQueuedButNotStarted = false;
 #ifdef MULTITHREADED_AUDIO
@@ -1725,7 +1736,7 @@ void CStream::Update()
 		// AL_BUFFERS_QUEUED = Number of *all* buffers in queue, including processed, processing and pending
 		// AL_BUFFERS_PROCESSED = Index of the buffer being processing right now. Buffers coming after that(have greater index) are pending buffers.
 		// which means: totalBuffers[0] - buffersProcessed[0] = pending buffers
-		
+
 		// We should wait queue to be cleared to loop track, because position calculation relies on queue.
 		if (m_nLoopCount != 1 && m_bActive && totalBuffers[0] == 0)
 		{
@@ -1748,7 +1759,7 @@ void CStream::Update()
 			while ( buffersProcessed[0]-- )
 			{
 				ALuint buffer[2];
-				
+
 				alSourceUnqueueBuffers(m_pAlSources[0], 1, &buffer[0]);
 				alSourceUnqueueBuffers(m_pAlSources[1], 1, &buffer[1]);
 
@@ -1827,5 +1838,5 @@ void CStream::ProviderTerm()
 	Stop();
 	ClearBuffers();
 }
-	
+
 #endif

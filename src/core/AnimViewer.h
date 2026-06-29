@@ -1,5 +1,7 @@
 #pragma once
 
+class CEntity;
+
 class CAnimViewer {
 public:
 	static int animTxdSlot;

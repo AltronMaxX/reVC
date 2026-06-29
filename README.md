@@ -2,6 +2,7 @@
 
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FAltronMaxX%2FreVC%2Fbadge%3Fref%3Dmiami&style=flat)](https://actions-badge.atrox.dev/AltronMaxX/reVC/goto?ref=miami)
 
+English | [Русский](https://github.com/AltronMaxX/reVC/blob/miami/README-ru.md) 
 
 ## Intro 
 
@@ -130,7 +131,7 @@ We accept only these kinds of PRs;
 - Translation fixes, for languages original game supported
 - Code that increase maintainability  
 
-We have a [Coding Style](https://github.com/AltronMaxX/reVC/blob/master/CODING_STYLE.md) document that isn't followed or enforced very well.
+We have a [Coding Style](https://github.com/AltronMaxX/reVC/blob/miami/CODING_STYLE.md) document that isn't followed or enforced very well.
 
 ## License
 

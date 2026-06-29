@@ -81,7 +81,8 @@ end
 
 workspace "reVC"
 	language "C++"
-	cppdialect "C++23"
+	cppdialect "C++20"
+	defines { "_HAS_CXX23=0", "_HAS_CXX20=0" }
 	configurations { "Debug", "Release" }
 	startproject "reVC"
 	location "build"
