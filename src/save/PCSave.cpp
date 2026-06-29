@@ -19,7 +19,11 @@ C_PcSave PcSaveHelper;
 void
 C_PcSave::SetSaveDirectory(const char *path)
 {
+#ifdef _WIN32
 	sprintf(DefaultPCSaveFileName, "%s\\%s", path, "GTAVCsf");
+#else
+	sprintf(DefaultPCSaveFileName, "%s/%s", path, "GTAVCsf");
+#endif
 }
 
 bool
@@ -33,7 +37,10 @@ C_PcSave::DeleteSlot(int32 slot)
 
 	PcSaveHelper.nErrorCode = SAVESTATUS_SUCCESSFUL;
 	sprintf(FileName, "%s%i.b", DefaultPCSaveFileName, slot + 1);
-	DeleteFile(FileName);
+	if (DeleteFile(FileName) != 0) {
+		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_SAVE_CLOSE;
+		return false;
+	}
 	SlotSaveDate[slot][0] = '\0';
 	return true;
 }
