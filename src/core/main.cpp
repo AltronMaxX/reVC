@@ -1103,6 +1103,8 @@ DisplayGameDebugText()
 		    "D3D8 "
 #elif defined RW_GL3
 		    "OpenGL "
+#elif defined RW_WGPU
+		    "WebGPU "
 #endif
 #if defined AUDIO_OAL
 		    "OAL "
@@ -1570,7 +1572,7 @@ Idle(void *arg)
 	if(!FrontEndMenuManager.m_bMenuActive && TheCamera.GetScreenFadeStatus() != FADE_2)
 	{
 		// This is from SA, but it's nice for windowed mode
-#if defined(GTA_PC) && !defined(RW_GL3)
+#if defined(GTA_PC) && !defined(RW_GL3) && !defined(RW_WGPU)
 		RwV2d pos;
 		pos.x = SCREEN_WIDTH / 2.0f;
 		pos.y = SCREEN_HEIGHT / 2.0f;

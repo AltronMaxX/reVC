@@ -60,7 +60,7 @@ int _caserename(const char *old_filename, const char *new_filename);
 #define caserename _caserename
 #endif
 
-#ifdef RW_GL3
+#if defined(RW_GL3) || defined(RW_WGPU)
 typedef struct
 {
     GLFWwindow* window;

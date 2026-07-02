@@ -100,7 +100,10 @@ if(${PROJECT}_WITH_DISCORD_RPC)
     message(STATUS "Discord RPC enabled (${DISCORD_RPC_DIR})")
 endif()
 
-if(LIBRW_GL3_GFXLIB STREQUAL "GLFW")
+# librw's WebGPU backend also uses GLFW for windowing, so build the vendored
+# GLFW when the GL3 gfxlib is GLFW *or* when the platform is WGPU. LIBRW_PLATFORM
+# is available here (set via -D) before librw's add_subdirectory configures it.
+if(LIBRW_GL3_GFXLIB STREQUAL "GLFW" OR LIBRW_PLATFORM STREQUAL "WGPU")
     set(GLFW_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
     set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -113,8 +116,14 @@ endif()
 # ── librw ─────────────────────────────────────────────────────────────────────
 option(${PROJECT}_VENDORED_LIBRW "Use vendored librw" ON)
 
+# Source directory for the vendored librw. Defaults to the in-tree submodule copy
+# (upstream, GL3/D3D9), but can be pointed at the local librw-wgpu fork for the
+# WebGPU port, e.g. -DREVC_LIBRW_SOURCE_DIR=/home/altronmaxx/GitHub/librw-wgpu
+set(${PROJECT}_LIBRW_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/librw"
+    CACHE PATH "Path to the librw source tree to build")
+
 if(${PROJECT}_VENDORED_LIBRW)
-    add_subdirectory(vendor/librw)
+    add_subdirectory("${${PROJECT}_LIBRW_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/librw")
 else()
     find_package(librw REQUIRED)
 endif()

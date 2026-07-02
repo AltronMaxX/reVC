@@ -1117,7 +1117,7 @@ CRadar::LoadTextures()
 					|| (x2 < 1 && y2 == 1)) // one pixel on each side of second to first/last line is transparent
 					pixels[x + y * 16] = 0;
 				else if((x2 == 2 && y2 >= 2)|| (y2 == 2 && x2 >= 2) )// colored square inside
-#ifdef RW_GL3
+#if defined(RW_GL3) || defined(RW_WGPU)
 					pixels[x + y * 16] = WAYPOINT_R | (WAYPOINT_G << 8) | (WAYPOINT_B << 16) | (255 << 24);
 #else
 					pixels[x + y * 16] = WAYPOINT_B | (WAYPOINT_G << 8) | (WAYPOINT_R << 16) | (255 << 24);

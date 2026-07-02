@@ -298,7 +298,7 @@ int cachedButtonNum = -1;
 
 wchar* DetectJoystickDraw(bool* disabled, bool userHovering) {
 
-#if defined RW_GL3 && !defined LIBRW_SDL2
+#if (defined RW_GL3 || defined RW_WGPU) && !defined LIBRW_SDL2
 	int numButtons;
 	int found = -1;
 	const char *joyname;

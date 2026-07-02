@@ -323,6 +323,19 @@ enum Config {
 #define NEW_RENDERER		// leeds-like world rendering, needs librw
 #endif
 
+// The WGPU backend has no WGSL ports of the custom render pipelines / post-FX
+// shaders yet. Disable the shader-based extras so the game renders with the
+// standard pipelines; these can be ported to WGSL later.
+#ifdef RW_WGPU
+#undef EXTENDED_COLOURFILTER
+#undef EXTENDED_PIPELINES
+#undef SCREEN_DROPLETS
+// NEW_RENDERER's blend passes live in the custom-pipe (EXTENDED_PIPELINES) files
+// via namespace WorldRender, so it can't be used without them. Fall back to the
+// classic renderer for the WGPU bring-up.
+#undef NEW_RENDERER
+#endif
+
 #define FIX_SPRITES	// fix sprites aspect ratio(moon, coronas, particle etc)
 
 #ifndef EXTENDED_COLOURFILTER
@@ -340,7 +353,7 @@ enum Config {
 #if !defined(RW_GL3) && defined(_WIN32)
 #define XINPUT
 #endif
-#if defined XINPUT || (defined RW_GL3 && !defined LIBRW_SDL2 && !defined GTA_HANDHELD)
+#if defined XINPUT || ((defined RW_GL3 || defined RW_WGPU) && !defined LIBRW_SDL2 && !defined GTA_HANDHELD)
 #define DETECT_JOYSTICK_MENU // Then we'll expect user to enter Controller->Detect joysticks if his joystick isn't detected at the start.
 #endif
 #define DETECT_PAD_INPUT_SWITCH // Adds automatic switch of pad related stuff between controller and kb/m
