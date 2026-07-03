@@ -52,8 +52,7 @@ jobs:
             -DREVC_VENDORED_LIBRW=ON  \
             -DREVC_AUDIO=OAL \
             -DREVC_WITH_DISCORD_RPC=${{ matrix.discord_rpc }} \
-            -DLIBRW_PLATFORM=GL3 \
-            -DLIBRW_GL3_GFXLIB=GLFW \
+            -DLIBRW_PLATFORM=WGPU \
             -DREVC_INSTALL=ON
 
       - name: Build
@@ -66,7 +65,7 @@ jobs:
           if [ "${{ matrix.discord_rpc }}" = "ON" ]; then
             DRPC="-drpc"
           fi
-          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-gl3-glfw-oal${DRPC}" >> "$GITHUB_OUTPUT"
+          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-wgpu-oal${DRPC}" >> "$GITHUB_OUTPUT"
 
       - name: Move binary to gamefiles
         run: |
