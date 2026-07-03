@@ -620,6 +620,9 @@ public:
 	int8 m_PrefsVsync;
 	int8 m_PrefsVsyncDisp;
 	int8 m_PrefsFrameLimiter;
+#ifdef RW_WGPU
+	int8 m_PrefsWgpuBackend;   // graphics backend index (0=Auto; see MenuScreensCustom); applied at startup
+#endif
 	int8 m_nPrefsAudio3DProviderIndex;
 	int8 m_PrefsSpeakers;
 	int8 m_PrefsDMA;

@@ -5,6 +5,7 @@
     <mapping directory="$PROJECT_DIR$/../librw-wgpu" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/gamefiles" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/vendor/glfw" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/vendor/librw" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/vendor/ogg" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/vendor/opus" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/vendor/opusfile" vcs="Git" />

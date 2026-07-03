@@ -1,0 +1,64 @@
+name: reVC windows premake wgpu
+
+on:
+  pull_request:
+  push:
+  release:
+    types: published
+
+env:
+  GLFW_BASE: "glfw-3.4.bin.WIN64"
+  GLFW_FILE: "glfw-3.4.bin.WIN64.zip"
+  GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip"
+  PLATFORM: "win-amd64-librw_wgpu-oal"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        buildtype: [Debug, Release]
+
+    name: "WGPU | ${{ matrix.buildtype }}"
+
+    steps:
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v3
+        with:
+          vs-prerelease: true
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download glfw
+        run: Invoke-WebRequest -Uri "${{ env.GLFW_URL }}" -OutFile "${{ env.GLFW_FILE }}"
+
+      - name: Unpack glfw
+        run: 7z x ${{ env.GLFW_FILE }}
+
+      - name: Configure build (premake)
+        shell: pwsh
+        run: ./premake5 vs2022 --with-librw --glfwdir64=${{ env.GLFW_BASE }}
+
+      - name: Build
+        run: msbuild -m build/reVC.sln /property:Configuration=${{ matrix.buildtype }} /property:Platform=${{ env.PLATFORM }}
+
+      - name: Move binaries to gamefiles
+        run: |
+          mv ./bin/${{ env.PLATFORM }}/${{ matrix.buildtype }}/reVC.exe ./gamefiles/
+          mv ./bin/${{ env.PLATFORM }}/${{ matrix.buildtype }}/reVC.pdb ./gamefiles/
+
+      - name: Move runtime dependencies to gamefiles
+        run: |
+          # premake's postbuild already stages wgpu_native.dll next to the exe
+          mv ./bin/${{ env.PLATFORM }}/${{ matrix.buildtype }}/wgpu_native.dll ./gamefiles/
+          mv ./vendor/mpg123/dist/Win64/libmpg123-0.dll ./gamefiles/
+          mv ./vendor/openal-soft/dist/Win64/OpenAL32.dll ./gamefiles/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reVC_${{ matrix.buildtype }}_${{ env.PLATFORM }}
+          path: ./gamefiles/*

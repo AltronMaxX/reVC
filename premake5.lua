@@ -105,6 +105,7 @@ workspace "reVC"
 			"win-x86-librw_gl3_glfw-oal",
 			"win-amd64-librw_d3d9-oal",
 			"win-amd64-librw_gl3_glfw-oal",
+			"win-amd64-librw_wgpu-oal",
 		}
 
 	filter { "system:linux" }
@@ -189,6 +190,15 @@ workspace "reVC"
 		includedirs { path.join(_OPTIONS["glfwdir32"], "include") }
 
 	filter "platforms:*amd64-librw_gl3_glfw*"
+		includedirs { path.join(_OPTIONS["glfwdir64"], "include") }
+
+	-- WebGPU backend (wgpu-native + GLFW). amd64 only: wgpu-native ships no
+	-- 32-bit Windows library. Applies to both the librw static lib (so the
+	-- src/wgpu/*.cpp #ifdef RW_WGPU sources activate) and the reVC app.
+	filter "platforms:*librw_wgpu*"
+		defines { "RW_WGPU" }
+		defines { "LIBRW_GLFW" }
+		includedirs { path.join(Librw, "external/wgpu-native/windows-x64/include") }
 		includedirs { path.join(_OPTIONS["glfwdir64"], "include") }
 
 	filter  {}
@@ -504,6 +514,18 @@ project "reVC"
 	filter "platforms:win-amd64*gl3_glfw*"
 		libdirs { path.join(_OPTIONS["glfwdir64"], "lib-" .. string.gsub(_ACTION or '', "vs", "vc")) }
 		links { "opengl32", "glfw3" }
+
+	filter "platforms:win-amd64*librw_wgpu*"
+		libdirs { path.join(Librw, "external/wgpu-native/windows-x64/lib") }
+		libdirs { path.join(_OPTIONS["glfwdir64"], "lib-" .. string.gsub(_ACTION or '', "vs", "vc")) }
+		-- import lib for the DLL is literally named wgpu_native.dll.lib; the
+		-- explicit .lib extension makes premake emit it verbatim (a bare
+		-- "wgpu_native.dll" would be silently dropped — can't link a DLL)
+		links { "wgpu_native.dll.lib", "glfw3" }
+		-- ship the runtime DLL next to reVC.exe
+		postbuildcommands {
+			'{COPYFILE} "' .. path.join(Librw, "external/wgpu-native/windows-x64/lib/wgpu_native.dll") .. '" "%{cfg.buildtarget.directory}"'
+		}
 
 	filter "platforms:linux*gl3_glfw*"
 		links { "GL", "glfw" }

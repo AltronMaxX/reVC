@@ -594,6 +594,24 @@ psInitialize(void)
 	FrontEndMenuManager.LoadSettings();
 #endif
 
+#ifdef RW_WGPU
+	// Apply the saved WebGPU backend choice before the device is created
+	// (RwEngineStart → startWGPU). Menu index: 0=Auto, 1=Vulkan, 2=OpenGL
+	// (non-Windows) / Direct3D 12 (Windows) — see WGPU_BACKEND_SELECTOR.
+	{
+		int wgpuBe = rw::wgpu::BACKEND_AUTO;
+		if (FrontEndMenuManager.m_PrefsWgpuBackend == 1)
+			wgpuBe = rw::wgpu::BACKEND_VULKAN;
+		else if (FrontEndMenuManager.m_PrefsWgpuBackend == 2)
+#if defined(_WIN32)
+			wgpuBe = rw::wgpu::BACKEND_D3D12;
+#else
+			wgpuBe = rw::wgpu::BACKEND_GL;
+#endif
+		rw::wgpu::setBackend(wgpuBe);
+	}
+#endif
+
 
 #ifdef _WIN32
 	MEMORYSTATUS memstats;

@@ -1,4 +1,4 @@
-name: reVC linux cmake amd64
+name: reVC linux cmake wgpu
 
 on:
   pull_request:
@@ -13,9 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         buildtype: [Debug, Release]
-        discord_rpc: [ON, OFF]
 
-    name: "${{ matrix.buildtype }} | discord_rpc=${{ matrix.discord_rpc }}"
+    name: "WGPU | ${{ matrix.buildtype }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +27,6 @@ jobs:
           sudo apt-get install -y \
             cmake \
             ninja-build \
-            gcc-multilib \
-            g++-multilib \
             libopenal-dev \
             libsndfile1-dev \
             libmpg123-dev \
@@ -42,18 +39,16 @@ jobs:
             libwayland-dev \
             libxkbcommon-dev \
             wayland-protocols \
-            libwayland-bin \
-            libglew-dev
+            libwayland-bin
 
       - name: Configure (CMake)
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
-            -DREVC_VENDORED_LIBRW=ON  \
+            -DREVC_VENDORED_LIBRW=ON \
             -DREVC_AUDIO=OAL \
-            -DREVC_WITH_DISCORD_RPC=${{ matrix.discord_rpc }} \
-            -DLIBRW_PLATFORM=WGPU \
-            -DREVC_INSTALL=ON
+            -DREVC_WITH_DISCORD_RPC=OFF \
+            -DLIBRW_PLATFORM=WGPU
 
       - name: Build
         run: cmake --build build --parallel
@@ -61,11 +56,7 @@ jobs:
       - name: Collect artifact name
         id: artname
         run: |
-          DRPC=""
-          if [ "${{ matrix.discord_rpc }}" = "ON" ]; then
-            DRPC="-drpc"
-          fi
-          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-wgpu-oal${DRPC}" >> "$GITHUB_OUTPUT"
+          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-wgpu-glfw-oal" >> "$GITHUB_OUTPUT"
 
       - name: Move binary to gamefiles
         run: |

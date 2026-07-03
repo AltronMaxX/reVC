@@ -65,7 +65,15 @@
 #ifdef PS2_ALPHA_TEST
 	#define DUALPASS_SELECTOR MENUACTION_CFO_SELECT, "FEM_2PR", { new CCFOSelect((int8*)&gPS2alphaTest, "Graphics", "PS2AlphaTest", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
 #else
-	#define DUALPASS_SELECTOR 
+	#define DUALPASS_SELECTOR
+#endif
+
+#ifdef RW_WGPU
+	// Saved to the INI (Graphics/WgpuBackend) and applied at the next startup
+	// (glfw.cpp reads it before RwEngineOpen) — switching backend needs a restart.
+	#define WGPU_BACKEND_SELECTOR MENUACTION_CFO_SELECT, "FEM_GBK", { new CCFOSelect((int8*)&FrontEndMenuManager.m_PrefsWgpuBackend, "Graphics", "WgpuBackend", wgpuBackends, ARRAY_SIZE(wgpuBackends), false) }, 0, 0, MENUALIGN_LEFT,
+#else
+	#define WGPU_BACKEND_SELECTOR
 #endif
 
 #ifdef PED_CAR_DENSITY_SLIDERS
@@ -105,6 +113,15 @@
 
 const char *filterNames[] = { "FEM_NON", "FEM_SIM", "FEM_NRM", "FEM_MOB" };
 const char *off_on[] = { "FEM_OFF", "FEM_ON" };
+#ifdef RW_WGPU
+// WebGPU backend choices. Index maps to rw::wgpu::BACKEND_* in the startup
+// plumbing (glfw.cpp). D3D12 is Windows-only; OpenGL is the desktop-GL path.
+#if defined(_WIN32)
+const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GDX" };  // Auto, Vulkan, Direct3D 12
+#else
+const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GGL" };  // Auto, Vulkan, OpenGL
+#endif
+#endif
 
 void RestoreDefGraphics(int8 action) {
 	if (action != FEOPTION_ACTION_SELECT)
@@ -782,6 +799,7 @@ CMenuScreenCustom aScreens[] = {
 		MULTISAMPLING_SELECTOR
 		ISLAND_LOADING_SELECTOR
 		DUALPASS_SELECTOR
+		WGPU_BACKEND_SELECTOR
 #ifdef EXTENDED_COLOURFILTER
 		POSTFX_SELECTORS
 #elif defined LEGACY_MENU_OPTIONS

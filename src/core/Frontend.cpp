@@ -487,6 +487,9 @@ CMenuManager::CMenuManager()
 	m_PrefsVsync = 0;
 	m_PrefsVsyncDisp = 1;
 	m_PrefsFrameLimiter = 1;
+#ifdef RW_WGPU
+	m_PrefsWgpuBackend = 0;   // 0 = Automatic (see WGPU_BACKEND_SELECTOR)
+#endif
 	m_PrefsLanguage = 0;
 	field_54 = 0;
 	m_PrefsAllowNastyGame = 1;
