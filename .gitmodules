@@ -12,7 +12,7 @@
 	branch = main
 [submodule "vendor/librw"]
 	path = vendor/librw
-	url = https://github.com/aap/librw.git
+	url = https://github.com/AltronMaxX/librw-wgpu.git
 [submodule "gamefiles"]
 	path = gamefiles
 	url = https://github.com/AltronMaxX/reVC-gamefiles.git
