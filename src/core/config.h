@@ -350,7 +350,7 @@ enum Config {
 //#define DISABLE_CUTSCENE_SHADOWS
 
 // Pad
-#if !defined(RW_GL3) && defined(_WIN32)
+#if !defined(RW_GL3) && !defined(RW_WGPU) && defined(_WIN32)
 #define XINPUT
 #endif
 #if defined XINPUT || ((defined RW_GL3 || defined RW_WGPU) && !defined LIBRW_SDL2 && !defined GTA_HANDHELD)
