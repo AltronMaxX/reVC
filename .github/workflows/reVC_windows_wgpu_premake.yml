@@ -50,11 +50,19 @@ jobs:
       # vcxproj directly with the combined Configuration and Platform=x64.
       # dependson only creates a solution-level order (no ProjectReference), so
       # librw must be built explicitly first.
+      # NOTE: shell must be cmd. premake's MSVC Configuration name contains a
+      # space ("<buildtype> <platform>"); PowerShell mangles /p:Configuration=
+      # "Debug win-amd64-librw_wgpu-oal" when calling native msbuild.exe (splits
+      # at the space → msbuild sees Configuration=Debug, no such config → wrong/
+      # empty config selected → "No Target Architecture"). cmd passes the quoted
+      # value intact.
       - name: Build librw
-        run: msbuild -m build/librw.vcxproj /property:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /property:Platform=x64
+        shell: cmd
+        run: msbuild -m build/librw.vcxproj /p:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /p:Platform=x64
 
       - name: Build reVC
-        run: msbuild -m build/reVC.vcxproj /property:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /property:Platform=x64
+        shell: cmd
+        run: msbuild -m build/reVC.vcxproj /p:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /p:Platform=x64
 
       - name: Move binaries to gamefiles
         run: |
