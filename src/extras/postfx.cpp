@@ -35,6 +35,42 @@ int32 u_contrastMult;
 rw::gl3::Shader *colourFilterVC;
 rw::gl3::Shader *contrast;
 #endif
+#ifdef RW_WGPU
+rw::wgpu::Im2DShader *colourFilterVC;
+rw::wgpu::Im2DShader *contrast;
+
+// WGSL ports of colourfilterVC.frag / contrast.frag. The backend prepends the
+// im2d vertex stage and bindings (t0/s0 = TEXTURERASTER, u_params = user
+// vec4s); unlike the GL versions there is no V flip — the wgpu backbuffer
+// grab (rasterRenderFast) keeps the top-left origin.
+static const char *colourfilterVC_wgsl = R"(
+@fragment
+fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
+	let blurcol = u_params.p[0];
+	let a = blurcol.a;
+	let doublec = clamp(blurcol * 2.0, vec4<f32>(0.0), vec4<f32>(1.0));
+	let dst = textureSample(t0, s0, f.uv);
+	var prev = dst;
+	for(var i = 0; i < 5; i = i + 1){
+		var tmp = dst * (1.0 - a) + prev * doublec * a;
+		tmp = tmp + prev * blurcol;
+		tmp = tmp + prev * blurcol;
+		prev = clamp(tmp, vec4<f32>(0.0), vec4<f32>(1.0));
+	}
+	return vec4<f32>(prev.rgb, 1.0);
+}
+)";
+
+static const char *contrast_wgsl = R"(
+@fragment
+fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
+	let dst = textureSample(t0, s0, f.uv);
+	let mult = u_params.p[0].rgb;
+	let add  = u_params.p[1].rgb;
+	return vec4<f32>(dst.rgb * mult + add, 1.0);
+}
+)";
+#endif
 
 void
 CPostFX::InitOnce(void)
@@ -173,6 +209,12 @@ CPostFX::Open(RwCamera *cam)
 	}
 
 #endif
+#ifdef RW_WGPU
+	colourFilterVC = rw::wgpu::createIm2DShader(colourfilterVC_wgsl);
+	assert(colourFilterVC);
+	contrast = rw::wgpu::createIm2DShader(contrast_wgsl);
+	assert(contrast);
+#endif
 }
 
 void
@@ -203,6 +245,16 @@ CPostFX::Close(void)
 	}
 	if(contrast){
 		contrast->destroy();
+		contrast = nil;
+	}
+#endif
+#ifdef RW_WGPU
+	if(colourFilterVC){
+		rw::wgpu::destroyIm2DShader(colourFilterVC);
+		colourFilterVC = nil;
+	}
+	if(contrast){
+		rw::wgpu::destroyIm2DShader(contrast);
 		contrast = nil;
 	}
 #endif
@@ -288,6 +340,12 @@ CPostFX::RenderOverlayShader(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
 		glUniform3fv(contrast->uniformLocations[u_contrastMult], 1, mult);
 		glUniform3fv(contrast->uniformLocations[u_contrastAdd], 1, add);
 #endif
+#ifdef RW_WGPU
+		float params[8] = { mult[0], mult[1], mult[2], 0.0f,
+		                    add[0], add[1], add[2], 0.0f };
+		rw::wgpu::setIm2DShaderParams(contrast, params, sizeof(params));
+		rw::wgpu::im2dOverrideShader = contrast;
+#endif
 	}else{
 		float f = Intensity;
 		float blurcolors[4];
@@ -304,6 +362,10 @@ CPostFX::RenderOverlayShader(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
 		colourFilterVC->use();
 		glUniform4fv(colourFilterVC->uniformLocations[u_blurcolor], 1, blurcolors);
 #endif
+#ifdef RW_WGPU
+		rw::wgpu::setIm2DShaderParams(colourFilterVC, blurcolors, sizeof(blurcolors));
+		rw::wgpu::im2dOverrideShader = colourFilterVC;
+#endif
 	}
 	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, Vertex, 4, Index, 6);
 #ifdef RW_D3D9
@@ -311,6 +373,9 @@ CPostFX::RenderOverlayShader(RwCamera *cam, int32 r, int32 g, int32 b, int32 a)
 #endif
 #ifdef RW_OPENGL
 	rw::gl3::im2dOverrideShader = nil;
+#endif
+#ifdef RW_WGPU
+	rw::wgpu::im2dOverrideShader = nil;
 #endif
 }
 

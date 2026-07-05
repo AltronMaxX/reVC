@@ -323,11 +323,10 @@ enum Config {
 #define NEW_RENDERER		// leeds-like world rendering, needs librw
 #endif
 
-// The WGPU backend has no WGSL ports of the custom render pipelines / post-FX
-// shaders yet. Disable the shader-based extras so the game renders with the
-// standard pipelines; these can be ported to WGSL later.
+// WGPU: EXTENDED_COLOURFILTER is ported to WGSL (postfx.cpp, im2dOverrideShader
+// in the wgpu backend). The remaining shader-based extras still need their WGSL
+// ports and stay disabled for now.
 #ifdef RW_WGPU
-#undef EXTENDED_COLOURFILTER
 #undef EXTENDED_PIPELINES
 #undef SCREEN_DROPLETS
 // NEW_RENDERER's blend passes live in the custom-pipe (EXTENDED_PIPELINES) files
