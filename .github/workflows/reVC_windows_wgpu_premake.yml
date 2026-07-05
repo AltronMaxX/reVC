@@ -42,8 +42,19 @@ jobs:
         shell: pwsh
         run: ./premake5 vs2022 --with-librw --glfwdir64=${{ env.GLFW_BASE }}
 
-      - name: Build
-        run: msbuild -m build/reVC.sln /property:Configuration=${{ matrix.buildtype }} /property:Platform=${{ env.PLATFORM }}
+      # premake encodes its "platform" into the MSVC *Configuration* name
+      # ("<buildtype> <platform>") while the vcxproj <Platform> is the real
+      # arch (x64). Passing /p:Platform=<premake platform> to the .sln leaks a
+      # global Platform property that overrides the project's x64 and matches no
+      # config (→ missing includes + "No Target Architecture"). So build each
+      # vcxproj directly with the combined Configuration and Platform=x64.
+      # dependson only creates a solution-level order (no ProjectReference), so
+      # librw must be built explicitly first.
+      - name: Build librw
+        run: msbuild -m build/librw.vcxproj /property:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /property:Platform=x64
+
+      - name: Build reVC
+        run: msbuild -m build/reVC.vcxproj /property:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /property:Platform=x64
 
       - name: Move binaries to gamefiles
         run: |
