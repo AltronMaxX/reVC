@@ -13,8 +13,9 @@ jobs:
       fail-fast: false
       matrix:
         buildtype: [Debug, Release]
+        discord: [OFF, ON]
 
-    name: "WGPU | ${{ matrix.buildtype }}"
+    name: "WGPU | ${{ matrix.buildtype }}${{ matrix.discord == 'ON' && ' | discord' || '' }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +48,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.buildtype }} \
             -DREVC_VENDORED_LIBRW=ON \
             -DREVC_AUDIO=OAL \
-            -DREVC_WITH_DISCORD_RPC=OFF \
+            -DREVC_WITH_DISCORD_RPC=${{ matrix.discord }} \
             -DLIBRW_PLATFORM=WGPU
 
       - name: Build
@@ -56,7 +57,7 @@ jobs:
       - name: Collect artifact name
         id: artname
         run: |
-          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-wgpu-glfw-oal" >> "$GITHUB_OUTPUT"
+          echo "name=reVC_${{ matrix.buildtype }}_linux-amd64-wgpu-glfw-oal${{ matrix.discord == 'ON' && '-discord' || '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Move binary to gamefiles
         run: |

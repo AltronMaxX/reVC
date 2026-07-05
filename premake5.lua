@@ -296,6 +296,10 @@ project "discord-rpc"
 	filter "platforms:*gl3_glfw*"
 		staticruntime "off"
 
+	-- match reVC/librw dynamic CRT on the wgpu platform (glfw3.lib is /MD)
+	filter "platforms:*librw_wgpu*"
+		staticruntime "off"
+
 	filter {}
 end
 

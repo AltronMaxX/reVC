@@ -19,8 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         buildtype: [Debug, Release]
+        discord: [OFF, ON]
 
-    name: "WGPU | ${{ matrix.buildtype }}"
+    name: "WGPU | ${{ matrix.buildtype }}${{ matrix.discord == 'ON' && ' | discord' || '' }}"
 
     steps:
       - name: Add msbuild to PATH
@@ -40,7 +41,10 @@ jobs:
 
       - name: Configure build (premake)
         shell: pwsh
-        run: ./premake5 vs2022 --with-librw --glfwdir64=${{ env.GLFW_BASE }}
+        run: |
+          $pargs = @("vs2022", "--with-librw", "--glfwdir64=${{ env.GLFW_BASE }}")
+          if ("${{ matrix.discord }}" -eq "ON") { $pargs += "--with-discord-rpc" }
+          ./premake5 @pargs
 
       # premake encodes its "platform" into the MSVC *Configuration* name
       # ("<buildtype> <platform>") while the vcxproj <Platform> is the real
@@ -59,6 +63,13 @@ jobs:
       - name: Build librw
         shell: cmd
         run: msbuild -m build/librw.vcxproj /p:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /p:Platform=x64
+
+      # discord-rpc is another dependson (no ProjectReference), so build it
+      # explicitly before reVC when enabled — reVC links discord-rpc.lib.
+      - name: Build discord-rpc
+        if: matrix.discord == 'ON'
+        shell: cmd
+        run: msbuild -m build/discord-rpc.vcxproj /p:Configuration="${{ matrix.buildtype }} ${{ env.PLATFORM }}" /p:Platform=x64
 
       - name: Build reVC
         shell: cmd
@@ -79,5 +90,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: reVC_${{ matrix.buildtype }}_${{ env.PLATFORM }}
+          name: reVC_${{ matrix.buildtype }}_${{ env.PLATFORM }}${{ matrix.discord == 'ON' && '-discord' || '' }}
           path: ./gamefiles/*
