@@ -258,6 +258,10 @@ project "librw"
 	filter "platforms:*gl3_glfw*"
 		staticruntime "off"
 
+	-- wgpu uses the same prebuilt glfw3.lib (dynamic CRT) as gl3, so match /MD
+	filter "platforms:*librw_wgpu*"
+		staticruntime "off"
+
 	filter "platforms:*RW34*"
 		flags { "ExcludeFromBuild" }
 	filter  {}
@@ -429,6 +433,10 @@ project "reVC"
 
 	filter "platforms:win*glfw*"
 		staticruntime "off"
+
+	-- wgpu platform name has no "glfw" token; link dynamic CRT to match glfw3.lib
+	filter "platforms:win*librw_wgpu*"
+		staticruntime "off"
 		
 	filter "platforms:*glfw*"
 		premake.modules.autoconf.parameters = "-lglfw -lX11"
@@ -522,9 +530,12 @@ project "reVC"
 		-- explicit .lib extension makes premake emit it verbatim (a bare
 		-- "wgpu_native.dll" would be silently dropped — can't link a DLL)
 		links { "wgpu_native.dll.lib", "glfw3" }
-		-- ship the runtime DLL next to reVC.exe
+		-- ship the runtime DLL next to reVC.exe. NOTE: use an absolute source
+		-- path — PostBuildEvent runs from the project dir (build/), and premake
+		-- does NOT rebase raw command strings, so a relative "vendor/librw/..."
+		-- would resolve to the non-existent build/vendor/librw/...
 		postbuildcommands {
-			'{COPYFILE} "' .. path.join(Librw, "external/wgpu-native/windows-x64/lib/wgpu_native.dll") .. '" "%{cfg.buildtarget.directory}"'
+			'{COPYFILE} "' .. path.getabsolute(path.join(Librw, "external/wgpu-native/windows-x64/lib/wgpu_native.dll")) .. '" "%{cfg.buildtarget.directory}"'
 		}
 
 	filter "platforms:linux*gl3_glfw*"
