@@ -515,7 +515,8 @@ CopySizeAndPreparePointer(uint8 *&buf, uint8 *&postbuf, uint8 *&postbuf2, uint32
 void
 DoGameSpecificStuffBeforeSave()
 {
-	CGameLogic::PassTime(360);
+	if (!CGame::bRequestAutosave)
+		CGameLogic::PassTime(360);
 	CPlayerPed *ped = FindPlayerPed();
 	ped->m_fCurrentStamina = ped->m_fMaxStamina;
 	CGame::TidyUpMemory(true, false);
