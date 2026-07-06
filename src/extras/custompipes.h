@@ -77,6 +77,7 @@ void SetTxdFindCallback(void);
 
 extern bool bRenderingEnvMap;
 extern int32 EnvMapSize;
+extern int32 EnvMapUpdatePeriod;
 extern rw::Camera *EnvMapCam;
 extern rw::Texture *EnvMapTex;
 extern rw::Texture *EnvMaskTex;

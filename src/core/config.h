@@ -323,17 +323,6 @@ enum Config {
 #define NEW_RENDERER		// leeds-like world rendering, needs librw
 #endif
 
-// WGPU: EXTENDED_COLOURFILTER is ported to WGSL (postfx.cpp, im2dOverrideShader
-// in the wgpu backend). The remaining shader-based extras still need their WGSL
-// ports and stay disabled for now.
-#ifdef RW_WGPU
-#undef EXTENDED_PIPELINES
-#undef SCREEN_DROPLETS
-// NEW_RENDERER's blend passes live in the custom-pipe (EXTENDED_PIPELINES) files
-// via namespace WorldRender, so it can't be used without them. Fall back to the
-// classic renderer for the WGPU bring-up.
-#undef NEW_RENDERER
-#endif
 
 #define FIX_SPRITES	// fix sprites aspect ratio(moon, coronas, particle etc)
 

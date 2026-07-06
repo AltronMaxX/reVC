@@ -60,6 +60,9 @@ static void *screenDroplet_PS;
 #ifdef RW_GL3
 static rw::gl3::Shader *screenDroplet;
 #endif
+#ifdef RW_WGPU
+static rw::wgpu::Im2DShader *screenDroplet;
+#endif
 
 // platform specific
 static void openim2d_uv2(void);
@@ -126,6 +129,7 @@ ScreenDroplets::InitDraw(void)
 	assert(screenDroplet);
 	}
 #endif
+	// RW_WGPU: shader created in openim2d_uv2() (needs the vertex layout)
 
 	ms_initialised = 1;
 }
@@ -151,6 +155,12 @@ ScreenDroplets::Shutdown(void)
 #ifdef RW_GL3
 	if(screenDroplet){
 		screenDroplet->destroy();
+		screenDroplet = nil;
+	}
+#endif
+#ifdef RW_WGPU
+	if(screenDroplet){
+		rw::wgpu::destroyIm2DShader(screenDroplet);
 		screenDroplet = nil;
 	}
 #endif
@@ -214,6 +224,11 @@ ScreenDroplets::Render(void)
 	rw::gl3::im2dOverrideShader = screenDroplet;
 	rw::gl3::setTexture(1, ms_screenTex);
 #endif
+#ifdef RW_WGPU
+	// the draw goes through im2DRenderCustom directly (extra UV set), only
+	// the grabbed screen needs binding as second texture
+	rw::wgpu::setIm2DTexture2(ms_screenTex);
+#endif
 
 	RenderBuffer::ClearRenderBuffer();
 	for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
@@ -228,6 +243,9 @@ ScreenDroplets::Render(void)
 #ifdef RW_GL3
 	rw::gl3::im2dOverrideShader = nil;
 	rw::gl3::setTexture(1, nil);
+#endif
+#ifdef RW_WGPU
+	rw::wgpu::setIm2DTexture2(nil);
 #endif
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, FALSE);
@@ -811,6 +829,92 @@ RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, Rw
 #ifndef RW_GL_USE_VAOS
 	disableAttribPointers(im2d_UV2_attribDesc, 4);
 #endif
+}
+#endif
+
+#ifdef RW_WGPU
+// Full WGSL module (vertex layout carries a second UV set, so the stock
+// im2d vertex stage can't be reused). Must honour the custom im2d binding
+// contract from rwwgpu.h: t0/s0 = TEXTURERASTER (drop mask), t1/s1 =
+// setIm2DTexture2 (grabbed screen). Unlike GL there is no V-flip: the wgpu
+// screen grab keeps the top-left origin, and the lens inversion is already
+// baked into the per-vertex uv2 assignment in AddToRenderList.
+static const char *screenDroplet_wgsl = R"(
+struct Xform {
+    xScl : f32,
+    yScl : f32,
+    xOff : f32,
+    yOff : f32,
+};
+@group(0) @binding(0) var<uniform> u_xform : Xform;
+@group(0) @binding(1) var t0 : texture_2d<f32>;
+@group(0) @binding(2) var s0 : sampler;
+struct Params {
+    p : array<vec4<f32>, 8>,
+};
+@group(0) @binding(3) var<uniform> u_params : Params;
+@group(0) @binding(4) var t1 : texture_2d<f32>;
+@group(0) @binding(5) var s1 : sampler;
+
+struct VsIn {
+    @location(0) pos   : vec4<f32>,
+    @location(1) color : vec4<f32>,
+    @location(2) uv    : vec2<f32>,
+    @location(3) uv2   : vec2<f32>,
+};
+struct VsOut {
+    @builtin(position) clip_pos : vec4<f32>,
+    @location(0)       color    : vec4<f32>,
+    @location(1)       uv       : vec2<f32>,
+    @location(2)       uv2      : vec2<f32>,
+};
+
+@vertex
+fn vs_main(v : VsIn) -> VsOut {
+    var out : VsOut;
+    let ndcX = v.pos.x * u_xform.xScl + u_xform.xOff;
+    let ndcY = v.pos.y * u_xform.yScl + u_xform.yOff;
+    let w = v.pos.w;
+    out.clip_pos = vec4<f32>(ndcX * w, ndcY * w, v.pos.z * w, w);
+    out.color = v.color;
+    out.uv    = v.uv;
+    out.uv2   = v.uv2;
+    return out;
+}
+
+@fragment
+fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
+    var color = f.color * textureSample(t0, s0, f.uv);
+    color = color * textureSample(t1, s1, f.uv2);
+    return color;
+}
+)";
+
+void
+openim2d_uv2(void)
+{
+	using namespace rw::wgpu;
+	Im2DCustomAttrib attribs[4] = {
+		{ 0, IM2DATTR_FLOAT4,   0 },
+		{ 1, IM2DATTR_UNORM8X4, (rw::uint32)offsetof(Im2DVertexUV2, r) },
+		{ 2, IM2DATTR_FLOAT2,   (rw::uint32)offsetof(Im2DVertexUV2, u) },
+		{ 3, IM2DATTR_FLOAT2,   (rw::uint32)offsetof(Im2DVertexUV2, u2) },
+	};
+	screenDroplet = createIm2DShaderEx(screenDroplet_wgsl, attribs, 4, sizeof(Im2DVertexUV2));
+	assert(screenDroplet);
+}
+
+void
+closeim2d_uv2(void)
+{
+	// shader is destroyed in Shutdown()
+}
+
+void
+RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, RwInt32 numVertices, RwImVertexIndex *indices, RwInt32 numIndices)
+{
+	assert(primType == rwPRIMTYPETRILIST);
+	rw::wgpu::im2DRenderCustom(screenDroplet, vertices, numVertices, indices, numIndices);
 }
 #endif
 

@@ -9,6 +9,7 @@
 #include "Timecycle.h"
 #include "FileMgr.h"
 #include "Clock.h"
+#include "Timer.h"
 #include "Weather.h"
 #include "TxdStore.h"
 #include "Renderer.h"
@@ -48,6 +49,10 @@ rw::TexDictionary *neoTxd;
 
 bool bRenderingEnvMap;
 int32 EnvMapSize = 128;
+// Re-render the reflection only every Nth frame: the env map pass renders the
+// whole scene again, which roughly doubles the CPU render cost per frame. At
+// 128x128 the reflection doesn't need a full-rate update.
+int32 EnvMapUpdatePeriod = 2;
 rw::Camera *EnvMapCam;
 rw::Texture *EnvMapTex;
 rw::Texture *EnvMaskTex;
@@ -125,6 +130,9 @@ EnvMapRender(void)
 {
 	if(VehiclePipeSwitch != VEHICLEPIPE_NEO)
 		return;
+
+	if(EnvMapUpdatePeriod > 1 && CTimer::GetFrameCounter() % (uint32)EnvMapUpdatePeriod != 0)
+		return;	// keep last frame's reflection
 
 	RwCameraEndUpdate(Scene.camera);
 

@@ -1636,8 +1636,11 @@ Idle(void *arg)
 		        TheCamera.SetMotionBlurAlpha(150);
 
 #ifdef SCREEN_DROPLETS
-		CPostFX::GetBackBuffer(Scene.camera);
 		ScreenDroplets::Process();
+		// the droplets sample the screen behind them — skip the fullscreen
+		// grab (a swapchain copy) when there are no drops to draw
+		if(ScreenDroplets::ms_numDrops != 0)
+			CPostFX::GetBackBuffer(Scene.camera);
 		ScreenDroplets::Render();
 #endif
 
