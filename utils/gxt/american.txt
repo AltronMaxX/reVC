@@ -14438,6 +14438,9 @@ AutoSave Not Present
 [FED_BDL]
 BORDERLESS
 
+[AUT_MSG]
+Game saved!
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
