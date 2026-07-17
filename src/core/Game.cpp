@@ -975,8 +975,15 @@ void CGame::Process(void)
 	DiscordRPC::Update();
 #endif
 
-	if (bRequestAutosave && !CWorld::Players[CWorld::PlayerInFocus].m_pPed->bInVehicle) {
-		if (!CTheScripts::IsPlayerOnAMission() && !CTheScripts::bAlreadyRunningAMissionScript) {
+	if (bRequestAutosave) {
+		auto playerInfo = CWorld::Players[CWorld::PlayerInFocus];
+		if (!playerInfo.m_pPed->bInVehicle &&
+			!playerInfo.IsRestartingAfterArrest() &&
+			!playerInfo.IsRestartingAfterDeath() &&
+			playerInfo.m_pPed->m_nPedState != PED_DEAD &&
+			playerInfo.m_pPed->m_nPedState != PED_ARRESTED &&
+			!CTheScripts::IsPlayerOnAMission() &&
+			!CTheScripts::bAlreadyRunningAMissionScript) {
 			int autoSaveSlot = 8;
 
 			if (!TheCamera.m_bFading) {
