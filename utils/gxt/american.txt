@@ -14441,6 +14441,9 @@ BORDERLESS
 [AUT_MSG]
 Game saved!
 
+[SKIP]
+Press the ~h~~k~~VEHICLE_ENTER_EXIT~~w~ to skip phone call.
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
