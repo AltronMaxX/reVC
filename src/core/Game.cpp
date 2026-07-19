@@ -990,6 +990,8 @@ void CGame::Process(void)
 				if (PcSaveHelper.SaveSlot(autoSaveSlot)) {}
 
 				bRequestAutosave = false;
+				wchar* text = TheText.Get("AUT_MSG");
+				CHud::SetHelpMessage(text, false);
 			}
 		}
 	}

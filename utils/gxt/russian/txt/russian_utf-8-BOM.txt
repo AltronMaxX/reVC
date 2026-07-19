@@ -14438,6 +14438,12 @@ NINTENDO SWITCH CONTROLLER
 [FED_BDL]
 Без рамок
 
+[AUT_MSG]
+Игра сохранена!
+
+[SKIP]
+Нажмите ~h~~k~~VEHICLE_ENTER_EXIT~~w~ для пропуска звонка.
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

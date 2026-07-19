@@ -1,33 +1,34 @@
 #include "common.h"
 
-#include "RwHelper.h"
-#include "PlayerPed.h"
-#include "Wanted.h"
-#include "Fire.h"
-#include "DMAudio.h"
-#include "Pad.h"
-#include "Camera.h"
-#include "WeaponEffects.h"
-#include "ModelIndices.h"
-#include "World.h"
-#include "RpAnimBlend.h"
 #include "AnimBlendAssociation.h"
 #include "AudioManager.h"
 #include "AudioSamples.h"
-#include "General.h"
-#include "Pools.h"
-#include "Darkel.h"
+#include "Camera.h"
 #include "CarCtrl.h"
+#include "DMAudio.h"
+#include "Darkel.h"
+#include "Fire.h"
+#include "General.h"
+#include "Hud.h"
 #include "MBlur.h"
 #include "Messages.h"
-#include "Streaming.h"
-#include "Population.h"
-#include "Script.h"
-#include "Replay.h"
+#include "ModelIndices.h"
+#include "Pad.h"
 #include "PedPlacement.h"
-#include "sampman.h"
-#include "VarConsole.h"
+#include "PlayerPed.h"
+#include "Pools.h"
+#include "Population.h"
+#include "Replay.h"
+#include "RpAnimBlend.h"
+#include "RwHelper.h"
 #include "SaveBuf.h"
+#include "Script.h"
+#include "Streaming.h"
+#include "VarConsole.h"
+#include "Wanted.h"
+#include "WeaponEffects.h"
+#include "World.h"
+#include "sampman.h"
 
 #define PAD_MOVE_TO_GAME_WORLD_MOVE 60.0f
 
@@ -1665,6 +1666,7 @@ CPlayerPed::FindNewAttackPoints(void)
 }
 
 static bool bFastForwardPhoneCall = false;
+static bool showSkipText = false;
 void
 CPlayerPed::ProcessControl(void)
 {
@@ -1828,8 +1830,15 @@ CPlayerPed::ProcessControl(void)
 					PlayerControlZelda(padUsed);
 				}
 			}
-			if (IsPedInControl() && m_nPedState != PED_ANSWER_MOBILE && padUsed)
+			if (IsPedInControl() && m_nPedState != PED_ANSWER_MOBILE && padUsed) {
 				ProcessPlayerWeapon(padUsed);
+				showSkipText = false;
+			}
+			if (m_nPedState == PED_ANSWER_MOBILE && !showSkipText) {
+				wchar* text = TheText.Get("SKIP");
+				CHud::SetHelpMessage(text, false);
+				showSkipText = true;
+			}
 			if (CPad::GetPad(0)->GetExitVehicle() && m_nPedState == PED_ANSWER_MOBILE && !bFastForwardPhoneCall)
 			{
 				bFastForwardPhoneCall = true;
