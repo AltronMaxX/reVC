@@ -1687,6 +1687,9 @@ CPed::ProcessBuoyancy(void)
 			m_vecMoveSpeed.z *= speedMult;
 			bIsStanding = false;
 			bIsDrowning = true;
+#ifdef PED_SWIMMING
+			if (!IsPlayer())
+#endif
 			InflictDamage(nil, WEAPONTYPE_DROWNING, 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
 		}
 		if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.25f * CTimer::GetTimeStep()) {
@@ -4774,6 +4777,17 @@ CPed::ReplaceWeaponWhenExitingVehicle(void)
 void
 CPed::PreRender(void)
 {
+#ifdef PED_SWIMMING
+	if (IsPlayer() && bIsInWater && !bIsStanding && !DyingOrDead()) {
+		CVector truePos = GetMatrix().GetPosition();
+		GetMatrix().SetUnity();
+		GetMatrix().Rotate(-HALFPI, 0.0f, m_fRotationCur);
+		GetMatrix().GetPosition() = CVector(truePos.x, truePos.y, truePos.z + 0.5f);
+		GetMatrix().UpdateRW();
+		UpdateRwFrame();
+		GetMatrix().GetPosition() = truePos;
+	}
+#endif
 	CShadows::StoreShadowForPed(this,
 		CTimeCycle::m_fShadowDisplacementX[CTimeCycle::m_CurrentStoredValue], CTimeCycle::m_fShadowDisplacementY[CTimeCycle::m_CurrentStoredValue],
 		CTimeCycle::m_fShadowFrontX[CTimeCycle::m_CurrentStoredValue], CTimeCycle::m_fShadowFrontY[CTimeCycle::m_CurrentStoredValue],

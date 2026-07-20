@@ -1670,6 +1670,10 @@ static bool showSkipText = false;
 void
 CPlayerPed::ProcessControl(void)
 {
+#ifdef PED_SWIMMING
+	if (bIsInWater)
+		SetHeading(m_fRotationCur);
+#endif
 	// Mobile has some debug/abandoned cheat thing in here: "gbFrankenTommy"
 
 	if (m_nEvadeAmount != 0)
@@ -1740,6 +1744,39 @@ CPlayerPed::ProcessControl(void)
 	if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW && m_nPedState != PED_ATTACK && !bInVehicle) {
 		DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
 	}
+
+#ifdef PED_SWIMMING
+	if (!DyingOrDead() && m_nPedState != PED_DRIVING) {
+		if (bIsInWater && !bIsStanding) {
+			float leftRight = padUsed ? padUsed->GetPedWalkLeftRight() : 0.0f;
+			float upDown = padUsed ? padUsed->GetPedWalkUpDown() : 0.0f;
+			float padMove = CVector2D(leftRight, upDown).Magnitude();
+			if (padMove > 0.0f) {
+				float swimHeading = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown) - TheCamera.Orientation;
+				m_fRotationDest = CGeneral::LimitRadianAngle(swimHeading);
+				float turn = m_fRotationDest - m_fRotationCur;
+				while (turn > PI) turn -= TWOPI;
+				while (turn < -PI) turn += TWOPI;
+				m_fRotationCur = CGeneral::LimitRadianAngle(m_fRotationCur + turn * Min(1.0f, 0.15f * CTimer::GetTimeStep()));
+				float swimSpeed = 0.09f * Min(padMove / 60.0f, 1.0f);
+				m_vecMoveSpeed.x = -Sin(m_fRotationCur) * swimSpeed;
+				m_vecMoveSpeed.y = Cos(m_fRotationCur) * swimSpeed;
+				m_nMoveState = PEDMOVE_WALK;
+			} else {
+				m_vecMoveSpeed.x *= 0.9f;
+				m_vecMoveSpeed.y *= 0.9f;
+				m_nMoveState = PEDMOVE_STILL;
+			}
+			if (!RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL))
+				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_FALL, 4.0f);
+			return;
+		} else if (bIsStanding) {
+			CAnimBlendAssociation *fallAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL);
+			if (fallAssoc)
+				fallAssoc->blendDelta = -4.0f;
+		}
+	}
+#endif
 
 	if (m_nMoveState != PEDMOVE_RUN && m_nMoveState != PEDMOVE_SPRINT)
 		RestoreSprintEnergy(1.0f);
