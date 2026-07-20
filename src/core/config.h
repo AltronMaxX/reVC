@@ -283,7 +283,7 @@ enum Config {
 #define FIX_INCOMPATIBLE_SAVES // try to fix incompatible saves, requires COMPATIBLE_SAVES
 #define LOAD_INI_SETTINGS // as the name suggests. fundamental for CUSTOM_FRONTEND_OPTIONS
 
-#define NO_MOVIES	// add option to disable intro videos
+//#define NO_MOVIES	// add option to disable intro videos
 
 #define EXTENDED_OFFSCREEN_DESPAWN_RANGE // Use onscreen despawn range for offscreen peds and vehicles to avoid them despawning in the distance when you look
                                          // away
