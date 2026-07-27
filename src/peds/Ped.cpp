@@ -4751,6 +4751,10 @@ CPed::RemoveWeaponWhenEnteringVehicle(void)
 			m_storedWeapon = GetWeapon()->m_eWeaponType;
 		SetCurrentWeapon(GetWeapon(5).m_eWeaponType);
 	} else {
+		if (IsPlayer() && HasWeaponSlot(5) && GetWeapon(5).m_nAmmoTotal > 0) { // Anyway storee weapon
+			if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED) // Fix for https://github.com/AltronMaxX/reVC/issues/28
+				m_storedWeapon = GetWeapon()->m_eWeaponType;
+		}
 		CWeaponInfo *ourWeapon = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		RemoveWeaponModel(ourWeapon->m_nModelId);
 	}
