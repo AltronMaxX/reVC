@@ -1,5 +1,6 @@
 #ifndef _WIN32
 #include "common.h"
+#ifdef GTA_PC
 #include "crossplatform.h"
 #include <signal.h>
 #include <pthread.h>
@@ -14,14 +15,12 @@
 #include <sys/resource.h>
 #include <stdarg.h>
 #include <limits.h>
-#include <errno.h>
 
 #ifdef __linux__
 #include <sys/syscall.h>
 #endif
 
 #include "CdStream.h"
-#include "rwcore.h"
 #include "MemoryMgr.h"
 
 #define CDDEBUG(f, ...)   debug ("%s: " f "\n", "cdvd_stream", ## __VA_ARGS__)
@@ -534,37 +533,20 @@ void *CdStreamThread(void *param)
 	pthread_exit(nil);
 }
 
-// Wrapper around open() that transparently retries without O_NOATIME.
-// O_NOATIME may only be used when the process' effective UID owns the file
-// (or has CAP_FOWNER); otherwise open() fails with EPERM even though the file
-// is perfectly readable. This happens e.g. when the game's data files were
-// created by a different user. Since O_NOATIME is only a minor optimization,
-// drop it and try again in that case.
-static int
-OpenImage(const char *path)
-{
-	int fd = open(path, _gdwCdStreamFlags);
-#ifdef __linux__
-	if (fd == -1 && errno == EPERM && (_gdwCdStreamFlags & O_NOATIME))
-		fd = open(path, _gdwCdStreamFlags & ~O_NOATIME);
-#endif
-	return fd;
-}
-
 bool
 CdStreamAddImage(char const *path)
 {
 	ASSERT(path != nil);
 	ASSERT(gNumImages < MAX_CDIMAGES);
 
-	gImgFiles[gNumImages] = OpenImage(path);
+	gImgFiles[gNumImages] = open(path, _gdwCdStreamFlags);
 
 	// Fix case sensitivity and backslashes.
 	if (gImgFiles[gNumImages] == -1) {
 		char* real = casepath(path, false);
 		if (real)
 		{
-			gImgFiles[gNumImages] = OpenImage(real);
+			gImgFiles[gNumImages] = open(real, _gdwCdStreamFlags);
 			free(real);
 		}
 	}
@@ -619,4 +601,5 @@ CdStreamGetNumImages(void)
 {
 	return gNumImages;
 }
+#endif
 #endif

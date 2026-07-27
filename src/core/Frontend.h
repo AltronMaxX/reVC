@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_FRONTEND_H__
+#define __GTA_FRONTEND_H__
 #ifdef PS2_MENU
 #include "Frontend_PS2.h"
 #else
@@ -814,7 +815,7 @@ public:
 	void CheckCodesForControls(int);
 	bool CheckHover(int x1, int x2, int y1, int y2);
 	void CheckSliderMovement(int);
-	void DisplayHelperText(const char*);
+	void DisplayHelperText(char*);
 	int DisplaySlider(float, float, float, float, float, float, float);
 	void DoSettingsBeforeStartingAGame();
 	void DrawStandardMenus(bool);
@@ -880,3 +881,5 @@ VALIDATE_SIZE(CMenuManager, 0x688);
 extern CMenuManager FrontEndMenuManager;
 
 #endif
+
+#endif // __GTA_FRONTEND_H__

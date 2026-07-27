@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_CONFIG_H__
+#define __GTA_CONFIG_H__
 
 // disables (most) stuff that wasn't in original gta-vc.exe
 #ifdef __MWERKS__
@@ -188,6 +189,7 @@ enum Config {
 #	define GTA_SCENE_EDIT
 #	define PC_MENU
 #	define PC_WATER
+#	define GTA_PC_CONTROLS	// enables keyboard and mouse. currently GTA_PC and a few other defines will not work without this
 #elif defined GTA_XBOX
 #elif defined GTA_MOBILE
 #	define MISSION_REPLAY
@@ -425,7 +427,7 @@ static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually
 #endif
 
 // Replay
-#define DONT_FIX_REPLAY_BUGS // keeps various bugs in CReplay, some of which are fairly cool!
+//#define DONT_FIX_REPLAY_BUGS // keeps various bugs in CReplay, some of which are fairly cool!
 //#define USE_BETA_REPLAY_MODE // adds another replay mode, a few seconds slomo (caution: buggy!)
 
 // Vehicles
@@ -507,3 +509,5 @@ static_assert(false, "SUPPORT_XBOX_SCRIPT and SUPPORT_MOBILE_SCRIPT are mutually
 #if defined(GTA_PS2) && defined(EXTERNAL_3D_SOUND)
 #error EXTERNAL_3D_SOUND cannot work on PS2
 #endif
+
+#endif // __GTA_CONFIG_H__

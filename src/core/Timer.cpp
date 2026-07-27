@@ -22,7 +22,6 @@ bool  CTimer::m_CodePause;
 uint32 CTimer::m_LogicalFrameCounter;
 uint32 CTimer::m_LogicalFramesPassed;
 #endif
-bool  CTimer::m_WindowMinimizedPause;
 
 uint32 _nCyclesPerMS = 1;
 
@@ -49,7 +48,6 @@ void CTimer::Initialise(void)
 	suspendDepth = 0;
 	m_UserPause = false;
 	m_CodePause = false;
-	m_WindowMinimizedPause = false;
 	m_snTimeInMillisecondsNonClipped = 0;
 	m_snPreviousTimeInMilliseconds = 0;
 	m_snTimeInMilliseconds = 1;
@@ -324,18 +322,6 @@ void CTimer::StartUserPause(void)
 void CTimer::EndUserPause(void)
 {
 	m_UserPause = false;
-}
-
-void CTimer::SetWindowMinimizedPause(bool pause)
-{
-	if (m_WindowMinimizedPause == pause)
-		return;
-
-	m_WindowMinimizedPause = pause;
-	if (pause)
-		Suspend();
-	else
-		Resume();
 }
 
 uint32 CTimer::GetCyclesPerFrame()

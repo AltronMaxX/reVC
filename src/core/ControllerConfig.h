@@ -1,4 +1,7 @@
-#pragma once
+#ifndef __GTA_CONTROLLERCONFIG_H__
+#define __GTA_CONTROLLERCONFIG_H__
+
+#ifdef GTA_PC_CONTROLS
 
 #if defined RW_D3D9 || defined RWLIBS
 #define DIRECTINPUT_VERSION 0x0800
@@ -227,3 +230,7 @@ VALIDATE_SIZE(CControllerConfigManager, 0x143C);
 #endif
 
 extern CControllerConfigManager ControlsManager;
+
+#endif
+
+#endif // __GTA_CONTROLLERCONFIG_H__

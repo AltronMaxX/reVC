@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_PLAYERINFO_H__
+#define __GTA_PLAYERINFO_H__
 
 #include "ColModel.h"
 
@@ -22,7 +23,6 @@ class CPed;
 class CVehicle;
 class CPlayerPed;
 class CCivilianPed;
-class CPtrList;
 
 class CPlayerInfo
 {
@@ -123,3 +123,5 @@ const CVector &FindPlayerSpeed(void);
 const CVector &FindPlayerCentreOfWorld(int32 player);
 const CVector &FindPlayerCentreOfWorld_NoSniperShift(void);
 float FindPlayerHeading(void);
+
+#endif // __GTA_PLAYERINFO_H__

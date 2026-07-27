@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_CHANNEL_H__
+#define __GTA_CHANNEL_H__
 
 #ifdef AUDIO_OAL
 #include "oal/oal_utils.h"
@@ -9,21 +10,19 @@
 
 class CChannel
 {
-	uint32 id;
+	uint8  id;
+	bool   bIs2DDefault;
+	bool   bForce2D;
+	uint8  Pan;
 	float  Pitch, Gain;
 	float  Mix;
 	void  *Data;
 	size_t DataSize;
-	int32  Frequency;
+	uint32 Frequency;
 	float  Position[3];
 	float  Distances[2];
-	int32  LoopCount;
 	ALint  LoopPoints[2];
-	ALint  LastProcessedOffset;
-	bool   bIs2D;
 public:
-	static int32 channelsThatNeedService;
-
 	static void InitChannels();
 	static void DestroyChannels();
 
@@ -38,18 +37,19 @@ public:
 	bool IsUsed();
 	void SetPitch(float pitch);
 	void SetGain(float gain);
-	void SetVolume(int32 vol);
-	void SetSampleData(void *_data, size_t _DataSize, int32 freq);
+	void SetVolume(uint32 vol);
+	void SetSampleData(void *_data, size_t _DataSize, uint32 freq);
 	void SetCurrentFreq(uint32 freq);
-	void SetLoopCount(int32 count);
+	void SetLoopCount(uint32 count);
 	void SetLoopPoints(ALint start, ALint end);
 	void SetPosition(float x, float y, float z);
 	void SetDistances(float max, float min);
-	void SetPan(int32 pan);
+	void SetPan(uint8 pan);
 	void ClearBuffer();
 	void SetReverbMix(ALuint slot, float mix);
 	void UpdateReverb(ALuint slot);
-	bool Update();
 };
 
 #endif
+
+#endif // __GTA_CHANNEL_H__

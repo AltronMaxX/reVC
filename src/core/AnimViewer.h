@@ -1,6 +1,5 @@
-#pragma once
-
-class CEntity;
+#ifndef __GTA_ANIMVIEWER_H__
+#define __GTA_ANIMVIEWER_H__
 
 class CAnimViewer {
 public:
@@ -12,3 +11,5 @@ public:
 	static void Shutdown();
 	static void Update();
 };
+
+#endif // __GTA_ANIMVIEWER_H__

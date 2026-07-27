@@ -1,11 +1,12 @@
 #include "DiscordRpc.h"
-#include <common.h>
+#include "Ped.h"
+#include "PlayerPed.h"
+#include "Replay.h"
+#include "Script.h"
 #include <PlayerInfo.h>
 #include <World.h>
 #include <Zones.h>
-#include "PlayerPed.h"
-#include "Ped.h"
-#include "Script.h"
+#include <common.h>
 
 #include <locale>
 
@@ -75,6 +76,9 @@ static const char *WideToUtf8(const wchar *s)
 void DiscordRPC::Update()
 {
 	Discord_RunCallbacks();
+
+	if (CReplay::IsPlayingBack())
+		return;
 
 	static std::string missionName;
 	static bool wasOnMission = false;

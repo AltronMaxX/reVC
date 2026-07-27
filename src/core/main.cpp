@@ -9,73 +9,72 @@
 #include "rpanisot.h"
 #endif
 
-#include "AnimViewer.h"
-#include "Antennas.h"
-#include "Camera.h"
+#include "main.h"
 #include "CdStream.h"
-#include "Clock.h"
-#include "Clouds.h"
-#include "Console.h"
-#include "Coronas.h"
-#include "Credits.h"
-#include "CutsceneMgr.h"
-#include "DMAudio.h"
-#include "Darkel.h"
-#include "Debug.h"
-#include "Draw.h"
-#include "FileMgr.h"
-#include "Fluff.h"
-#include "Font.h"
-#include "Frontend.h"
-#include "Garages.h"
 #include "General.h"
-#include "GenericGameStorage.h"
-#include "Glass.h"
-#include "Hud.h"
-#include "Lights.h"
-#include "MemoryCard.h"
-#include "MemoryHeap.h"
-#include "Messages.h"
-#include "MusicManager.h"
-#include "NodeName.h"
-#include "Occlusion.h"
-#include "Pad.h"
-#include "Particle.h"
-#include "PathFind.h"
-#include "Ped.h"
-#include "Pickups.h"
-#include "PointLights.h"
-#include "Renderer.h"
-#include "Replay.h"
-#include "Ropes.h"
-#include "RpAnimBlend.h"
-#include "Rubbish.h"
 #include "RwHelper.h"
-#include "SceneEdit.h"
-#include "Script.h"
+#include "Clouds.h"
+#include "Draw.h"
+#include "Sprite2d.h"
+#include "Renderer.h"
+#include "Coronas.h"
+#include "WaterLevel.h"
+#include "Weather.h"
+#include "Glass.h"
+#include "WaterCannon.h"
+#include "SpecialFX.h"
 #include "Shadows.h"
 #include "Skidmarks.h"
-#include "SpecialFX.h"
-#include "Sprite2d.h"
-#include "Text.h"
+#include "Antennas.h"
+#include "Rubbish.h"
+#include "Particle.h"
+#include "Pickups.h"
+#include "WeaponEffects.h"
+#include "PointLights.h"
+#include "Fluff.h"
+#include "Replay.h"
+#include "Camera.h"
+#include "World.h"
+#include "Ped.h"
+#include "Font.h"
+#include "Pad.h"
+#include "Hud.h"
+#include "User.h"
+#include "Messages.h"
+#include "Darkel.h"
+#include "Garages.h"
+#include "MusicManager.h"
+#include "VisibilityPlugins.h"
+#include "NodeName.h"
+#include "DMAudio.h"
+#include "CutsceneMgr.h"
+#include "Lights.h"
+#include "Credits.h"
+#include "ZoneCull.h"
 #include "Timecycle.h"
 #include "TxdStore.h"
-#include "User.h"
-#include "VarConsole.h"
-#include "VisibilityPlugins.h"
-#include "WaterCannon.h"
-#include "WaterLevel.h"
-#include "WeaponEffects.h"
-#include "Weather.h"
-#include "World.h"
-#include "ZoneCull.h"
-#include "crossplatform.h"
-#include "custompipes.h"
-#include "debugmenu.h"
-#include "main.h"
-#include "postfx.h"
-#include "screendroplets.h"
+#include "FileMgr.h"
+#include "Text.h"
+#include "RpAnimBlend.h"
+#include "Frontend.h"
+#include "AnimViewer.h"
+#include "Script.h"
+#include "PathFind.h"
+#include "Debug.h"
+#include "Console.h"
 #include "timebars.h"
+#include "GenericGameStorage.h"
+#include "MemoryCard.h"
+#include "MemoryHeap.h"
+#include "SceneEdit.h"
+#include "debugmenu.h"
+#include "Clock.h"
+#include "Occlusion.h"
+#include "Ropes.h"
+#include "postfx.h"
+#include "custompipes.h"
+#include "screendroplets.h"
+#include "VarConsole.h"
 #ifdef USE_OUR_VERSIONING
 #include "GitSHA1.h"
 #endif
@@ -382,7 +381,12 @@ DoRWStuffEndOfFrame(void)
 		}
 	}
 #else
-	if (CPad::GetPad(1)->GetLeftShockJustDown() || CPad::GetPad(0)->GetFJustDown(11)) {
+#ifdef GTA_PC_CONTROLS
+	if (CPad::GetPad(1)->GetLeftShockJustDown() || CPad::GetPad(0)->GetFJustDown(11))
+#else
+	if (CPad::GetPad(1)->GetLeftShockJustDown())
+#endif
+	{
 		sprintf(s, "screen_%011lld.png", time(nil));
 		RwGrabScreen(Scene.camera, s);
 	}
@@ -1883,7 +1887,7 @@ void TheGame(void)
 			TheText.Load();
 		}
 
-		CGame::currLevel = TheMemoryCard.GetLevelToLoad();
+		CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
 	}
 #else
 	//TODO
@@ -1906,7 +1910,7 @@ void TheGame(void)
 			CSprite2d::InitPerFrame();
 			CFont::InitPerFrame();
 
-			PUSH_MEMID(MEMID_GAME_PROCESS)
+			PUSH_MEMID(MEMID_GAME_PROCESS);
 			CPointLights::InitPerFrame();
 			CGame::Process();
 			POP_MEMID();
@@ -1990,7 +1994,7 @@ void TheGame(void)
 
 			CTimer::Update();
 
-			POP_MEMID():	// MEMID_RENDER
+			POP_MEMID();	// MEMID_RENDER
 
 			if (g_SlowMode)
 				ProcessSlowMode();

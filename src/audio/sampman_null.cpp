@@ -322,7 +322,7 @@ cSampleManager::StopChannel(uint32 nChannel)
 }
 
 void
-cSampleManager::PreloadStreamedFile(uint32 nFile, uint8 nStream)
+cSampleManager::PreloadStreamedFile(tTrack nFile, uint8 nStream)
 {
 	ASSERT( nStream < MAX_STREAMS );
 }
@@ -340,7 +340,7 @@ cSampleManager::StartPreloadedStreamedFile(uint8 nStream)
 }
 
 bool8
-cSampleManager::StartStreamedFile(uint32 nFile, uint32 nPos, uint8 nStream)
+cSampleManager::StartStreamedFile(tTrack nFile, uint32 nPos, uint8 nStream)
 {	
 	ASSERT( nStream < MAX_STREAMS );
 	
@@ -362,7 +362,11 @@ cSampleManager::GetStreamedFilePosition(uint8 nStream)
 }
 
 void
+#ifdef GTA_PS2
+cSampleManager::SetStreamedVolumeAndPan(uint8 nVolume, uint8 nLRPan, uint8 nFRPan, bool8 nEffectFlag, uint8 nStream)
+#else
 cSampleManager::SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, bool8 nEffectFlag, uint8 nStream)
+#endif
 {
 	ASSERT( nStream < MAX_STREAMS );
 }
@@ -381,6 +385,11 @@ cSampleManager::IsStreamPlaying(uint8 nStream)
 	ASSERT( nStream < MAX_STREAMS );
 
 	return FALSE;
+}
+
+void
+cSampleManager::Service(void)
+{
 }
 
 bool8

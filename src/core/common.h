@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_COMMON_H__
+#define __GTA_COMMON_H__
 
 #define _CRT_SECURE_NO_WARNINGS
 #define _USE_MATH_DEFINES
@@ -35,7 +36,6 @@
 #endif
 
 #if defined _WIN32 && defined WITHWINDOWS && !defined _INC_WINDOWS
-#define NOMINMAX
 #include <windows.h>
 #endif
 
@@ -371,7 +371,7 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 #endif
 #define ASSERT assert
 
-#ifdef __MWERKS__
+#if defined(__MWERKS__) || defined(GTA_PS2)
 #define static_assert(bool_constexpr, message)
 #endif
 
@@ -401,3 +401,5 @@ template<int s, int t> struct check_size {
 #define CONCAT_(x,y) x##y
 #define CONCAT(x,y) CONCAT_(x,y)
 
+
+#endif // __GTA_COMMON_H__
