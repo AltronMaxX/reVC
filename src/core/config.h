@@ -286,6 +286,7 @@ enum Config {
 #define LOAD_INI_SETTINGS // as the name suggests. fundamental for CUSTOM_FRONTEND_OPTIONS
 
 //#define NO_MOVIES	// add option to disable intro videos
+#define RANDOM_SPLASH_SCREEN
 
 #define EXTENDED_OFFSCREEN_DESPAWN_RANGE // Use onscreen despawn range for offscreen peds and vehicles to avoid them despawning in the distance when you look
                                          // away

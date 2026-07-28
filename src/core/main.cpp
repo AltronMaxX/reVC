@@ -1732,7 +1732,14 @@ FrontendIdle(void)
 void
 InitialiseGame(void)
 {
+#ifdef RANDOM_SPLASH_SCREEN // Random splash screen
+	int index = CGeneral::GetRandomNumberInRange(0, 14);
+	char splashName[16];
+	sprintf(splashName, "loadsc%d", index);
+	LoadingScreen(nil, nil, splashName);
+#else
 	LoadingScreen(nil, nil, "loadsc0");
+#endif
 	CGame::Initialise("DATA\\GTA_VC.DAT");
 #ifdef USE_DISCORD_RPC
 	DiscordRPC::Initialize();

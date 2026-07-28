@@ -2249,9 +2249,9 @@ main(int argc, char *argv[])
 
 				    case GS_INIT_INTRO_MPEG:
 					{
-				    	/*if (CMenuManager::OS_Language == LANG_FRENCH || CMenuManager::OS_Language == LANG_GERMAN)
+				    	if (FrontEndMenuManager.OS_Language == LANG_FRENCH || FrontEndMenuManager.OS_Language == LANG_GERMAN)
 				    		MoviePlayer::Play("movies/GTAtitlesGER.mpg");
-				    	else*/
+				    	else
 				    		MoviePlayer::Play("movies/GTAtitles.mpg");
 
 					    gGameState = GS_INTRO_MPEG;
