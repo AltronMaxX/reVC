@@ -116,7 +116,7 @@ public:
 #endif
 class CStream
 {
-	char     m_aFilename[128];
+	char     m_aFilename[MAX_PATH];
 	ALuint  *m_pAlSources;
 	ALuint (&m_alBuffers)[NUM_STREAMBUFFERS];
 	

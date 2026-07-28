@@ -102,14 +102,6 @@ extern RwUInt32 gGameState;
 
 RwBool IsForegroundApp();
 
-#ifndef MAX_PATH
-    #if !defined _WIN32 || defined __MINGW32__
-    #define MAX_PATH PATH_MAX
-    #else
-    #define MAX_PATH 260
-    #endif
-#endif
-
 // Codes compatible with Windows and Linux
 #ifndef _WIN32
 #define DeleteFile unlink
@@ -153,7 +145,7 @@ typedef void* HANDLE;
 
 struct WIN32_FIND_DATA {
     char extension[32]; // for searching
-    char folder[MAX_PATH];	// for searching
+    char folder[PATH_MAX];	// for searching
     char cFileName[256]; // because tSkinInfo has it 256
     time_t ftLastWriteTime;
 };

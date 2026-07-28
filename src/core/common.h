@@ -1,6 +1,8 @@
 #ifndef __GTA_COMMON_H__
 #define __GTA_COMMON_H__
 
+#include <limits.h>
+
 #define _CRT_SECURE_NO_WARNINGS
 #define _USE_MATH_DEFINES
 #pragma warning(disable: 4244)	// int to float
@@ -216,6 +218,14 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #else
 #define SCREEN_SCALE_AR(a) (a)
 #define SCALE_AND_CENTER_X(x) SCREEN_STRETCH_X(x)
+#endif
+
+#ifndef MAX_PATH
+#if !defined _WIN32 || defined __MINGW32__
+#define MAX_PATH PATH_MAX
+#else
+#define MAX_PATH 4096
+#endif
 #endif
 
 #include "maths.h"

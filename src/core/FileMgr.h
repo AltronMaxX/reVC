@@ -1,12 +1,5 @@
 #ifndef __GTA_FILEMGR_H__
 #define __GTA_FILEMGR_H__
-#ifndef MAX_PATH
-    #if !defined _WIN32 || defined __MINGW32__
-    #define MAX_PATH 4096
-    #else
-    #define MAX_PATH 260
-    #endif
-#endif
 
 class CFileMgr
 {
