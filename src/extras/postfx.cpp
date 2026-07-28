@@ -359,13 +359,10 @@ CPostFX::NeedFrontBuffer(int32 type)
 	// Last frame -- needed for motion blur
 	if(CMBlur::Drunkness > 0.0f)
 		return true;
-	if(type == MOTION_BLUR_SNIPER)
-		return true;
 
 	switch(EffectSwitch){
 	case POSTFX_OFF:
 	case POSTFX_SIMPLE:
-		// no actual rendering here
 		return false;
 	case POSTFX_NORMAL:
 		if(MotionBlurOn)
@@ -402,6 +399,10 @@ CPostFX::Render(RwCamera *cam, uint32 red, uint32 green, uint32 blue, uint32 blu
 		green = AvgGreen;
 		blue = AvgBlue;
 		blur = AvgAlpha;
+	} else if(type == MOTION_BLUR_SNIPER){
+		red = AvgRed;
+		green = AvgGreen;
+		blue = AvgBlue;
 	}
 
 	if(NeedBackBuffer())
@@ -414,13 +415,11 @@ CPostFX::Render(RwCamera *cam, uint32 red, uint32 green, uint32 blue, uint32 blu
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 
-	if(type == MOTION_BLUR_SNIPER){
-		if(!bJustInitialised)
-			RenderOverlaySniper(cam, red, green, blue, blur);
-	}else switch(EffectSwitch){
+	switch(EffectSwitch){
 	case POSTFX_OFF:
 	case POSTFX_SIMPLE:
-		// no actual rendering here
+		if(type == MOTION_BLUR_SNIPER && !bJustInitialised)
+			RenderOverlaySniper(cam, red, green, blue, blur);
 		break;
 	case POSTFX_NORMAL:
 		if(MotionBlurOn){
