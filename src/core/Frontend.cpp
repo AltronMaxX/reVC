@@ -787,7 +787,7 @@ CMenuManager::CheckSliderMovement(int value)
 }
 
 void
-CMenuManager::DisplayHelperText(char *text)
+CMenuManager::DisplayHelperText(const char *text)
 {
 	if (m_nMenuFadeAlpha != 255)
 		return;
