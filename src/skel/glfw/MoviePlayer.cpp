@@ -13,8 +13,10 @@
 #include "crossplatform.h"
 #include "skeleton.h"
 
+#ifdef AUDIO_OAL
 #include <AL/al.h>
 #include <AL/alc.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
@@ -169,20 +171,24 @@ namespace
 	int g_videoHeight = 0;
 	double g_frameDuration = 1.0 / 30.0; // seconds per video frame, from plm_get_framerate()
 
+	bool g_audioReady = false;
+	int g_audioSampleRate = 48000;
+	double g_audioFrameDuration = (double)PLM_AUDIO_SAMPLES_PER_FRAME / 48000.0; // seconds per audio frame
+	double g_audioAccumulator = 0.0;
+
+#ifdef AUDIO_OAL
 	ALCdevice *g_alDevice = nullptr;
 	ALCcontext *g_alContext = nullptr;
 	ALuint g_alSource = 0;
 	static const int kNumAudioBuffers = 4;
 	ALuint g_alBuffers[kNumAudioBuffers] = { 0, 0, 0, 0 };
-	bool g_audioReady = false;
-	int g_audioSampleRate = 48000;
-	double g_audioFrameDuration = (double)PLM_AUDIO_SAMPLES_PER_FRAME / 48000.0; // seconds per audio frame
-	double g_audioAccumulator = 0.0;
 	int g_nextFreeBuffer = 0;
+#endif
 
 	double g_lastTime = 0.0; // seconds, from glfwGetTime()
 	double g_accumulator = 0.0;
 
+#ifdef AUDIO_OAL
 	bool InitAudio()
 	{
 		g_alDevice = alcOpenDevice(nullptr); // default device
@@ -269,6 +275,11 @@ namespace
 		if (state != AL_PLAYING)
 			alSourcePlay(g_alSource);
 	}
+#else
+	bool InitAudio() { return false; }
+	void CloseAudio() {}
+	void QueueAudioFrame(plm_samples_t *) {}
+#endif
 
 	void CloseMovie()
 	{
