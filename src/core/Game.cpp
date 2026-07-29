@@ -977,7 +977,7 @@ void CGame::Process(void)
 
 	if (bRequestAutosave) {
 		auto playerInfo = CWorld::Players[CWorld::PlayerInFocus];
-		if (!playerInfo.m_pPed->bInVehicle &&
+		if (!CReplay::IsPlayingBack() && !playerInfo.m_pPed->bInVehicle &&
 			!playerInfo.IsRestartingAfterArrest() &&
 			!playerInfo.IsRestartingAfterDeath() &&
 			playerInfo.m_pPed->m_nPedState != PED_DEAD &&
