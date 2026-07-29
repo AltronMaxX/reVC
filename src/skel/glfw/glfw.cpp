@@ -179,7 +179,9 @@ MarkWindowFocusLost(void)
 	WindowFocused = FALSE;
 	WindowFocusLostLatch = TRUE;
 	WindowActivePollCount = 0;
-	ApplyWindowMinimizedPause(TRUE);
+	// GLFW callbacks may run while glfwSetWindowMonitor is changing modes.
+	// Defer mouse/audio/game state changes until glfwPollEvents has returned.
+	ForegroundApp = FALSE;
 }
 
 bool
@@ -2117,8 +2119,6 @@ windowFocusCB(GLFWwindow* window, int focused) {
 	WindowFocused = !!focused;
 	if (!focused)
 		MarkWindowFocusLost();
-	else
-		psRefreshFocusAfterPause();
 }
 
 void
@@ -2126,8 +2126,6 @@ windowIconifyCB(GLFWwindow* window, int iconified) {
 	WindowIconified = !!iconified;
 	if (iconified)
 		MarkWindowFocusLost();
-	else
-		psRefreshFocusAfterPause();
 }
 
 /*
@@ -2397,6 +2395,9 @@ main(int argc, char *argv[])
 #endif
 		{
 			glfwPollEvents();
+			// Callbacks above only latch raw state. Apply the transition here,
+			// outside GLFW's native message-dispatch stack.
+			psRefreshAndGetWindowMinimizedPause();
 #ifdef GET_KEYBOARD_INPUT_FROM_X11
 			checkKeyPresses();
 #endif

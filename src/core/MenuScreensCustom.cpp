@@ -289,7 +289,6 @@ void ScreenModeAfterChange(int8 before, int8 after)
 	const bool showMouse = FrontEndMenuManager.m_bShowMouse;
 
 	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
-	psRestoreFocusAfterPause();
 
 	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
 	FrontEndMenuManager.m_nCurrOption = currOption;

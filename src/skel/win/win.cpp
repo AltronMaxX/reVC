@@ -186,7 +186,10 @@ MarkWindowFocusLost(void)
 	WindowFocused = FALSE;
 	WindowFocusLostLatch = TRUE;
 	WindowActivePollCount = 0;
-	ApplyWindowMinimizedPause(TRUE);
+	// Window messages can be dispatched re-entrantly by ShowWindow/SetWindowPos
+	// while RenderWare is changing video modes. Defer mouse/audio/game state
+	// changes until the main loop has returned from the window procedure.
+	ForegroundApp = FALSE;
 }
 
 bool
@@ -1137,7 +1140,6 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 				MarkWindowFocusLost();
 			} else {
 				WindowMinimized = FALSE;
-				psRefreshFocusAfterPause();
 			}
 
 			r.x = 0;
@@ -1334,8 +1336,6 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			if (PSGLOBAL(window) != nil) {
 				if (LOWORD(wParam) == WA_INACTIVE)
 					MarkWindowFocusLost();
-				else
-					psRefreshFocusAfterPause();
 			}
 			break;
 		}
@@ -1345,8 +1345,6 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			if (PSGLOBAL(window) != nil) {
 				if (!(BOOL)wParam)
 					MarkWindowFocusLost();
-				else
-					psRefreshFocusAfterPause();
 			}
 
 			switch ( gGameState )
@@ -1483,8 +1481,6 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case WM_SETFOCUS:
 		{
-			if (PSGLOBAL(window) != nil)
-				psRefreshFocusAfterPause();
 			break;
 		}
 
@@ -1839,7 +1835,7 @@ psSelectDevice()
 		const int height = monitorRect.bottom - monitorRect.top;
 
 		ShowWindow(PSGLOBAL(window), SW_RESTORE);
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP | WS_MINIMIZEBOX);
 		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
 			monitorRect.left, monitorRect.top, width, height,
 			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
@@ -2484,6 +2480,9 @@ WinMain(HINSTANCE instance,
 		while( !RsGlobal.quit && !FrontEndMenuManager.m_bWantToRestart )
 #endif
 		{
+			// Apply focus transitions only from the main loop. In particular, do
+			// not release input or service audio from a re-entrant window callback.
+			psRefreshAndGetWindowMinimizedPause();
 			if( PeekMessage(&message, nil, 0U, 0U, PM_REMOVE|PM_NOYIELD) )
 			{
 				if( message.message == WM_QUIT )
@@ -2943,6 +2942,8 @@ HRESULT CapturePad(RwInt32 padID)
 	
 	if ( nil == (*pPad) )
 		return S_OK;
+	if (!IsWindowActuallyActive())
+		return DIERR_OTHERAPPHASPRIO;
 	
 	// Poll the device to read the current state
 	hr = (*pPad)->Poll();
@@ -2954,12 +2955,11 @@ HRESULT CapturePad(RwInt32 padID)
 		// we don't have any special reset that needs to be done. We
 		// just re-acquire and try again.
 		hr = (*pPad)->Acquire();
-		while( hr == DIERR_INPUTLOST ) 
-			hr = (*pPad)->Acquire();
 
 		// hr may be DIERR_OTHERAPPHASPRIO or other errors.	 This
-		// may occur when the app is minimized or in the process of 
-		// switching, so just try again later 
+		// may occur when the app is minimized or in the process of
+		// switching, so never spin here: the message pump must remain free
+		// to process the focus event that lets DirectInput recover.
 		
 		if( FAILED(hr) )
 			return hr; 
@@ -3172,6 +3172,8 @@ HRESULT _InputGetMouseState(DIMOUSESTATE2 *state)
 	
 	if ( PSGLOBAL(mouse) == nil )
 		return S_FALSE;
+	if (!IsWindowActuallyActive())
+		return DIERR_OTHERAPPHASPRIO;
 	
 	// Get the input's device state, and put the state in dims
 	ZeroMemory( state, sizeof(DIMOUSESTATE2) );
@@ -3185,10 +3187,11 @@ HRESULT _InputGetMouseState(DIMOUSESTATE2 *state)
 		// we don't have any special reset that needs to be done.
 		// We just re-acquire and try again.
 		
-		// If input is lost then acquire and keep trying 
+		// Retry once. A loop here can deadlock Alt+Tab because DirectInput
+		// cannot recover until the main thread processes more window events.
 		hr = PSGLOBAL(mouse)->Acquire();
-		while( hr == DIERR_INPUTLOST ) 
-			hr = PSGLOBAL(mouse)->Acquire();
+		if ( FAILED(hr) )
+			return hr;
 		
 		ZeroMemory( state, sizeof(DIMOUSESTATE2) );
 		hr = PSGLOBAL(mouse)->GetDeviceState( sizeof(DIMOUSESTATE2), state );
