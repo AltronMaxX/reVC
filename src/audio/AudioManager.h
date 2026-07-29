@@ -573,6 +573,7 @@ public:
 	bool8 IsMissionAudioSamplePlaying(uint8 slot);
 	bool8 IsMissionAudioSampleFinished(uint8 slot);
 	void ClearMissionAudio(uint8 slot); // inlined in vc
+	void SetMissionAudioPausedForWindowPause(bool paused);
 	void ProcessMissionAudioSlot(uint8 slot);
 	void ProcessMissionAudio();
 
@@ -581,6 +582,7 @@ public:
 	void InitialisePoliceRadio();
 	void ResetPoliceRadio();
 	void SetMissionScriptPoliceAudio(uint32 sfx); // inlined and optimized
+	void RestartMissionScriptPoliceAudioAfterPause(uint32 sfx);
 	int8 GetMissionScriptPoliceAudioPlayingStatus();
 	void DoPoliceRadioCrackle();
 	void ServicePoliceRadio();

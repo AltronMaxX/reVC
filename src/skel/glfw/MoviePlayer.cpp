@@ -164,6 +164,7 @@ namespace
 {
 	enum class State { Inactive, Active, Stopping };
 	State g_state = State::Inactive;
+	bool g_paused = false;
 
 	plm_t *g_plm = nullptr;
 	uint8_t *g_rgbaBuffer = nullptr;
@@ -288,6 +289,7 @@ namespace
 		CloseAudio();
 		g_videoWidth = 0;
 		g_videoHeight = 0;
+		g_paused = false;
 		g_state = State::Inactive;
 	}
 
@@ -555,12 +557,31 @@ void MoviePlayer::Play(const char *path)
 
 	g_lastTime = glfwGetTime();
 	g_accumulator = 0.0;
+	g_paused = false;
 	g_state = State::Active;
 }
 
 bool MoviePlayer::IsActive()
 {
 	return g_state != State::Inactive;
+}
+
+void MoviePlayer::SetPaused(bool paused)
+{
+	if (g_state == State::Inactive || g_paused == paused)
+		return;
+
+	g_paused = paused;
+#ifdef AUDIO_OAL
+	if (g_audioReady) {
+		if (paused)
+			alSourcePause(g_alSource);
+		else
+			alSourcePlay(g_alSource);
+	}
+#endif
+	if (!paused)
+		g_lastTime = glfwGetTime();
 }
 
 void MoviePlayer::Stop()
@@ -571,7 +592,7 @@ void MoviePlayer::Stop()
 
 void MoviePlayer::Draw()
 {
-	if (g_state == State::Inactive)
+	if (g_state == State::Inactive || g_paused)
 		return;
 
 	if (g_state == State::Stopping) {

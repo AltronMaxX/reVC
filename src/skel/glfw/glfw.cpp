@@ -73,6 +73,9 @@ rw::EngineOpenParams openParams;
 static RwBool		  ForegroundApp = TRUE;
 static RwBool		  WindowIconified = FALSE;
 static RwBool		  WindowFocused = TRUE;
+static RwBool		  WindowFocusLostLatch = FALSE;
+static RwBool		  WindowPlatformPaused = FALSE;
+static RwInt32		  WindowActivePollCount = 2;
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -103,6 +106,138 @@ IsFullscreenLikeWindowMode(void)
 #else
 	return PSGLOBAL(fullScreen);
 #endif
+}
+
+static RwBool
+IsWindowActuallyActive(void)
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	if (window == nil ||
+		glfwGetWindowAttrib(window, GLFW_ICONIFIED) != GLFW_FALSE ||
+		glfwGetWindowAttrib(window, GLFW_FOCUSED) != GLFW_TRUE)
+		return FALSE;
+
+#ifdef _WIN32
+	return GetForegroundWindow() == glfwGetWin32Window(window);
+#else
+	return TRUE;
+#endif
+}
+
+static void
+SetWindowAudioSuspended(RwBool suspended)
+{
+	DMAudio.SetStreamsPausedForWindowPause(!!suspended || CGame::IsWindowPauseMenuActive());
+	if (suspended) {
+		DMAudio.SetEffectsMasterVolume(0);
+		DMAudio.SetMusicMasterVolume(0);
+	} else {
+		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+	}
+	DMAudio.Service();
+}
+
+static void
+RefreshWindowPauseMouse(void)
+{
+	if (PSGLOBAL(window) == nil)
+		return;
+
+	_InputInitialiseMouse(!CGame::IsWindowPauseMenuActive() &&
+		!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
+}
+
+static void
+ApplyWindowMinimizedPause(RwBool paused)
+{
+	if (WindowPlatformPaused == paused) {
+		ForegroundApp = !paused;
+		CTimer::SetWindowMinimizedPause(!!paused);
+		return;
+	}
+
+	WindowPlatformPaused = paused;
+	ForegroundApp = !paused;
+	CTimer::SetWindowMinimizedPause(!!paused);
+	MoviePlayer::SetPaused(!!paused);
+
+	if (paused) {
+		_InputShutdownMouse();
+		CGame::InitAfterFocusLoss();
+	} else {
+		CGame::ResumeWindowPauseMenuAfterFocusRestore();
+		RefreshWindowPauseMouse();
+	}
+
+	SetWindowAudioSuspended(paused);
+}
+
+static void
+MarkWindowFocusLost(void)
+{
+	WindowFocused = FALSE;
+	WindowFocusLostLatch = TRUE;
+	WindowActivePollCount = 0;
+	// GLFW callbacks may run while glfwSetWindowMonitor is changing modes.
+	// Defer mouse/audio/game state changes until glfwPollEvents has returned.
+	ForegroundApp = FALSE;
+}
+
+bool
+psRefreshAndGetWindowMinimizedPause()
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	if (window != nil) {
+		WindowIconified = glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
+		WindowFocused = IsWindowActuallyActive();
+	} else {
+		WindowIconified = FALSE;
+		WindowFocused = TRUE;
+	}
+
+	if (WindowIconified || !WindowFocused) {
+		WindowFocusLostLatch = TRUE;
+		WindowActivePollCount = 0;
+	} else if (WindowFocusLostLatch) {
+		if (++WindowActivePollCount >= 2) {
+			WindowFocusLostLatch = FALSE;
+			WindowActivePollCount = 2;
+		}
+	} else {
+		WindowActivePollCount = 2;
+	}
+
+	ApplyWindowMinimizedPause(WindowIconified || !WindowFocused || WindowFocusLostLatch);
+	return !!WindowPlatformPaused;
+}
+
+void
+psRefreshFocusAfterPause()
+{
+	(void)psRefreshAndGetWindowMinimizedPause();
+}
+
+void
+psRestoreFocusAfterPause()
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	WindowIconified = window != nil && glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
+	WindowFocused = window == nil || glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
+
+	if (WindowIconified || !WindowFocused || !IsWindowActuallyActive()) {
+		WindowFocusLostLatch = TRUE;
+		WindowActivePollCount = 0;
+		ApplyWindowMinimizedPause(TRUE);
+		return;
+	}
+
+	WindowFocusLostLatch = FALSE;
+	WindowActivePollCount = 2;
+	const RwBool wasPaused = WindowPlatformPaused;
+	ApplyWindowMinimizedPause(FALSE);
+	if (!wasPaused)
+		RefreshWindowPauseMouse();
 }
 
 size_t _dwMemAvailPhys;
@@ -194,8 +329,7 @@ psCameraBeginUpdate(RwCamera *camera)
 {
 	if ( !RwCameraBeginUpdate(Scene.camera) )
 	{
-		ForegroundApp = FALSE;
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		MarkWindowFocusLost();
 		return FALSE;
 	}
 	
@@ -421,8 +555,12 @@ psInitialize(void)
 	
 	PsGlobal.fullScreen = FALSE;
 	PsGlobal.cursorIsInWindow = FALSE;
+	ForegroundApp = TRUE;
 	WindowFocused = TRUE;
 	WindowIconified = FALSE;
+	WindowFocusLostLatch = FALSE;
+	WindowPlatformPaused = FALSE;
+	WindowActivePollCount = 2;
 	
 	PsGlobal.joy1id	= -1;
 	PsGlobal.joy2id	= -1;
@@ -705,8 +843,8 @@ RwBool IsForegroundApp()
 
 
 #ifdef IMPROVED_VIDEOMODE
-static void
-GetBorderlessMonitorInfo(int *x, int *y, int *width, int *height)
+static GLFWmonitor *
+GetSelectedMonitor(void)
 {
 	int numMonitors;
 	GLFWmonitor **monitors = glfwGetMonitors(&numMonitors);
@@ -716,12 +854,23 @@ GetBorderlessMonitorInfo(int *x, int *y, int *width, int *height)
 		monitor = monitors[GcurSel];
 	if (monitor == nil)
 		monitor = glfwGetPrimaryMonitor();
+	return monitor;
+}
+
+static void
+GetSelectedMonitorInfo(int *x, int *y, int *width, int *height, RwBool workArea)
+{
+	GLFWmonitor *monitor = GetSelectedMonitor();
 
 	if (monitor != nil) {
-		const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-		glfwGetMonitorPos(monitor, x, y);
+		if (workArea) {
+			glfwGetMonitorWorkarea(monitor, x, y, width, height);
+			return;
+		}
 
+		const GLFWvidmode *mode = glfwGetVideoMode(monitor);
 		if (mode != nil) {
+			glfwGetMonitorPos(monitor, x, y);
 			*width = mode->width;
 			*height = mode->height;
 			return;
@@ -732,6 +881,64 @@ GetBorderlessMonitorInfo(int *x, int *y, int *width, int *height)
 	*y = 0;
 	*width = FrontEndMenuManager.m_nPrefsWidth;
 	*height = FrontEndMenuManager.m_nPrefsHeight;
+}
+
+static void
+ApplyGLFWWindowMode(const RwVideoMode &vm)
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	if (window == nil)
+		return;
+
+	GLFWmonitor *monitor = GetSelectedMonitor();
+	const GLFWvidmode *monitorMode = monitor == nil ? nil : glfwGetVideoMode(monitor);
+
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN && monitor != nil) {
+		glfwRestoreWindow(window);
+		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+		glfwSetWindowMonitor(window, monitor, 0, 0, vm.width, vm.height,
+			monitorMode == nil ? GLFW_DONT_CARE : monitorMode->refreshRate);
+
+		RsGlobal.maximumWidth = vm.width;
+		RsGlobal.maximumHeight = vm.height;
+		RsGlobal.width = vm.width;
+		RsGlobal.height = vm.height;
+		PSGLOBAL(fullScreen) = TRUE;
+	} else if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+		int x, y, width, height;
+		GetSelectedMonitorInfo(&x, &y, &width, &height, FALSE);
+
+		glfwRestoreWindow(window);
+		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+		glfwSetWindowMonitor(window, nil, x, y, width, height, GLFW_DONT_CARE);
+		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
+
+		RsGlobal.maximumWidth = width;
+		RsGlobal.maximumHeight = height;
+		RsGlobal.width = width;
+		RsGlobal.height = height;
+		PSGLOBAL(fullScreen) = FALSE;
+	} else {
+		int x, y, width, height;
+		GetSelectedMonitorInfo(&x, &y, &width, &height, TRUE);
+		const int windowWidth = FrontEndMenuManager.m_nPrefsWidth;
+		const int windowHeight = FrontEndMenuManager.m_nPrefsHeight;
+
+		glfwRestoreWindow(window);
+		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+		glfwSetWindowMonitor(window, nil,
+			x + (width - windowWidth) / 2, y + (height - windowHeight) / 2,
+			windowWidth, windowHeight, GLFW_DONT_CARE);
+		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
+		glfwMaximizeWindow(window);
+
+		glfwGetFramebufferSize(window, &width, &height);
+		RsGlobal.maximumWidth = width;
+		RsGlobal.maximumHeight = height;
+		RsGlobal.width = width;
+		RsGlobal.height = height;
+		PSGLOBAL(fullScreen) = FALSE;
+	}
 }
 #endif
 
@@ -941,7 +1148,8 @@ psSelectDevice()
 	/* Set up the video mode and set the apps window
 	* dimensions to match */
 #ifdef IMPROVED_VIDEOMODE
-	glfwWindowHint(GLFW_DECORATED, FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS ? GLFW_FALSE : GLFW_TRUE);
+	glfwWindowHint(GLFW_DECORATED, FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_WINDOWED ? GLFW_TRUE : GLFW_FALSE);
+	glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
 #endif
 	if (!RwEngineSetVideoMode(GcurSelVM))
 	{
@@ -973,22 +1181,7 @@ psSelectDevice()
 		PSGLOBAL(fullScreen) = TRUE;
 	}
 #else
-	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
-		int x, y, width, height;
-		GetBorderlessMonitorInfo(&x, &y, &width, &height);
-
-		RsGlobal.maximumWidth = width;
-		RsGlobal.maximumHeight = height;
-		RsGlobal.width = width;
-		RsGlobal.height = height;
-	} else {
-		RsGlobal.maximumWidth = FrontEndMenuManager.m_nPrefsWidth;
-		RsGlobal.maximumHeight = FrontEndMenuManager.m_nPrefsHeight;
-		RsGlobal.width = FrontEndMenuManager.m_nPrefsWidth;
-		RsGlobal.height = FrontEndMenuManager.m_nPrefsHeight;
-	}
-
-	PSGLOBAL(fullScreen) = FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN;
+	ApplyGLFWWindowMode(vm);
 #endif
 
 #ifdef MULTISAMPLING
@@ -1093,7 +1286,11 @@ long _InputInitialiseMouse(bool exclusive)
 
 void _InputShutdownMouse()
 {
-	// Not needed
+	if (PSGLOBAL(window) == nil)
+		return;
+
+	lastCursorMode = GLFW_CURSOR_NORMAL;
+	glfwSetInputMode(PSGLOBAL(window), GLFW_CURSOR, lastCursorMode);
 }
 
 // Not "needs exclusive" on GLFW, but more like "needs to change mode"
@@ -1130,23 +1327,13 @@ void psPostRWinit(void)
 	_InputInitialiseJoys();
 	_InputInitialiseMouse(false);
 
-	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
 #ifdef IMPROVED_VIDEOMODE
-		if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
-			int x, y, width, height;
-			GetBorderlessMonitorInfo(&x, &y, &width, &height);
-
-			glfwSetWindowAttrib(PSGLOBAL(window), GLFW_DECORATED, GLFW_FALSE);
-			glfwSetWindowPos(PSGLOBAL(window), x, y);
-			glfwSetWindowSize(PSGLOBAL(window), width, height);
-		} else {
-			glfwSetWindowAttrib(PSGLOBAL(window), GLFW_DECORATED, GLFW_TRUE);
-			glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
-		}
+	ApplyGLFWWindowMode(vm);
 #else
+	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
 		glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
-#endif
 	}
+#endif
 
 	// Make sure all keys are released
 	CPad::GetPad(0)->Clear(true);
@@ -1183,6 +1370,7 @@ RwBool _psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode)
 	RsEventHandler(rsCAMERASIZE, &r);
 	
 	psPostRWinit();
+	psRestoreFocusAfterPause();
 	
 	return TRUE;
 }
@@ -1929,11 +2117,15 @@ cursorEnterCB(GLFWwindow* window, int entered) {
 void
 windowFocusCB(GLFWwindow* window, int focused) {
 	WindowFocused = !!focused;
+	if (!focused)
+		MarkWindowFocusLost();
 }
 
 void
 windowIconifyCB(GLFWwindow* window, int iconified) {
 	WindowIconified = !!iconified;
+	if (iconified)
+		MarkWindowFocusLost();
 }
 
 /*
@@ -2063,6 +2255,7 @@ main(int argc, char *argv[])
 #endif
 
 	psPostRWinit();
+	psRestoreFocusAfterPause();
 
 	ControlsManager.InitDefaultControlConfigMouse(MousePointerStateHelper.GetMouseSetUp());
 
@@ -2202,6 +2395,9 @@ main(int argc, char *argv[])
 #endif
 		{
 			glfwPollEvents();
+			// Callbacks above only latch raw state. Apply the transition here,
+			// outside GLFW's native message-dispatch stack.
+			psRefreshAndGetWindowMinimizedPause();
 #ifdef GET_KEYBOARD_INPUT_FROM_X11
 			checkKeyPresses();
 #endif
@@ -2292,6 +2488,8 @@ main(int argc, char *argv[])
 						LoadingScreen(nil, nil, "loadsc0");
 						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
 #endif
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 						if ( !CGame::InitialiseOnceAfterRW() )
 							RsGlobal.quit = TRUE;
 						
@@ -2308,6 +2506,8 @@ main(int argc, char *argv[])
 					{
 						LoadingScreen(nil, nil, "loadsc0");
 						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 						
 						FrontEndMenuManager.m_bGameNotLoaded = true;
 						
@@ -2336,6 +2536,8 @@ main(int argc, char *argv[])
 						if ( !FrontEndMenuManager.m_bMenuActive || FrontEndMenuManager.m_bWantToLoad )
 #endif
 						{
+							if (psRefreshAndGetWindowMinimizedPause())
+								break;
 							gGameState = GS_INIT_PLAYING_GAME;
 							TRACE("gGameState = GS_INIT_PLAYING_GAME;");
 						}
@@ -2346,6 +2548,8 @@ main(int argc, char *argv[])
 						if ( FrontEndMenuManager.m_bWantToLoad )
 #endif
 						{
+							if (psRefreshAndGetWindowMinimizedPause())
+								break;
 							InitialiseGame();
 							FrontEndMenuManager.m_bGameNotLoaded = false;
 							gGameState = GS_PLAYING_GAME;
@@ -2357,6 +2561,8 @@ main(int argc, char *argv[])
 					
 					case GS_INIT_PLAYING_GAME:
 					{
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 #ifdef PS2_MENU
 						CGame::Initialise("DATA\\GTA3.DAT");
 						
@@ -2403,13 +2609,9 @@ main(int argc, char *argv[])
 			}
 			else
 			{
-				if ( RwCameraBeginUpdate(Scene.camera) )
-				{
-					RwCameraEndUpdate(Scene.camera);
-					ForegroundApp = TRUE;
-					RsEventHandler(rsACTIVATE, (void *)TRUE);
-				}
-				
+				psRefreshFocusAfterPause();
+				if (!IsWindowActuallyActive())
+					glfwWaitEventsTimeout(0.05);
 			}
 		}
 

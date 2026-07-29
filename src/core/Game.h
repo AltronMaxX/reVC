@@ -34,6 +34,10 @@ enum eAreaName {
 
 class CGame
 {
+	static bool bWindowPauseMenuActive;
+	static bool bWindowPauseMenuPending;
+	static bool bWindowPauseMenuWasAlreadyActive;
+	static void ResetWindowPauseMenu(void);
 public:
 	static eLevelName currLevel;
 	static int32 currArea;
@@ -69,6 +73,10 @@ public:
 	static void Process(void);
 
 	static void InitAfterFocusLoss(void);
+	static void FinishWindowPauseMenu(void);
+	static void ResumeWindowPauseMenuAfterFocusRestore(void);
+	static bool IsWindowPauseMenuActive(void) { return bWindowPauseMenuActive; }
+	static bool ShouldPreserveWindowPauseMusicMode(void) { return bWindowPauseMenuActive && !bWindowPauseMenuWasAlreadyActive; }
 
 	static bool IsInInterior(void) { return currArea != AREA_MAIN_MAP; }
 	static bool CanSeeWaterFromCurrArea(void);

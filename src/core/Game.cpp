@@ -1,4 +1,5 @@
 #include "common.h"
+#include "crossplatform.h"
 #include "platform.h"
 
 #include "Game.h"
@@ -113,6 +114,9 @@ bool CGame::russianGame = false;
 bool CGame::japaneseGame = false;
 #endif
 bool CGame::bRequestAutosave = false;
+bool CGame::bWindowPauseMenuActive = false;
+bool CGame::bWindowPauseMenuPending = false;
+bool CGame::bWindowPauseMenuWasAlreadyActive = false;
 #ifndef MASTER
 CVector CGame::PlayerCoords;
 bool8 CGame::VarUpdatePlayerCoords;
@@ -369,6 +373,7 @@ CGame::FinalShutdown(void)
 
 bool CGame::Initialise(const char* datFile)
 {
+	ResetWindowPauseMenu();
 	ResetLoadingScreenBar();
 	strcpy(aDatFile, datFile);
 
@@ -594,6 +599,7 @@ bool CGame::Initialise(const char* datFile)
 
 bool CGame::ShutDown(void)
 {
+	ResetWindowPauseMenu();
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
 #endif
@@ -742,6 +748,7 @@ void CGame::ReloadIPLs(void)
 
 void CGame::ShutDownForRestart(void)
 {
+	ResetWindowPauseMenu();
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
 #endif
@@ -847,6 +854,9 @@ void CGame::InitialiseWhenRestarting(void)
 
 void CGame::Process(void) 
 {
+	if (IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 	CPad::UpdatePads();
 #ifdef USE_CUSTOM_ALLOCATOR
 	ProcessTidyUpMemory();
@@ -855,6 +865,8 @@ void CGame::Process(void)
 	DebugMenuProcess();
 #endif
 	CCutsceneMgr::Update();
+	if (CCutsceneMgr::IsWaitingForAudioAfterWindowPause())
+		return;
 
 	if (!CCutsceneMgr::IsCutsceneProcessing() && !CTimer::GetIsCodePaused())
 		FrontEndMenuManager.Process();
@@ -1359,13 +1371,59 @@ void CGame::ProcessTidyUpMemory(void)
 }
 
 void
+CGame::ResetWindowPauseMenu(void)
+{
+	if (!bWindowPauseMenuActive && !bWindowPauseMenuPending && !bWindowPauseMenuWasAlreadyActive)
+		return;
+
+	bWindowPauseMenuActive = false;
+	bWindowPauseMenuPending = false;
+	bWindowPauseMenuWasAlreadyActive = false;
+	CTimer::EndUserPause();
+	DMAudio.SetStreamsPausedForWindowPause(CTimer::GetWindowMinimizedPause());
+	DMAudio.Service();
+}
+
+void
 CGame::InitAfterFocusLoss()
 {
-	FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = FrontEndMenuManager.m_lastWorking3DAudioProvider;
-	DMAudio.SetCurrent3DProvider(FrontEndMenuManager.m_lastWorking3DAudioProvider);
+	if (gGameState != GS_PLAYING_GAME || FrontEndMenuManager.m_bGameNotLoaded)
+		return;
 
-	if (!FrontEndMenuManager.m_bGameNotLoaded && !FrontEndMenuManager.m_bMenuActive)
+	if (!bWindowPauseMenuActive)
+		bWindowPauseMenuWasAlreadyActive = FrontEndMenuManager.m_bMenuActive;
+	bWindowPauseMenuActive = true;
+	bWindowPauseMenuPending = true;
+	CTimer::StartUserPause();
+	DMAudio.SetStreamsPausedForWindowPause(true);
+	DMAudio.Service();
+	CCutsceneMgr::RecordWindowPause();
+}
+
+void
+CGame::ResumeWindowPauseMenuAfterFocusRestore(void)
+{
+	if (!bWindowPauseMenuActive || !bWindowPauseMenuPending ||
+	    gGameState != GS_PLAYING_GAME || FrontEndMenuManager.m_bGameNotLoaded ||
+	    !IsForegroundApp())
+		return;
+
+	bWindowPauseMenuPending = false;
+	CTimer::StartUserPause();
+	DMAudio.SetStreamsPausedForWindowPause(true);
+	DMAudio.Service();
+
+	if (!FrontEndMenuManager.m_bMenuActive)
 		FrontEndMenuManager.m_bStartUpFrontEndRequested = true;
+}
+
+void
+CGame::FinishWindowPauseMenu(void)
+{
+	if (!bWindowPauseMenuActive || !IsForegroundApp() || CTimer::GetWindowMinimizedPause())
+		return;
+
+	ResetWindowPauseMenu();
 }
 
 bool

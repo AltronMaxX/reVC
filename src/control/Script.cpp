@@ -16,6 +16,7 @@
 #include "EmergencyPed.h"
 #include "FileMgr.h"
 #include "Frontend.h"
+#include "Game.h"
 #include "General.h"
 #ifdef MISSION_REPLAY
 #include "GenericGameStorage.h"
@@ -876,6 +877,9 @@ CRunningScript* CTheScripts::StartNewScript(uint32 ip)
 
 void CTheScripts::Process()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 	if (CReplay::IsPlayingBack())
 		return;
 	CommandsExecuted = 0;
@@ -980,6 +984,9 @@ bool CTheScripts::IsPlayerOnAMission()
 
 void CRunningScript::Process()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 	LogOnStartProcessing();
 #endif
@@ -1007,6 +1014,9 @@ void CRunningScript::Process()
 
 int8 CRunningScript::ProcessOneCommand()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return 1;
+
 	int8 retval = -1;
 	++CTheScripts::CommandsExecuted;
 	int32 command = (uint16)CTheScripts::Read2BytesFromScript(&m_nIp);

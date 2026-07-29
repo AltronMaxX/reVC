@@ -74,6 +74,9 @@ public:
 	void PreloadCutSceneMusic(tTrack);
 	void PlayPreloadedCutSceneMusic(void);
 	void StopCutSceneMusic(void);
+	bool8 IsCutSceneMusicPlaying(void);
+	void ResumeCutSceneMusicAfterPause(void);
+	int32 GetCutSceneMusicPosition(void);
 	tTrack GetRadioInCar(void);
 	void SetRadioInCar(tTrack);
 	void SetRadioChannelByScript(tTrack, int32);

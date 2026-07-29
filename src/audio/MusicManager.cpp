@@ -1165,6 +1165,32 @@ cMusicManager::StopCutSceneMusic(void)
 	}
 }
 
+bool8
+cMusicManager::IsCutSceneMusicPlaying(void)
+{
+	return m_bIsInitialised && !m_bDisabled && m_nMusicMode == MUSICMODE_CUTSCENE &&
+	       m_nPlayingTrack != NO_TRACK && SampleManager.IsStreamPlaying(0);
+}
+
+void
+cMusicManager::ResumeCutSceneMusicAfterPause(void)
+{
+	if (m_bIsInitialised && !m_bDisabled && m_nMusicMode == MUSICMODE_CUTSCENE &&
+	    m_nPlayingTrack != NO_TRACK) {
+		SampleManager.PauseStream(FALSE, 0);
+		if (!SampleManager.IsStreamPlaying(0))
+			SampleManager.StartPreloadedStreamedFile(0);
+	}
+}
+
+int32
+cMusicManager::GetCutSceneMusicPosition(void)
+{
+	if (m_bIsInitialised && !m_bDisabled && m_nMusicMode == MUSICMODE_CUTSCENE && m_nPlayingTrack != NO_TRACK)
+		return SampleManager.GetStreamedFilePosition(0);
+	return -1;
+}
+
 void
 cMusicManager::PlayFrontEndTrack(tTrack track, bool8 loopFlag)
 {

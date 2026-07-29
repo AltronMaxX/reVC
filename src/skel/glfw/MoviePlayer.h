@@ -9,6 +9,8 @@ void Draw();
 
 bool IsActive();
 
+void SetPaused(bool paused);
+
 void Stop();
 }
 
