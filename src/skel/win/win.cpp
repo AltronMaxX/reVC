@@ -2745,7 +2745,7 @@ WinMain(HINSTANCE instance,
 				if (IsWindowActuallyActive())
 					Sleep(1);
 				else
-					WaitMessage();
+					MsgWaitForMultipleObjectsEx(0, nil, 50, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 			}
 		}
 
