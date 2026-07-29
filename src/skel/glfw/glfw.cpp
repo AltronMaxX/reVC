@@ -1939,6 +1939,17 @@ windowIconifyCB(GLFWwindow* window, int iconified) {
 /*
  *****************************************************************************
  */
+// True if the player pressed a button to skip an intro movie (controller A /
+// Start, Enter, or the left mouse button).
+static bool
+SkipMovieButtonJustDown()
+{
+	return CPad::GetPad(0)->GetCrossJustDown()
+	    || CPad::GetPad(0)->GetStartJustDown()
+	    || CPad::GetPad(0)->GetEnterJustDown()
+	    || CPad::GetPad(0)->GetLeftMouseJustDown();
+}
+
 #ifdef _WIN32
 int PASCAL
 WinMain(HINSTANCE instance,
@@ -1963,15 +1974,6 @@ WinMain(HINSTANCE instance,
 
 #else
 
-// True if the player pressed a button to skip an intro movie (controller A /
-	// Start, or Enter on a keyboard).
-	static bool SkipMovieButtonJustDown()
-	{
-		return CPad::GetPad(0)->GetCrossJustDown()
-		    || CPad::GetPad(0)->GetStartJustDown()
-		    || CPad::GetPad(0)->GetEnterJustDown()
-			|| CPad::GetPad(0)->GetLeftMouseJustDown();
-	}
 int
 main(int argc, char *argv[])
 {

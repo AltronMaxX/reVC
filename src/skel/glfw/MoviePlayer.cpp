@@ -13,64 +13,54 @@
 #include "crossplatform.h"
 #include "skeleton.h"
 
+#ifdef AUDIO_OAL
 #include <AL/al.h>
 #include <AL/alc.h>
+#endif
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #define PL_MPEG_IMPLEMENTATION
-#include "vendor/pl_mpeg/pl_mpeg.h"
+#include "../../../vendor/pl_mpeg/pl_mpeg.h"
 
-typedef unsigned int GLenum;
-typedef unsigned int GLuint;
-typedef int GLint;
-typedef int GLsizei;
-typedef float GLfloat;
-typedef unsigned char GLboolean;
-typedef long GLsizeiptr;
-typedef long GLintptr;
-typedef char GLchar;
-typedef unsigned int GLbitfield;
-
-typedef void (*PFN_glGenTextures)(GLsizei n, GLuint *textures);
-typedef void (*PFN_glBindTexture)(GLenum target, GLuint texture);
-typedef void (*PFN_glTexImage2D)(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height,
-	GLint border, GLenum format, GLenum type, const void *pixels);
-typedef void (*PFN_glTexParameteri)(GLenum target, GLenum pname, GLint param);
-typedef GLuint (*PFN_glCreateShader)(GLenum type);
-typedef void (*PFN_glShaderSource)(GLuint shader, GLsizei count, const GLchar *const *string, const GLint *length);
-typedef void (*PFN_glCompileShader)(GLuint shader);
-typedef void (*PFN_glGetShaderiv)(GLuint shader, GLenum pname, GLint *params);
-typedef void (*PFN_glGetShaderInfoLog)(GLuint shader, GLsizei maxLength, GLsizei *length, GLchar *infoLog);
-typedef GLuint (*PFN_glCreateProgram)(void);
-typedef void (*PFN_glAttachShader)(GLuint program, GLuint shader);
-typedef void (*PFN_glLinkProgram)(GLuint program);
-typedef void (*PFN_glGetProgramiv)(GLuint program, GLenum pname, GLint *params);
-typedef void (*PFN_glGetProgramInfoLog)(GLuint program, GLsizei maxLength, GLsizei *length, GLchar *infoLog);
-typedef void (*PFN_glUseProgram)(GLuint program);
-typedef GLint (*PFN_glGetAttribLocation)(GLuint program, const GLchar *name);
-typedef GLint (*PFN_glGetUniformLocation)(GLuint program, const GLchar *name);
-typedef void (*PFN_glUniform1i)(GLint location, GLint v0);
-typedef void (*PFN_glGenBuffers)(GLsizei n, GLuint *buffers);
-typedef void (*PFN_glBindBuffer)(GLenum target, GLuint buffer);
-typedef void (*PFN_glBufferData)(GLenum target, GLsizeiptr size, const void *data, GLenum usage);
-typedef void (*PFN_glVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
-typedef void (*PFN_glEnableVertexAttribArray)(GLuint index);
-typedef void (*PFN_glDisableVertexAttribArray)(GLuint index);
-typedef void (*PFN_glDrawArrays)(GLenum mode, GLint first, GLsizei count);
-typedef void (*PFN_glActiveTexture)(GLenum texture);
-typedef void (*PFN_glViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-typedef void (*PFN_glClearColor)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-typedef void (*PFN_glClear)(GLbitfield mask);
-typedef void (*PFN_glDisable)(GLenum cap);
-typedef void (*PFN_glGetIntegerv)(GLenum pname, GLint *data);
-typedef const unsigned char *(*PFN_glGetString)(GLenum name);
-typedef void (*PFN_glGenVertexArrays)(GLsizei n, GLuint *arrays);
-typedef void (*PFN_glBindVertexArray)(GLuint array);
-typedef void (*PFN_glEnable)(GLenum cap);
-typedef unsigned char (*PFN_glIsEnabled)(GLenum cap);
+typedef PFNGLGENTEXTURESPROC PFN_glGenTextures;
+typedef PFNGLBINDTEXTUREPROC PFN_glBindTexture;
+typedef PFNGLTEXIMAGE2DPROC PFN_glTexImage2D;
+typedef PFNGLTEXPARAMETERIPROC PFN_glTexParameteri;
+typedef PFNGLCREATESHADERPROC PFN_glCreateShader;
+typedef PFNGLSHADERSOURCEPROC PFN_glShaderSource;
+typedef PFNGLCOMPILESHADERPROC PFN_glCompileShader;
+typedef PFNGLGETSHADERIVPROC PFN_glGetShaderiv;
+typedef PFNGLGETSHADERINFOLOGPROC PFN_glGetShaderInfoLog;
+typedef PFNGLCREATEPROGRAMPROC PFN_glCreateProgram;
+typedef PFNGLATTACHSHADERPROC PFN_glAttachShader;
+typedef PFNGLLINKPROGRAMPROC PFN_glLinkProgram;
+typedef PFNGLGETPROGRAMIVPROC PFN_glGetProgramiv;
+typedef PFNGLGETPROGRAMINFOLOGPROC PFN_glGetProgramInfoLog;
+typedef PFNGLUSEPROGRAMPROC PFN_glUseProgram;
+typedef PFNGLGETATTRIBLOCATIONPROC PFN_glGetAttribLocation;
+typedef PFNGLGETUNIFORMLOCATIONPROC PFN_glGetUniformLocation;
+typedef PFNGLUNIFORM1IPROC PFN_glUniform1i;
+typedef PFNGLGENBUFFERSPROC PFN_glGenBuffers;
+typedef PFNGLBINDBUFFERPROC PFN_glBindBuffer;
+typedef PFNGLBUFFERDATAPROC PFN_glBufferData;
+typedef PFNGLVERTEXATTRIBPOINTERPROC PFN_glVertexAttribPointer;
+typedef PFNGLENABLEVERTEXATTRIBARRAYPROC PFN_glEnableVertexAttribArray;
+typedef PFNGLDISABLEVERTEXATTRIBARRAYPROC PFN_glDisableVertexAttribArray;
+typedef PFNGLDRAWARRAYSPROC PFN_glDrawArrays;
+typedef PFNGLACTIVETEXTUREPROC PFN_glActiveTexture;
+typedef PFNGLVIEWPORTPROC PFN_glViewport;
+typedef PFNGLCLEARCOLORPROC PFN_glClearColor;
+typedef PFNGLCLEARPROC PFN_glClear;
+typedef PFNGLDISABLEPROC PFN_glDisable;
+typedef PFNGLGETINTEGERVPROC PFN_glGetIntegerv;
+typedef PFNGLGETSTRINGPROC PFN_glGetString;
+typedef PFNGLGENVERTEXARRAYSPROC PFN_glGenVertexArrays;
+typedef PFNGLBINDVERTEXARRAYPROC PFN_glBindVertexArray;
+typedef PFNGLENABLEPROC PFN_glEnable;
+typedef PFNGLISENABLEDPROC PFN_glIsEnabled;
 
 namespace
 {
@@ -170,35 +160,6 @@ namespace
 	}
 }
 
-#define GL_TEXTURE_2D         0x0DE1
-#define GL_TEXTURE0           0x84C0
-#define GL_RGBA               0x1908
-#define GL_UNSIGNED_BYTE      0x1401
-#define GL_TEXTURE_MIN_FILTER 0x2801
-#define GL_TEXTURE_MAG_FILTER 0x2800
-#define GL_LINEAR             0x2601
-#define GL_VERTEX_SHADER      0x8B31
-#define GL_FRAGMENT_SHADER    0x8B30
-#define GL_COMPILE_STATUS     0x8B81
-#define GL_LINK_STATUS        0x8B82
-#define GL_ARRAY_BUFFER       0x8892
-#define GL_STATIC_DRAW        0x88E4
-#define GL_FLOAT              0x1406
-#define GL_FALSE              0
-#define GL_TRUE               1
-#define GL_TRIANGLE_STRIP     0x0005
-#define GL_DEPTH_TEST         0x0B71
-#define GL_CULL_FACE          0x0B44
-#define GL_BLEND              0x0BE2
-#define GL_COLOR_BUFFER_BIT   0x4000
-#define GL_VIEWPORT           0x0BA2
-#define GL_VERSION            0x1F02
-#define GL_CURRENT_PROGRAM       0x8B8D
-#define GL_ARRAY_BUFFER_BINDING  0x8894
-#define GL_VERTEX_ARRAY_BINDING  0x85B5
-#define GL_ACTIVE_TEXTURE        0x84E0
-#define GL_TEXTURE_BINDING_2D    0x8069
-
 namespace
 {
 	enum class State { Inactive, Active, Stopping };
@@ -210,20 +171,24 @@ namespace
 	int g_videoHeight = 0;
 	double g_frameDuration = 1.0 / 30.0; // seconds per video frame, from plm_get_framerate()
 
+	bool g_audioReady = false;
+	int g_audioSampleRate = 48000;
+	double g_audioFrameDuration = (double)PLM_AUDIO_SAMPLES_PER_FRAME / 48000.0; // seconds per audio frame
+	double g_audioAccumulator = 0.0;
+
+#ifdef AUDIO_OAL
 	ALCdevice *g_alDevice = nullptr;
 	ALCcontext *g_alContext = nullptr;
 	ALuint g_alSource = 0;
 	static const int kNumAudioBuffers = 4;
 	ALuint g_alBuffers[kNumAudioBuffers] = { 0, 0, 0, 0 };
-	bool g_audioReady = false;
-	int g_audioSampleRate = 48000;
-	double g_audioFrameDuration = (double)PLM_AUDIO_SAMPLES_PER_FRAME / 48000.0; // seconds per audio frame
-	double g_audioAccumulator = 0.0;
 	int g_nextFreeBuffer = 0;
+#endif
 
 	double g_lastTime = 0.0; // seconds, from glfwGetTime()
 	double g_accumulator = 0.0;
 
+#ifdef AUDIO_OAL
 	bool InitAudio()
 	{
 		g_alDevice = alcOpenDevice(nullptr); // default device
@@ -310,6 +275,11 @@ namespace
 		if (state != AL_PLAYING)
 			alSourcePlay(g_alSource);
 	}
+#else
+	bool InitAudio() { return false; }
+	void CloseAudio() {}
+	void QueueAudioFrame(plm_samples_t *) {}
+#endif
 
 	void CloseMovie()
 	{
@@ -534,7 +504,10 @@ void MoviePlayer::Play(const char *path)
 	if (g_state != State::Inactive)
 		CloseMovie();
 
-	char *realPath = casepath(path);
+	char *realPath = nil;
+#ifndef _WIN32
+	realPath = casepath(path);
+#endif
 	const char *openPath = realPath ? realPath : path;
 
 	g_plm = plm_create_with_filename(openPath);

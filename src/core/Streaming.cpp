@@ -931,7 +931,7 @@ CStreaming::RequestIslands(eLevelName level)
 	}
 }
 
-static char *IGnames[] = {
+static const char *IGnames[] = {
 	"player",
 	"player2",
 	"player3",
@@ -956,7 +956,7 @@ static char *IGnames[] = {
 	""
 };
 
-static char *CSnames[] = {
+static const char *CSnames[] = {
 	"csplay",
 	"csplay2",
 	"csplay3",

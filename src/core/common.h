@@ -38,6 +38,7 @@
 #endif
 
 #if defined _WIN32 && defined WITHWINDOWS && !defined _INC_WINDOWS
+#define NOMINMAX
 #include <windows.h>
 #endif
 
@@ -224,7 +225,7 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #if !defined _WIN32 || defined __MINGW32__
 #define MAX_PATH PATH_MAX
 #else
-#define MAX_PATH 4096
+#define MAX_PATH 260
 #endif
 #endif
 
