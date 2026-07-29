@@ -28,6 +28,7 @@
 #include "DMAudio.h"
 #include "FileMgr.h"
 #include "Frontend.h"
+#include "Game.h"
 #include "SceneEdit.h"
 #include "Pools.h"
 #include "Debug.h"
@@ -250,6 +251,10 @@ CCamera::Init(void)
 void
 CCamera::Process(void)
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause() ||
+	    CCutsceneMgr::IsWaitingForAudioAfterWindowPause())
+		return;
+
 	// static bool InterpolatorNotInitialised = true;	// unused
 	static float PlayerMinDist = 1.3f;
 	static bool WasPreviouslyInterSyhonFollowPed = false;	// only written

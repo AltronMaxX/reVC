@@ -55,6 +55,11 @@
 #define MAX_SUBSYSTEMS		(16)
 
 static RwBool		  ForegroundApp = TRUE;
+static RwBool		  WindowFocused = TRUE;
+static RwBool		  WindowMinimized = FALSE;
+static RwBool		  WindowFocusLostLatch = FALSE;
+static RwBool		  WindowPlatformPaused = FALSE;
+static RwInt32		  WindowActivePollCount = 2;
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -103,6 +108,135 @@ IsFullscreenLikeWindowMode(void)
 #else
 	return PSGLOBAL(fullScreen);
 #endif
+}
+
+static RwBool
+IsWindowMinimized(void)
+{
+	HWND window = PSGLOBAL(window);
+	if (window == nil)
+		return FALSE;
+
+	WINDOWPLACEMENT placement;
+	placement.length = sizeof(placement);
+	return IsIconic(window) ||
+		(GetWindowPlacement(window, &placement) &&
+		 (placement.showCmd == SW_SHOWMINIMIZED || placement.showCmd == SW_MINIMIZE));
+}
+
+static RwBool
+IsWindowActuallyActive(void)
+{
+	HWND window = PSGLOBAL(window);
+	return window != nil && !IsWindowMinimized() && GetForegroundWindow() == window;
+}
+
+static void
+SetWindowAudioSuspended(RwBool suspended)
+{
+	DMAudio.SetStreamsPausedForWindowPause(!!suspended || CGame::IsWindowPauseMenuActive());
+	if (suspended) {
+		DMAudio.SetEffectsMasterVolume(0);
+		DMAudio.SetMusicMasterVolume(0);
+	} else {
+		DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+		DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+	}
+	DMAudio.Service();
+}
+
+static void
+RefreshWindowPauseMouse(void)
+{
+	if (PSGLOBAL(dinterface) == nil)
+		return;
+
+	_InputShutdownMouse();
+	_InputInitialiseMouse(!CGame::IsWindowPauseMenuActive() &&
+		!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
+}
+
+static void
+ApplyWindowMinimizedPause(RwBool paused)
+{
+	if (WindowPlatformPaused == paused) {
+		ForegroundApp = !paused;
+		CTimer::SetWindowMinimizedPause(!!paused);
+		return;
+	}
+
+	WindowPlatformPaused = paused;
+	ForegroundApp = !paused;
+	CTimer::SetWindowMinimizedPause(!!paused);
+
+	if (paused) {
+		_InputShutdownMouse();
+		CGame::InitAfterFocusLoss();
+	} else {
+		CGame::ResumeWindowPauseMenuAfterFocusRestore();
+		RefreshWindowPauseMouse();
+	}
+
+	SetWindowAudioSuspended(paused);
+}
+
+static void
+MarkWindowFocusLost(void)
+{
+	WindowFocused = FALSE;
+	WindowFocusLostLatch = TRUE;
+	WindowActivePollCount = 0;
+	ApplyWindowMinimizedPause(TRUE);
+}
+
+bool
+psRefreshAndGetWindowMinimizedPause()
+{
+	HWND window = PSGLOBAL(window);
+	WindowMinimized = window != nil && IsWindowMinimized();
+	WindowFocused = IsWindowActuallyActive();
+
+	if (WindowMinimized || !WindowFocused) {
+		WindowFocusLostLatch = TRUE;
+		WindowActivePollCount = 0;
+	} else if (WindowFocusLostLatch) {
+		if (++WindowActivePollCount >= 2) {
+			WindowFocusLostLatch = FALSE;
+			WindowActivePollCount = 2;
+		}
+	} else {
+		WindowActivePollCount = 2;
+	}
+
+	ApplyWindowMinimizedPause(WindowMinimized || !WindowFocused || WindowFocusLostLatch);
+	return !!WindowPlatformPaused;
+}
+
+void
+psRefreshFocusAfterPause()
+{
+	(void)psRefreshAndGetWindowMinimizedPause();
+}
+
+void
+psRestoreFocusAfterPause()
+{
+	WindowMinimized = PSGLOBAL(window) != nil && IsWindowMinimized();
+	WindowFocused = IsWindowActuallyActive();
+
+	if (!WindowFocused || WindowMinimized) {
+		WindowFocusLostLatch = TRUE;
+		WindowActivePollCount = 0;
+		ApplyWindowMinimizedPause(TRUE);
+		return;
+	}
+
+	WindowFocusLostLatch = FALSE;
+	WindowActivePollCount = 2;
+	const RwBool wasPaused = WindowPlatformPaused;
+	ApplyWindowMinimizedPause(FALSE);
+	if (!wasPaused)
+		RefreshWindowPauseMouse();
 }
 
 #ifdef PS2_MENU
@@ -231,8 +365,7 @@ psCameraBeginUpdate(RwCamera *camera)
 {
 	if ( !RwCameraBeginUpdate(Scene.camera) )
 	{
-		ForegroundApp = FALSE;
-		RsEventHandler(rsACTIVATE, (void *)FALSE);
+		MarkWindowFocusLost();
 		return FALSE;
 	}
 	
@@ -635,6 +768,12 @@ psInitialize(void)
 	RsGlobal.ps = &PsGlobal;
 	
 	PsGlobal.fullScreen = FALSE;
+	ForegroundApp = TRUE;
+	WindowFocused = TRUE;
+	WindowMinimized = FALSE;
+	WindowFocusLostLatch = FALSE;
+	WindowPlatformPaused = FALSE;
+	WindowActivePollCount = 2;
 	
 	PsGlobal.dinterface = nil;
 	PsGlobal.mouse	   = nil;
@@ -980,16 +1119,26 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_SETCURSOR:
 		{
-			ShowCursor(FALSE);
-			
-			SetCursor(nil);
-			
-			break; // is this correct ?
+			if (LOWORD(lParam) == HTCLIENT && !WindowPlatformPaused)
+				SetCursor(nil);
+			else
+				SetCursor(LoadCursor(nil, IDC_ARROW));
+			return TRUE;
 		}
 		
 		case WM_SIZE:
 		{
 			RwRect r;
+
+			if (PSGLOBAL(window) == nil) {
+				// CreateWindow sends WM_SIZE before PSGLOBAL(window) is assigned.
+			} else if (wParam == SIZE_MINIMIZED) {
+				WindowMinimized = TRUE;
+				MarkWindowFocusLost();
+			} else {
+				WindowMinimized = FALSE;
+				psRefreshFocusAfterPause();
+			}
 
 			r.x = 0;
 			r.y = 0;
@@ -1049,7 +1198,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			rect.bottom = newPos->bottom - newPos->top;
 			rect.right = newPos->right - newPos->left;
 
-			SetWindowPos(window, HWND_TOP, rect.left, rect.top,
+			SetWindowPos(window, HWND_NOTOPMOST, rect.left, rect.top,
 						 (rect.right - rect.left),
 						 (rect.bottom - rect.top), SWP_NOMOVE);
 
@@ -1180,8 +1329,26 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 #endif
 		}
 
+		case WM_ACTIVATE:
+		{
+			if (PSGLOBAL(window) != nil) {
+				if (LOWORD(wParam) == WA_INACTIVE)
+					MarkWindowFocusLost();
+				else
+					psRefreshFocusAfterPause();
+			}
+			break;
+		}
+
 		case WM_ACTIVATEAPP:
 		{
+			if (PSGLOBAL(window) != nil) {
+				if (!(BOOL)wParam)
+					MarkWindowFocusLost();
+				else
+					psRefreshFocusAfterPause();
+			}
+
 			switch ( gGameState )
 			{
 				case GS_LOGO_MPEG:
@@ -1314,13 +1481,17 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
-#ifdef FIX_BUGS // game turns on menu when focus is re-gained rather than lost
-		case WM_KILLFOCUS:
-#else
 		case WM_SETFOCUS:
-#endif
 		{
-			CGame::InitAfterFocusLoss();
+			if (PSGLOBAL(window) != nil)
+				psRefreshFocusAfterPause();
+			break;
+		}
+
+		case WM_KILLFOCUS:
+		{
+			if (PSGLOBAL(window) != nil)
+				MarkWindowFocusLost();
 			break;
 		}
 
@@ -1425,19 +1596,33 @@ UINT GetBestRefreshRate(UINT width, UINT height, UINT depth)
 
 #ifdef IMPROVED_VIDEOMODE
 static void
-GetBorderlessMonitorRect(RECT *rect)
+GetSelectedMonitorRects(RECT *monitorRect, RECT *workRect)
 {
-	HMONITOR monitor = MonitorFromWindow(PSGLOBAL(window), MONITOR_DEFAULTTONEAREST);
+	HMONITOR monitor = nil;
+#ifdef USE_D3D9
+	LPDIRECT3D9 d3d = Direct3DCreate9(D3D_SDK_VERSION);
+#else
+	LPDIRECT3D8 d3d = Direct3DCreate8(D3D_SDK_VERSION);
+#endif
+	if (d3d != nil) {
+		if ((UINT)GcurSel < d3d->GetAdapterCount())
+			monitor = d3d->GetAdapterMonitor(GcurSel);
+		d3d->Release();
+	}
+	if (monitor == nil)
+		monitor = MonitorFromWindow(PSGLOBAL(window), MONITOR_DEFAULTTONEAREST);
+
 	MONITORINFO monitorInfo;
 	monitorInfo.cbSize = sizeof(monitorInfo);
 
-	if (monitor != nil && GetMonitorInfo(monitor, &monitorInfo))
-		*rect = monitorInfo.rcMonitor;
-	else {
-		rect->left = 0;
-		rect->top = 0;
-		rect->right = GetSystemMetrics(SM_CXSCREEN);
-		rect->bottom = GetSystemMetrics(SM_CYSCREEN);
+	if (monitor != nil && GetMonitorInfo(monitor, &monitorInfo)) {
+		*monitorRect = monitorInfo.rcMonitor;
+		*workRect = monitorInfo.rcWork;
+	} else {
+		monitorRect->left = workRect->left = 0;
+		monitorRect->top = workRect->top = 0;
+		monitorRect->right = workRect->right = GetSystemMetrics(SM_CXSCREEN);
+		monitorRect->bottom = workRect->bottom = GetSystemMetrics(SM_CYSCREEN);
 	}
 }
 #endif
@@ -1623,11 +1808,8 @@ psSelectDevice()
 		}
 	}
 	
-#ifdef IMPROVED_VIDEOMODE
-	if (!FrontEndMenuManager.m_nPrefsWindowed)
-#else
+#ifndef IMPROVED_VIDEOMODE
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
-#endif
 	{
 		RsGlobal.maximumWidth = vm.width;
 		RsGlobal.maximumHeight = vm.height;
@@ -1635,52 +1817,58 @@ psSelectDevice()
 		RsGlobal.height = vm.height;
 		
 		PSGLOBAL(fullScreen) = TRUE;
-
-#ifdef IMPROVED_VIDEOMODE
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_POPUP);
-		SetWindowPos(PSGLOBAL(window), nil, 0, 0, 0, 0,
-					SWP_NOMOVE|SWP_NOSIZE|SWP_NOZORDER|
-					SWP_FRAMECHANGED);
-	}else{
-		RECT rect;
-		if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
-			GetBorderlessMonitorRect(&rect);
-			int width = rect.right - rect.left;
-			int height = rect.bottom - rect.top;
-
-			SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
-			SetWindowPos(PSGLOBAL(window), HWND_TOP, rect.left, rect.top, width, height, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
-
-			RsGlobal.maximumWidth = width;
-			RsGlobal.maximumHeight = height;
-			RsGlobal.width = width;
-			RsGlobal.height = height;
-		} else {
-			rect.left = rect.top = 0;
-			rect.right = FrontEndMenuManager.m_nPrefsWidth;
-			rect.bottom = FrontEndMenuManager.m_nPrefsHeight;
-			AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-
-			// center it
-			int spaceX = GetSystemMetrics(SM_CXSCREEN) - (rect.right-rect.left);
-			int spaceY = GetSystemMetrics(SM_CYSCREEN) - (rect.bottom-rect.top);
-
-			SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
-			SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST, spaceX/2, spaceY/2,
-				(rect.right - rect.left),
-				(rect.bottom - rect.top), 0);
-
-			// Have to get actual size because the window perhaps didn't fit
-			GetClientRect(PSGLOBAL(window), &rect);
-			RsGlobal.maximumWidth = rect.right;
-			RsGlobal.maximumHeight = rect.bottom;
-			RsGlobal.width = rect.right;
-			RsGlobal.height = rect.bottom;
-		}
-		
-		PSGLOBAL(fullScreen) = FALSE;
-#endif
 	}
+#else
+	RECT monitorRect, workRect;
+	GetSelectedMonitorRects(&monitorRect, &workRect);
+
+	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN) {
+		ShowWindow(PSGLOBAL(window), SW_RESTORE);
+		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
+			monitorRect.left, monitorRect.top, vm.width, vm.height,
+			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+
+		RsGlobal.maximumWidth = vm.width;
+		RsGlobal.maximumHeight = vm.height;
+		RsGlobal.width = vm.width;
+		RsGlobal.height = vm.height;
+		PSGLOBAL(fullScreen) = TRUE;
+	} else if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+		const int width = monitorRect.right - monitorRect.left;
+		const int height = monitorRect.bottom - monitorRect.top;
+
+		ShowWindow(PSGLOBAL(window), SW_RESTORE);
+		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
+		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
+			monitorRect.left, monitorRect.top, width, height,
+			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
+
+		RsGlobal.maximumWidth = width;
+		RsGlobal.maximumHeight = height;
+		RsGlobal.width = width;
+		RsGlobal.height = height;
+		PSGLOBAL(fullScreen) = FALSE;
+	} else {
+		const int workWidth = workRect.right - workRect.left;
+		const int workHeight = workRect.bottom - workRect.top;
+
+		ShowWindow(PSGLOBAL(window), SW_RESTORE);
+		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
+		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
+			workRect.left, workRect.top, workWidth, workHeight,
+			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+		ShowWindow(PSGLOBAL(window), SW_MAXIMIZE);
+
+		RECT windowRect;
+		GetClientRect(PSGLOBAL(window), &windowRect);
+		RsGlobal.maximumWidth = windowRect.right;
+		RsGlobal.maximumHeight = windowRect.bottom;
+		RsGlobal.width = windowRect.right;
+		RsGlobal.height = windowRect.bottom;
+		PSGLOBAL(fullScreen) = FALSE;
+	}
+#endif
 #ifdef MULTISAMPLING
 	RwD3D8EngineSetMultiSamplingLevels(1 << FrontEndMenuManager.m_nPrefsMSAALevel);
 #endif
@@ -1715,6 +1903,7 @@ RwBool _psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode)
 	r.h = RsGlobal.maximumHeight;
 
 	RsEventHandler(rsCAMERASIZE, &r);
+	psRestoreFocusAfterPause();
 	
 	return TRUE;
 }
@@ -2154,6 +2343,7 @@ WinMain(HINSTANCE instance,
 
 		return FALSE;
 	}
+	psRestoreFocusAfterPause();
 
 	/* 
 	 * Parse command line parameters (except program name) one at 
@@ -2427,6 +2617,8 @@ WinMain(HINSTANCE instance,
 						LoadingScreen(nil, nil, "loadsc0");
 						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
 #endif
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 						if ( !CGame::InitialiseOnceAfterRW() )
 							RsGlobal.quit = TRUE;
 				
@@ -2444,6 +2636,8 @@ WinMain(HINSTANCE instance,
 					{
 						LoadingScreen(nil, nil, "loadsc0");
 						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 						
 						FrontEndMenuManager.m_bGameNotLoaded = true;
 						
@@ -2474,6 +2668,8 @@ WinMain(HINSTANCE instance,
 						if ( !FrontEndMenuManager.m_bMenuActive || FrontEndMenuManager.m_bWantToLoad )
 #endif
 						{
+							if (psRefreshAndGetWindowMinimizedPause())
+								break;
 							gGameState = GS_INIT_PLAYING_GAME;
 							TRACE("gGameState = GS_INIT_PLAYING_GAME;");
 						}
@@ -2484,6 +2680,8 @@ WinMain(HINSTANCE instance,
 						if ( FrontEndMenuManager.m_bWantToLoad )
 #endif
 						{
+							if (psRefreshAndGetWindowMinimizedPause())
+								break;
 							InitialiseGame();
 							FrontEndMenuManager.m_bGameNotLoaded = false;
 							gGameState = GS_PLAYING_GAME;
@@ -2495,6 +2693,8 @@ WinMain(HINSTANCE instance,
 					
 					case GS_INIT_PLAYING_GAME:
 					{
+						if (psRefreshAndGetWindowMinimizedPause())
+							break;
 #ifdef PS2_MENU
 						CGame::Initialise("DATA\\GTA3.DAT");
 						
@@ -2541,14 +2741,11 @@ WinMain(HINSTANCE instance,
 			}
 			else
 			{
-				if ( RwCameraBeginUpdate(Scene.camera) )
-				{
-					RwCameraEndUpdate(Scene.camera);
-					ForegroundApp = TRUE;
-					RsEventHandler(rsACTIVATE, (void *)TRUE);
-				}
-				
-				WaitMessage();
+				psRefreshFocusAfterPause();
+				if (IsWindowActuallyActive())
+					Sleep(1);
+				else
+					WaitMessage();
 			}
 		}
 

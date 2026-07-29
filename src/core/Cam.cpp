@@ -12,8 +12,10 @@
 #include "CopPed.h"
 #include "RpAnimBlend.h"
 #include "ControllerConfig.h"
+#include "CutsceneMgr.h"
 #include "Pad.h"
 #include "Frontend.h"
+#include "Game.h"
 #include "General.h"
 #include "Timecycle.h"
 #include "Renderer.h"
@@ -96,6 +98,9 @@ float PLAYERPED_TREND_SMOOTHING_CONST_INV = 0.8f;
 void
 CCam::Process(void)
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 	CVector CameraTarget;
 	float TargetSpeedVar = 0.0f;
 	float TargetOrientation = 0.0f;
@@ -3548,6 +3553,10 @@ FindSplinePathPositionVector(CVector *out, float *spline, uint32 time, uint32 &m
 void
 CCam::Process_FlyBy(const CVector&, float, float, float)
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause() ||
+	    CCutsceneMgr::IsWaitingForAudioAfterWindowPause())
+		return;
+
 	float UpAngle = 0.0f;
 	static float FirstFOVValue = 0.0f;
 	static float PsuedoFOV;

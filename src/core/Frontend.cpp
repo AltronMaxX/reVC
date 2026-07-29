@@ -596,7 +596,8 @@ CMenuManager::Initialise(void)
 		m_nCurrScreen = MENUPAGE_NONE;
 #endif
 
-	DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+	if (!CGame::ShouldPreserveWindowPauseMusicMode())
+		DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio.PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
 	DMAudio.Service();
 	DMAudio.SetMusicMasterVolume(m_PrefsMusicVolume);
@@ -3507,7 +3508,11 @@ CMenuManager::Process(void)
 	ProcessDialogTimer();
 #endif
 
-	if (TheCamera.GetScreenFadeStatus() != FADE_0)
+	if (CGame::IsWindowPauseMenuActive() &&
+	    (!IsForegroundApp() || CTimer::GetWindowMinimizedPause()))
+		return;
+
+	if (TheCamera.GetScreenFadeStatus() != FADE_0 && !CGame::IsWindowPauseMenuActive())
 		return;
 
 	InitialiseChangedLanguageSettings();
@@ -4792,7 +4797,9 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				break;
 #endif
 			case MENUACTION_RESUME_FROM_SAVEZONE:
-				RequestFrontEndShutDown();
+				if (!CGame::IsWindowPauseMenuActive() ||
+				    (IsForegroundApp() && !CTimer::GetWindowMinimizedPause()))
+					RequestFrontEndShutDown();
 				break;
 			case MENUACTION_LOADRADIO:
 				if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
@@ -4853,7 +4860,9 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 					m_PrefsVsync = m_PrefsVsyncDisp;
 				}
 #endif
-				RequestFrontEndShutDown();
+				if (!CGame::IsWindowPauseMenuActive() ||
+				    (IsForegroundApp() && !CTimer::GetWindowMinimizedPause()))
+					RequestFrontEndShutDown();
 				break;
 			case MENUACTION_DONTCANCEL:
 				SwitchToNewScreen(-2);
@@ -4862,7 +4871,8 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				if (m_nDisplayVideoMode != m_nPrefsVideoMode) {
 					m_nPrefsVideoMode = m_nDisplayVideoMode;
 					_psSelectScreenVM(m_nPrefsVideoMode);
-					DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+					if (!CGame::ShouldPreserveWindowPauseMusicMode())
+						DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
 					DMAudio.Service();
 					CentreMousePointer();
 					m_bShowMouse = true;
@@ -5573,16 +5583,18 @@ CMenuManager::ProcessFileActions()
 void
 CMenuManager::SwitchMenuOnAndOff()
 {
-	if (!TheCamera.m_WideScreenOn) {
+	const bool windowPauseMenuActive = CGame::IsWindowPauseMenuActive();
+	if (!TheCamera.m_WideScreenOn || windowPauseMenuActive) {
 
 		// Reminder: You need REGISTER_START_BUTTON defined to make it work.
-		if ((CPad::GetPad(0)->GetStartJustDown() || CPad::GetPad(0)->GetEscapeJustDown())
-			&& (!m_bMenuActive || m_nCurrScreen == MENUPAGE_PAUSE_MENU || m_nCurrScreen == MENUPAGE_CHOOSE_SAVE_SLOT || m_nCurrScreen == MENUPAGE_SAVE_CHEAT_WARNING)
-			|| m_bShutDownFrontEndRequested || m_bStartUpFrontEndRequested
+		bool switchButtonPressed = (CPad::GetPad(0)->GetStartJustDown() || CPad::GetPad(0)->GetEscapeJustDown())
+			&& (!m_bMenuActive || m_nCurrScreen == MENUPAGE_PAUSE_MENU || m_nCurrScreen == MENUPAGE_CHOOSE_SAVE_SLOT || m_nCurrScreen == MENUPAGE_SAVE_CHEAT_WARNING);
 #ifdef REGISTER_START_BUTTON
-			|| CPad::GetPad(0)->GetStartJustDown() && !m_bGameNotLoaded
+		switchButtonPressed = switchButtonPressed ||
+			(CPad::GetPad(0)->GetStartJustDown() && !m_bGameNotLoaded);
 #endif
-			) {
+		if ((!windowPauseMenuActive && switchButtonPressed) ||
+		    m_bShutDownFrontEndRequested || m_bStartUpFrontEndRequested) {
 
 			if (m_nCurrScreen != MENUPAGE_LOADING_IN_PROGRESS
 #ifdef XBOX_MESSAGE_SCREEN
@@ -5658,8 +5670,13 @@ CMenuManager::SwitchMenuOnAndOff()
 				CPad::GetPad(0)->NewState.Start = start4;
 #endif
 				UnloadTextures();
-				CTimer::EndUserPause();
-				CTimer::Update();
+				if (windowPauseMenuActive) {
+					CGame::FinishWindowPauseMenu();
+					CTimer::Update();
+				} else {
+					CTimer::EndUserPause();
+					CTimer::Update();
+				}
 				m_OnlySaveMenu = false;
 			}
 		}
@@ -5711,7 +5728,8 @@ CMenuManager::UnloadTextures()
 		DMAudio.StopFrontEndTrack();
 
 	DMAudio.PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
-	DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+	if (!CGame::ShouldPreserveWindowPauseMusicMode())
+		DMAudio.ChangeMusicMode(MUSICMODE_GAME);
 	if (m_bSpritesLoaded) {
 		printf("REMOVE frontend\n");
 		int frontend = CTxdStore::FindTxdSlot("frontend1");

@@ -10,6 +10,9 @@
 #endif
 
 #include "main.h"
+#include "crossplatform.h"
+#include "Game.h"
+#include "Timer.h"
 #include "CdStream.h"
 #include "General.h"
 #include "RwHelper.h"
@@ -653,6 +656,15 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 {
 	CSprite2d *splash;
 
+	const bool windowMinimizedPause = psRefreshAndGetWindowMinimizedPause();
+	if (windowMinimizedPause) {
+		DMAudio.SetStreamsPausedForWindowPause(true);
+		DMAudio.Service();
+		return;
+	}
+	if (CGame::IsWindowPauseMenuActive())
+		return;
+
 #ifdef DISABLE_LOADING_SCREEN
 	if (str1 && str2)
 		return;
@@ -738,6 +750,15 @@ void
 LoadingIslandScreen(const char *levelName)
 {
 	CSprite2d *splash;
+
+	const bool windowMinimizedPause = psRefreshAndGetWindowMinimizedPause();
+	if (windowMinimizedPause) {
+		DMAudio.SetStreamsPausedForWindowPause(true);
+		DMAudio.Service();
+		return;
+	}
+	if (CGame::IsWindowPauseMenuActive())
+		return;
 
 	splash = LoadSplash(nil);
 	if(!DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255))
@@ -1534,7 +1555,19 @@ Render2dStuffAfterFade(void)
 void
 Idle(void *arg)
 {
+	const bool windowMinimizedPause = psRefreshAndGetWindowMinimizedPause();
 	CTimer::Update();
+	if (windowMinimizedPause) {
+		DMAudio.SetStreamsPausedForWindowPause(true);
+		DMAudio.Service();
+		return;
+	}
+
+	if (CGame::IsWindowPauseMenuActive()) {
+		CGame::ResumeWindowPauseMenuAfterFocusRestore();
+		if (!IsForegroundApp())
+			return;
+	}
 
 	tbInit();
 
@@ -1545,7 +1578,11 @@ Idle(void *arg)
 	CPointLights::InitPerFrame();
 
 	tbStartTimer(0, "CGame::Process");
-	CGame::Process();
+	if (CGame::IsWindowPauseMenuActive()) {
+		CPad::UpdatePads();
+		FrontEndMenuManager.Process();
+	} else
+		CGame::Process();
 	tbEndTimer("CGame::Process");
 	POP_MEMID();
 
@@ -1701,8 +1738,16 @@ popret:	POP_MEMID();	// MEMID_RENDER
 void
 FrontendIdle(void)
 {
-	CDraw::CalculateAspectRatio();
+	const bool windowMinimizedPause = psRefreshAndGetWindowMinimizedPause();
 	CTimer::Update();
+	if (windowMinimizedPause) {
+		DMAudio.SetStreamsPausedForWindowPause(true);
+		DMAudio.Service();
+		return;
+	}
+	if (CGame::IsWindowPauseMenuActive())
+		return;
+	CDraw::CalculateAspectRatio();
 	CSprite2d::SetRecipNearClip(); // this should be on InitialiseRenderWare according to PS2 asm. seems like a bug fix
 	CSprite2d::InitPerFrame();
 	CFont::InitPerFrame();

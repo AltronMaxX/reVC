@@ -8,6 +8,7 @@
 #include "Explosion.h"
 #include "Fire.h"
 #include "Garages.h"
+#include "Game.h"
 #include "Glass.h"
 #include "Messages.h"
 #include "ModelIndices.h"
@@ -1921,6 +1922,9 @@ CWorld::RemoveStaticObjects()
 void
 CWorld::Process(void)
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 	if(!(CTimer::GetFrameCounter() & 63)) CReferences::PruneAllReferencesInWorld();
 
 	if(bProcessCutsceneOnly) {

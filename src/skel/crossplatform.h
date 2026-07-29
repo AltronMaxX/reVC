@@ -101,6 +101,9 @@ enum eGameState
 extern RwUInt32 gGameState;
 
 RwBool IsForegroundApp();
+bool psRefreshAndGetWindowMinimizedPause();
+void psRefreshFocusAfterPause();
+void psRestoreFocusAfterPause();
 
 // Codes compatible with Windows and Linux
 #ifndef _WIN32
