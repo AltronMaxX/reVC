@@ -163,7 +163,6 @@ ApplyWindowMinimizedPause(RwBool paused)
 	MoviePlayer::SetPaused(!!paused);
 
 	if (paused) {
-		_InputShutdownMouse();
 		CGame::InitAfterFocusLoss();
 	} else {
 		CGame::ResumeWindowPauseMenuAfterFocusRestore();
