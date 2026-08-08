@@ -3770,7 +3770,7 @@ static bool
 StatsExportUsesUtf8()
 {
 #ifdef MORE_LANGUAGES
-	return CGame::russianGame;
+	return FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_RUSSIAN;
 #else
 	return false;
 #endif
