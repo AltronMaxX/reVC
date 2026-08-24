@@ -1,0 +1,62 @@
+name: reVC mod menu Windows x64
+
+on:
+  push:
+    branches:
+      - miami
+      - mod-menu-build
+  workflow_dispatch:
+
+env:
+  GLFW_BASE: "glfw-3.4.bin.WIN64"
+  GLFW_FILE: "glfw-3.4.bin.WIN64.zip"
+  GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v3
+        with:
+          vs-prerelease: true
+
+      - name: Download GLFW
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "${{ env.GLFW_URL }}" -OutFile "${{ env.GLFW_FILE }}"
+          7z x "${{ env.GLFW_FILE }}"
+
+      - name: Generate Visual Studio project
+        shell: pwsh
+        run: |
+          ./premake5 vs2022 --with-librw --glfwdir64="${{ env.GLFW_BASE }}"
+
+      - name: Build Debug x64
+        shell: pwsh
+        run: |
+          msbuild -m build/reVC.sln /property:Configuration=Debug /property:Platform=win-amd64-librw_gl3_glfw-oal
+
+      - name: Assemble package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item "bin/win-amd64-librw_gl3_glfw-oal/Debug/reVC.exe" package/
+          Copy-Item "bin/win-amd64-librw_gl3_glfw-oal/Debug/reVC.pdb" package/ -ErrorAction SilentlyContinue
+          Copy-Item "vendor/mpg123/dist/Win64/libmpg123-0.dll" package/
+          Copy-Item "vendor/openal-soft/dist/Win64/OpenAL32.dll" package/
+          Compress-Archive -Path "package/*" -DestinationPath "reVC-modmenu-win64.zip" -Force
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: reVC-modmenu-win64
+          path: reVC-modmenu-win64.zip
+          if-no-files-found: error
+          retention-days: 30
