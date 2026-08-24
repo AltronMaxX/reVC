@@ -136,15 +136,15 @@ TWEAKFUNCN(AddMoney, "Give $10,000");
 TWEAKFUNCN(MaxMoney, "Max Money");
 TWEAKFUNCN(FullHealth, "Full Health");
 TWEAKFUNCN(FullArmour, "Full Armour");
-TWEAKFUNCN(ApplyHealth, "Apply Health");
-TWEAKFUNCN(ApplyArmour, "Apply Armour");
 TWEAKFLOATN(health, 0.0f, 100.0f, 10.0f, "Health Value");
+TWEAKFUNCN(ApplyHealth, "Apply Health");
 TWEAKFLOATN(armour, 0.0f, 100.0f, 10.0f, "Armour Value");
-TWEAKSWITCHN(skin, 0, 7, skinNames, ApplySkin, "Skin");
+TWEAKFUNCN(ApplyArmour, "Apply Armour");
+TWEAKINT32N(skin, 0, 7, 1, "Skin Index");
 TWEAKFUNCN(ApplySkin, "Apply Skin");
 
 SETTWEAKPATH("Mod Menu|Weapons");
-TWEAKSWITCHN(weapon, WEAPONTYPE_UNARMED, WEAPONTYPE_CAMERA, weaponNames, GiveSelectedWeapon, "Weapon");
+TWEAKINT32N(weapon, WEAPONTYPE_UNARMED, WEAPONTYPE_CAMERA, 1, "Weapon Index");
 TWEAKFUNCN(GiveSelectedWeapon, "Give Selected Weapon");
 TWEAKFUNCN(GiveAllWeapons, "Give All Weapons");
 
