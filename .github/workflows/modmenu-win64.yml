@@ -1,62 +1,92 @@
-name: reVC mod menu Windows x64
+name: Build reVC mod menu
 
 on:
-  push:
-    branches:
-      - miami
-      - mod-menu-build
   workflow_dispatch:
-
-env:
-  GLFW_BASE: "glfw-3.4.bin.WIN64"
-  GLFW_FILE: "glfw-3.4.bin.WIN64.zip"
-  GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip"
 
 jobs:
   build:
-    runs-on: windows-latest
-
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64 OpenGL
+            os: windows-latest
+            renderer: opengl
+            platform: win-amd64-librw_gl3_glfw-oal
+          - name: Windows x64 DirectX 9
+            os: windows-latest
+            renderer: directx
+            platform: win-amd64-librw_d3d9-oal
+          - name: Linux x64 OpenGL
+            os: ubuntu-latest
+            renderer: opengl
+            platform: linux-amd64-librw_gl3_glfw-oal
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
-
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libglfw3-dev libgl1-mesa-dev libopenal-dev libmpg123-dev libsndfile1-dev libx11-dev
       - name: Add MSBuild to PATH
+        if: runner.os == 'Windows'
         uses: microsoft/setup-msbuild@v3
         with:
           vs-prerelease: true
-
       - name: Download GLFW
+        if: runner.os == 'Windows' && matrix.renderer == 'opengl'
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "${{ env.GLFW_URL }}" -OutFile "${{ env.GLFW_FILE }}"
-          7z x "${{ env.GLFW_FILE }}"
-
-      - name: Generate Visual Studio project
+          Invoke-WebRequest -Uri "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip" -OutFile glfw.zip
+          7z x glfw.zip
+      - name: Generate Windows project
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./premake5 vs2022 --with-librw --glfwdir64="${{ env.GLFW_BASE }}"
-
-      - name: Build Debug x64
+          if ("${{ matrix.renderer }}" -eq "opengl") { ./premake5 vs2022 --with-librw --glfwdir64="glfw-3.4.bin.WIN64" } else { ./premake5 vs2022 --with-librw }
+      - name: Build Windows
+        if: runner.os == 'Windows'
         shell: pwsh
-        run: |
-          msbuild -m build/reVC.sln /property:Configuration=Debug /property:Platform=win-amd64-librw_gl3_glfw-oal
-
-      - name: Assemble package
+        run: msbuild -m build/reVC.sln /property:Configuration=Debug /property:Platform=${{ matrix.platform }}
+      - name: Generate Linux Makefiles
+        if: runner.os == 'Linux'
+        run: ./premake5 gmake2 --with-librw
+      - name: Build Linux
+        if: runner.os == 'Linux'
+        run: make -C build config=debug_${{ matrix.platform }}
+      - name: Package Windows
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package | Out-Null
-          Copy-Item "bin/win-amd64-librw_gl3_glfw-oal/Debug/reVC.exe" package/
-          Copy-Item "bin/win-amd64-librw_gl3_glfw-oal/Debug/reVC.pdb" package/ -ErrorAction SilentlyContinue
-          Copy-Item "vendor/mpg123/dist/Win64/libmpg123-0.dll" package/
-          Copy-Item "vendor/openal-soft/dist/Win64/OpenAL32.dll" package/
-          Compress-Archive -Path "package/*" -DestinationPath "reVC-modmenu-win64.zip" -Force
-
-      - name: Upload ZIP artifact
+          Copy-Item "bin/${{ matrix.platform }}/Debug/reVC.exe" package/
+          Copy-Item "bin/${{ matrix.platform }}/Debug/reVC.pdb" package/ -ErrorAction SilentlyContinue
+          Copy-Item "vendor/mpg123/dist/Win64/libmpg123-0.dll" package/ -ErrorAction SilentlyContinue
+          Copy-Item "vendor/openal-soft/dist/Win64/OpenAL32.dll" package/ -ErrorAction SilentlyContinue
+          Compress-Archive -Path "package/*" -DestinationPath "reVC-${{ matrix.renderer }}-win64.zip" -Force
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p package
+          cp "bin/${{ matrix.platform }}/Debug/reVC" package/
+          tar -czf reVC-opengl-linux-amd64.tar.gz -C package .
+      - name: Upload Windows package
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v6
         with:
-          name: reVC-modmenu-win64
-          path: reVC-modmenu-win64.zip
+          name: reVC-${{ matrix.renderer }}-Windows
+          path: reVC-*.zip
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload Linux package
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v6
+        with:
+          name: reVC-opengl-Linux
+          path: reVC-opengl-linux-amd64.tar.gz
           if-no-files-found: error
           retention-days: 30
