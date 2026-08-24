@@ -6,7 +6,6 @@
 #include "World.h"
 #include "PlayerInfo.h"
 #include "Ped.h"
-#include "PlayerPed.h"
 #include "Streaming.h"
 #include "Automobile.h"
 #include "ModelIndices.h"
@@ -17,6 +16,7 @@ static float health = 100.0f;
 static float armour = 100.0f;
 static int32 weapon = WEAPONTYPE_COLT45;
 static int32 skin = 0;
+static int32 &money = CWorld::Players[0].m_nMoney;
 
 static const char *weaponNames[] = {
 	"Unarmed", "Brass Knuckles", "Screwdriver", "Golf Club", "Nightstick",
@@ -122,50 +122,37 @@ static void SpawnPolice()
 
 static void AddMoney()
 {
-	CWorld::Players[0].m_nMoney += 10000;
+	money += 10000;
 }
 
 static void MaxMoney()
 {
-	CWorld::Players[0].m_nMoney = 99999999;
+	money = 99999999;
 }
 
-void Init()
-{
-	DebugMenuAddInt32("Mod Menu|Player", "Money", &CWorld::Players[0].m_nMoney, nil,
-		1000, 0, 99999999, nil);
-	DebugMenuAddCmd("Mod Menu|Player", "Give $10,000", AddMoney);
-	DebugMenuAddCmd("Mod Menu|Player", "Max Money", MaxMoney);
+SETTWEAKPATH("Mod Menu|Player");
+TWEAKINT32N(money, 0, 99999999, 1000, "Money");
+TWEAKFUNCN(AddMoney, "Give $10,000");
+TWEAKFUNCN(MaxMoney, "Max Money");
+TWEAKFUNCN(FullHealth, "Full Health");
+TWEAKFUNCN(FullArmour, "Full Armour");
+TWEAKFUNCN(ApplyHealth, "Apply Health");
+TWEAKFUNCN(ApplyArmour, "Apply Armour");
+TWEAKFLOATN(health, 0.0f, 100.0f, 10.0f, "Health Value");
+TWEAKFLOATN(armour, 0.0f, 100.0f, 10.0f, "Armour Value");
+TWEAKSWITCHN(skin, 0, 7, skinNames, ApplySkin, "Skin");
+TWEAKFUNCN(ApplySkin, "Apply Skin");
 
-	DebugMenuAddFloat32("Mod Menu|Player", "Health", &health, ApplyHealth,
-		10.0f, 0.0f, 100.0f);
-	DebugMenuAddCmd("Mod Menu|Player", "Full Health", FullHealth);
-	DebugMenuAddFloat32("Mod Menu|Player", "Armour", &armour, ApplyArmour,
-		10.0f, 0.0f, 100.0f);
-	DebugMenuAddCmd("Mod Menu|Player", "Full Armour", FullArmour);
+SETTWEAKPATH("Mod Menu|Weapons");
+TWEAKSWITCHN(weapon, WEAPONTYPE_UNARMED, WEAPONTYPE_CAMERA, weaponNames, GiveSelectedWeapon, "Weapon");
+TWEAKFUNCN(GiveSelectedWeapon, "Give Selected Weapon");
+TWEAKFUNCN(GiveAllWeapons, "Give All Weapons");
 
-	DebugMenuEntry *weaponEntry = DebugMenuAddInt32("Mod Menu|Weapons", "Weapon",
-		&weapon, GiveSelectedWeapon, 1, WEAPONTYPE_UNARMED, WEAPONTYPE_CAMERA, weaponNames);
-	DebugMenuEntrySetWrap(weaponEntry, true);
-	DebugMenuAddCmd("Mod Menu|Weapons", "Give Selected Weapon", GiveSelectedWeapon);
-	DebugMenuAddCmd("Mod Menu|Weapons", "Give All Weapons", GiveAllWeapons);
+SETTWEAKPATH("Mod Menu|Spawn");
+TWEAKFUNCN(SpawnInfernus, "Spawn Infernus");
+TWEAKFUNCN(SpawnRhino, "Spawn Rhino");
+TWEAKFUNCN(SpawnPolice, "Spawn Police");
 
-	DebugMenuEntry *skinEntry = DebugMenuAddInt32("Mod Menu|Player", "Skin",
-		&skin, ApplySkin, 1, 0,
-		(int32)(sizeof(skinNames) / sizeof(skinNames[0])) - 1, skinNames);
-	DebugMenuEntrySetWrap(skinEntry, true);
-	DebugMenuAddCmd("Mod Menu|Player", "Apply Skin", ApplySkin);
-
-	DebugMenuAddCmd("Mod Menu|Spawn", "Spawn Infernus", SpawnInfernus);
-	DebugMenuAddCmd("Mod Menu|Spawn", "Spawn Rhino", SpawnRhino);
-	DebugMenuAddCmd("Mod Menu|Spawn", "Spawn Police", SpawnPolice);
-}
-
-}
-
-void ModMenuInit()
-{
-	ReVCModMenu::Init();
 }
 
 #endif
