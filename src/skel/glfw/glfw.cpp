@@ -112,12 +112,12 @@ static RwBool
 IsWindowActuallyActive(void)
 {
 	GLFWwindow *window = PSGLOBAL(window);
-	if (window == nil ||
-		glfwGetWindowAttrib(window, GLFW_ICONIFIED) != GLFW_FALSE ||
-		glfwGetWindowAttrib(window, GLFW_FOCUSED) != GLFW_TRUE)
+	if (window == nil || glfwGetWindowAttrib(window, GLFW_ICONIFIED) != GLFW_FALSE)
 		return FALSE;
 
 #ifdef _WIN32
+	if (glfwGetWindowAttrib(window, GLFW_FOCUSED) != GLFW_TRUE)
+		return FALSE;
 	return GetForegroundWindow() == glfwGetWin32Window(window);
 #else
 	return TRUE;
