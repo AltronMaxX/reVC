@@ -112,6 +112,7 @@ char CGame::aDatFile[32];
 #ifdef MORE_LANGUAGES
 bool CGame::russianGame = false;
 bool CGame::japaneseGame = false;
+bool CGame::ukrainianGame = false;
 #endif
 bool CGame::bRequestAutosave = false;
 bool CGame::bWindowPauseMenuActive = false;

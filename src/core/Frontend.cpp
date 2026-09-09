@@ -2987,6 +2987,7 @@ CMenuManager::InitialiseChangedLanguageSettings()
 #ifdef MORE_LANGUAGES
 		CGame::russianGame = false;
 		CGame::japaneseGame = false;
+		CGame::ukrainianGame = false;
 		switch (m_PrefsLanguage) {
 		case LANGUAGE_POLISH:
 			CFont::ReloadFonts(FONT_LANGSET_POLISH);
@@ -2996,6 +2997,9 @@ CMenuManager::InitialiseChangedLanguageSettings()
 			break;
 		case LANGUAGE_JAPANESE:
 			CFont::ReloadFonts(FONT_LANGSET_JAPANESE);
+			break;
+		case LANGUAGE_UKRAINIAN:
+			CFont::ReloadFonts(FONT_LANGSET_UKRAINIAN);
 			break;
 		default:
 			CFont::ReloadFonts(FONT_LANGSET_EFIGS);
@@ -3016,6 +3020,9 @@ CMenuManager::InitialiseChangedLanguageSettings()
 			break;
 		case LANGUAGE_JAPANESE:
 			CGame::japaneseGame = true;
+			break;
+		case LANGUAGE_UKRAINIAN:
+			CGame::ukrainianGame = true;
 			break;
 #endif
 		default:

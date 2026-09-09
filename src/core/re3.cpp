@@ -124,6 +124,16 @@ void LangJapSelect(int8 action)
 		FrontEndMenuManager.SaveSettings();
 	}
 }
+
+void LangUkrSelect(int8 action)
+{
+	if (action == FEOPTION_ACTION_SELECT) {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_UKRAINIAN;
+		FrontEndMenuManager.m_bFrontEnd_ReloadObrTxtGxt = true;
+		FrontEndMenuManager.InitialiseChangedLanguageSettings();
+		FrontEndMenuManager.SaveSettings();
+	}
+}
 #endif
 
 void
@@ -185,6 +195,13 @@ CustomFrontendOptionsPopulate(void)
 		CFileMgr::CloseFile(fd);
 	}
 #endif
+	if (fd = CFileMgr::OpenFile("text/ukrainian.gxt")) {
+		if (fd2 = CFileMgr::OpenFile("models/fonts_ukr.txd")) {
+			FrontendOptionAddDynamic("FEL_UKR", 0, 0, MENUALIGN_CENTER, nil, nil, LangUkrSelect, nil, nil);
+			CFileMgr::CloseFile(fd2);
+		}
+		CFileMgr::CloseFile(fd);
+	}
 #endif
 
 }

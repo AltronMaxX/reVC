@@ -71,6 +71,9 @@ CText::Load(void)
 	case CMenuManager::LANGUAGE_JAPANESE:
 		sprintf(filename, "JAPANESE.GXT");
 		break;
+	case CMenuManager::LANGUAGE_UKRAINIAN:
+		sprintf(filename, "UKRAINIAN.GXT");
+		break;
 #endif
 	}
 
@@ -275,6 +278,9 @@ CText::LoadMissionText(char *MissionTableName)
 	case CMenuManager::LANGUAGE_JAPANESE:
 		sprintf(filename, "JAPANESE.GXT");
 		break;
+	case CMenuManager::LANGUAGE_UKRAINIAN:
+		sprintf(filename, "UKRAINIAN.GXT");
+		break;
 #endif
 	}
 	CTimer::Suspend();
@@ -471,7 +477,7 @@ UnicodeToAscii(wchar *src)
 	int len;
 	for(len = 0; *src != '\0' && len < 256-1; len++, src++)
 #ifdef MORE_LANGUAGES
-		if(*src < 128 || ((CGame::russianGame || CGame::japaneseGame) && *src < 256))
+		if(*src < 128 || ((CGame::russianGame || CGame::japaneseGame || CGame::ukrainianGame) && *src < 256))
 #else
 		if(*src < 128)
 #endif
