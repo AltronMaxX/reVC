@@ -1,9 +1,5 @@
 #include <csignal>
 #define WITHWINDOWS
-#include "Object.h"
-#include "Pools.h"
-#include "Restart.h"
-#include "Stats.h"
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
 #include <xinput.h>
@@ -128,6 +124,16 @@ void LangJapSelect(int8 action)
 		FrontEndMenuManager.SaveSettings();
 	}
 }
+
+void LangUkrSelect(int8 action)
+{
+	if (action == FEOPTION_ACTION_SELECT) {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_UKRAINIAN;
+		FrontEndMenuManager.m_bFrontEnd_ReloadObrTxtGxt = true;
+		FrontEndMenuManager.InitialiseChangedLanguageSettings();
+		FrontEndMenuManager.SaveSettings();
+	}
+}
 #endif
 
 void
@@ -189,6 +195,13 @@ CustomFrontendOptionsPopulate(void)
 		CFileMgr::CloseFile(fd);
 	}
 #endif
+	if (fd = CFileMgr::OpenFile("text/ukrainian.gxt")) {
+		if (fd2 = CFileMgr::OpenFile("models/fonts_ukr.txd")) {
+			FrontendOptionAddDynamic("FEL_UKR", 0, 0, MENUALIGN_CENTER, nil, nil, LangUkrSelect, nil, nil);
+			CFileMgr::CloseFile(fd2);
+		}
+		CFileMgr::CloseFile(fd);
+	}
 #endif
 
 }
@@ -516,6 +529,7 @@ bool LoadINISettings()
 	ReadIniIfExists("Display", "Subtitles", &FrontEndMenuManager.m_PrefsShowSubtitles);
 	ReadIniIfExists("Graphics", "AspectRatio", &FrontEndMenuManager.m_PrefsUseWideScreen);
 	ReadIniIfExists("Graphics", "FrameLimiter", &FrontEndMenuManager.m_PrefsFrameLimiter);
+	ReadIniIfExists("Graphics", "MaxFPS", &RsGlobal.maxFPS);
 #ifdef LEGACY_MENU_OPTIONS
 	ReadIniIfExists("Graphics", "VSync", &FrontEndMenuManager.m_PrefsVsyncDisp);
 	ReadIniIfExists("Graphics", "Trails", &CMBlur::BlurOn);
@@ -635,6 +649,7 @@ void SaveINISettings()
 	StoreIni("Display", "ShowHud", FrontEndMenuManager.m_PrefsShowHud);
 	StoreIni("Display", "RadarMode", FrontEndMenuManager.m_PrefsRadarMode);
 	StoreIni("Display", "ShowLegends", FrontEndMenuManager.m_PrefsShowLegends);
+	StoreIni("Graphics", "MaxFPS", RsGlobal.maxFPS);
 
 #ifdef EXTENDED_COLOURFILTER
 	StoreIni("CustomPipesValues", "PostFXIntensity", CPostFX::Intensity);
@@ -830,93 +845,6 @@ static void
 SwitchToMission(void)
 {
 	CTheScripts::SwitchToMission(nextMissionToSwitch);
-}
-#endif
-
-#ifdef UNLOCK_BRIDGES
-static void
-UnlockBridges(void) // Just porting from main.scm
-{
-	CStats::NoMoreHurricanes = 0;
-
-	CVector pos = CVector(-822.7, 1157.9, 10.1);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	CRestart::AddHospitalRestartPoint(pos, 4.0);
-	pos = CVector(-885.2, -470.4, 12.1);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	CRestart::AddHospitalRestartPoint(pos, 276.0);
-
-	pos = CVector(-659.5, 760.4, 10.5);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	CRestart::AddPoliceRestartPoint(pos, 133.0);
-	pos = CVector(-871.9, -682.3, 10.2);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	CRestart::AddPoliceRestartPoint(pos, 328.1);
-
-	ThePaths.SwitchPedRoadsOffInArea(189.8, 230.3, 0.0, 248.0, 258.5, 30.0, false);
-	ThePaths.SwitchPedRoadsOffInArea(-787.8, -519.4, 10.0, -657.5, -475.2, 20.0, false);
-	ThePaths.SwitchPedRoadsOffInArea(-38.0, 84.3, 0.0, -102.3, 95.1, 30.0, false);
-	ThePaths.SwitchPedRoadsOffInArea(-214.6, -948.8, 0.0, -258.7, -920.6, 30.0, false);
-	ThePaths.SwitchPedRoadsOffInArea(-99.8, 1041.9, 0.0, -129.0, 1097.4, 30.0, false);
-
-	ThePaths.SwitchRoadsOffInArea(189.8, 230.3, 0.0, 248.0, 258.5, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(-38.0, 84.3, 0.0, -102.3, 95.1, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(175.0, 236.1, 0.0, 161.0, 242.4, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(149.8, 231.4, 0.0, 136.0, 235.3, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(63.4, 188.6, 0.0, 49.4, 189.7, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(-214.6, -948.8, 0.0, -258.7, -920.6, 30.0, false);
-	ThePaths.SwitchRoadsOffInArea(-787.8, -519.4, 10.0, -657.5, -475.2, 20.0, false);
-	ThePaths.SwitchRoadsOffInArea(-99.8, 1041.9, 0.0, -129.0, 1097.4, 30.0, false);
-
-	CWorld::Remove(CObject::NT_ROADBLOCKCI);
-	CWorld::RemoveReferencesToDeletedObject(CObject::NT_ROADBLOCKCI);
-	delete CObject::NT_ROADBLOCKCI;
-
-	CWorld::Remove(CObject::NT_ROADBLOCKGF);
-	CWorld::RemoveReferencesToDeletedObject(CObject::NT_ROADBLOCKGF);
-	delete CObject::NT_ROADBLOCKGF;
-
-	CWorld::Remove(CObject::WSH_ROADBLOCK);
-	CWorld::RemoveReferencesToDeletedObject(CObject::WSH_ROADBLOCK);
-	delete CObject::WSH_ROADBLOCK;
-
-	CWorld::Remove(CObject::COMGATE1CLOSED);
-	CWorld::RemoveReferencesToDeletedObject(CObject::COMGATE1CLOSED);
-	delete CObject::COMGATE1CLOSED;
-
-	CWorld::Remove(CObject::COMGATE2CLOSED);
-	CWorld::RemoveReferencesToDeletedObject(CObject::COMGATE2CLOSED);
-	delete CObject::COMGATE2CLOSED;
-
-	CObject *pObj = new CObject(2444, false);
-	pObj->ObjectCreatedBy = 2;
-	pos = CVector(-712.524, -489.428, 12.549);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	pObj->SetPosition(pos);
-	pObj->SetOrientation(0.0f, 0.0f, 0.0f);
-	pObj->GetMatrix().UpdateRW();
-	pObj->UpdateRwFrame();
-	CBaseModelInfo *pModelInfo = CModelInfo::GetModelInfo(2444);
-	if(pModelInfo->IsBuilding() && ((CSimpleModelInfo *)pModelInfo)->m_isBigBuilding) pObj->SetupBigBuilding();
-	CTheScripts::ClearSpaceForMissionEntity(pos, pObj);
-	CWorld::Add(pObj);
-	CTheScripts::MissionCleanUp.RemoveEntityFromList(CPools::GetObjectPool()->GetIndex(pObj), 3);
-	CObject::COMGATE1CLOSED = pObj;
-
-	pObj = new CObject(2443, false);
-	pObj->ObjectCreatedBy = 2;
-	pos = CVector(-183.824, -473.223, 12.615);
-	if(pos.z <= MAP_Z_LOW_LIMIT) pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-	pObj->SetPosition(pos);
-	pObj->SetOrientation(0.0f, 0.0f, 0.0f);
-	pObj->GetMatrix().UpdateRW();
-	pObj->UpdateRwFrame();
-	pModelInfo = CModelInfo::GetModelInfo(2443);
-	if(pModelInfo->IsBuilding() && ((CSimpleModelInfo *)pModelInfo)->m_isBigBuilding) pObj->SetupBigBuilding();
-	CTheScripts::ClearSpaceForMissionEntity(pos, pObj);
-	CWorld::Add(pObj);
-	CTheScripts::MissionCleanUp.RemoveEntityFromList(CPools::GetObjectPool()->GetIndex(pObj), 3);
-	CObject::COMGATE2CLOSED = pObj;
 }
 #endif
 
@@ -1251,9 +1179,6 @@ extern bool gbRenderWorld2;
 		missionEntry = DebugMenuAddVar("Game", "Select mission", &nextMissionToSwitch, nil, 1, 0, ARRAY_SIZE(missions) - 1, missions);
 		DebugMenuEntrySetWrap(missionEntry, true);
 		DebugMenuAddCmd("Game", "Start selected mission ", SwitchToMission);
-#endif
-#ifdef UNLOCK_BRIDGES
-		DebugMenuAddCmd("Game", "Unlock bridges ", UnlockBridges);
 #endif
 		extern bool PrintDebugCode;
 		extern int16 DebugCamMode;

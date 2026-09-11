@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_AUDIOMANAGER_H__
+#define __GTA_AUDIOMANAGER_H__
 
 #include "audio_enums.h"
 #include "AudioCollision.h"
@@ -572,6 +573,7 @@ public:
 	bool8 IsMissionAudioSamplePlaying(uint8 slot);
 	bool8 IsMissionAudioSampleFinished(uint8 slot);
 	void ClearMissionAudio(uint8 slot); // inlined in vc
+	void SetMissionAudioPausedForWindowPause(bool paused);
 	void ProcessMissionAudioSlot(uint8 slot);
 	void ProcessMissionAudio();
 
@@ -580,6 +582,7 @@ public:
 	void InitialisePoliceRadio();
 	void ResetPoliceRadio();
 	void SetMissionScriptPoliceAudio(uint32 sfx); // inlined and optimized
+	void RestartMissionScriptPoliceAudioAfterPause(uint32 sfx);
 	int8 GetMissionScriptPoliceAudioPlayingStatus();
 	void DoPoliceRadioCrackle();
 	void ServicePoliceRadio();
@@ -647,3 +650,5 @@ enum
 	PED_COMMENT_VOLUME_BEHIND_WALL = 31,
 	COLLISION_MAX_DIST = 60,
 };
+
+#endif // __GTA_AUDIOMANAGER_H__

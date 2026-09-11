@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_GAME_H__
+#define __GTA_GAME_H__
 
 enum eLevelName {
 	LEVEL_IGNORE = -1, // beware, this is only used in CPhysical's m_nZoneLevel
@@ -33,6 +34,10 @@ enum eAreaName {
 
 class CGame
 {
+	static bool bWindowPauseMenuActive;
+	static bool bWindowPauseMenuPending;
+	static bool bWindowPauseMenuWasAlreadyActive;
+	static void ResetWindowPauseMenu(void);
 public:
 	static eLevelName currLevel;
 	static int32 currArea;
@@ -43,6 +48,7 @@ public:
 #ifdef MORE_LANGUAGES
 	static bool russianGame;
 	static bool japaneseGame;
+	static bool ukrainianGame;
 #endif
 	static bool noProstitutes;
 	static bool playingIntro;
@@ -68,6 +74,10 @@ public:
 	static void Process(void);
 
 	static void InitAfterFocusLoss(void);
+	static void FinishWindowPauseMenu(void);
+	static void ResumeWindowPauseMenuAfterFocusRestore(void);
+	static bool IsWindowPauseMenuActive(void) { return bWindowPauseMenuActive; }
+	static bool ShouldPreserveWindowPauseMusicMode(void) { return bWindowPauseMenuActive && !bWindowPauseMenuWasAlreadyActive; }
 
 	static bool IsInInterior(void) { return currArea != AREA_MAIN_MAP; }
 	static bool CanSeeWaterFromCurrArea(void);
@@ -80,3 +90,5 @@ public:
 };
 
 inline bool IsAreaVisible(int area) { return area == CGame::currArea || area == AREA_EVERYWHERE; }
+
+#endif // __GTA_GAME_H__

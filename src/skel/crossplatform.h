@@ -1,3 +1,5 @@
+#ifndef GTA_PS2
+
 #include <time.h>
 #include <limits.h>
 
@@ -99,14 +101,9 @@ enum eGameState
 extern RwUInt32 gGameState;
 
 RwBool IsForegroundApp();
-
-#ifndef MAX_PATH
-    #if !defined _WIN32 || defined __MINGW32__
-    #define MAX_PATH PATH_MAX
-    #else
-    #define MAX_PATH 260
-    #endif
-#endif
+bool psRefreshAndGetWindowMinimizedPause();
+void psRefreshFocusAfterPause();
+void psRestoreFocusAfterPause();
 
 // Codes compatible with Windows and Linux
 #ifndef _WIN32
@@ -151,7 +148,7 @@ typedef void* HANDLE;
 
 struct WIN32_FIND_DATA {
     char extension[32]; // for searching
-    char folder[MAX_PATH];	// for searching
+    char folder[PATH_MAX];	// for searching
     char cFileName[256]; // because tSkinInfo has it 256
     time_t ftLastWriteTime;
 };
@@ -185,4 +182,5 @@ void GetDateFormat(int, int, SYSTEMTIME*, int, char*, int);
 #endif
 #define GLFW_GAMEPAD_BUTTON_Y 2
 
+#endif
 #endif

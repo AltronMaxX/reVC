@@ -1202,10 +1202,14 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		return 0;
 	}
 	case COMMAND_GET_CONTROLLER_MODE:
-#if defined(GTA_PC) && !defined(DETECT_PAD_INPUT_SWITCH)
-		ScriptParams[0] = 0;
-#else
+#ifdef GTA_PC
+#ifdef DETECT_PAD_INPUT_SWITCH
 		ScriptParams[0] = CPad::IsAffectedByController ? CPad::GetPad(0)->Mode : 0;
+#else
+		ScriptParams[0] = 0;
+#endif
+#else
+		ScriptParams[0] = CPad::GetPad(0)->Mode;
 #endif
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -1284,14 +1288,6 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_OBJECT);
-		switch(mi) {
-			case 2446: CObject::COMGATE1CLOSED = pObj; break;
-			case 2447: CObject::COMGATE2CLOSED = pObj; break;
-		    case 590: CObject::NT_ROADBLOCKCI = pObj; break;
-		    case 2141: CObject::NT_ROADBLOCKGF = pObj; break;
-		    case 3518: CObject::WSH_ROADBLOCK = pObj; break;
-			default: break;
-		}
 		return 0;
 	}
 	/*

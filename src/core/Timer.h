@@ -1,5 +1,5 @@
-#pragma once
-#include "common.h"
+#ifndef __GTA_TIMER_H__
+#define __GTA_TIMER_H__
 
 class CTimer
 {
@@ -47,7 +47,7 @@ public:
 	static bool GetIsUserPaused() { return m_UserPause; }
 	static bool GetIsCodePaused() { return m_CodePause; }
 	static void SetCodePause(bool pause) { m_CodePause = pause; }
-	static bool GetIsWindowMinimizedPaused() { return m_WindowMinimizedPause; }
+	static bool GetWindowMinimizedPause() { return m_WindowMinimizedPause; }
 	static void SetWindowMinimizedPause(bool pause);
 	
 	static void Initialise(void);
@@ -73,3 +73,5 @@ public:
 	static uint32 GetLogicalFramesPassed(void) { return m_LogicalFramesPassed; }
 #endif
 };
+
+#endif // __GTA_TIMER_H__

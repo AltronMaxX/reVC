@@ -1440,14 +1440,14 @@ void CReplay::RestoreStuffFromMem(void)
 	memcpy(CRadar::ms_RadarTrace, pRadarBlips, sizeof(sRadarTrace) * NUMRADARBLIPS);
 	delete[] pRadarBlips;
 	pRadarBlips = nil;
-	/* #ifdef FIX_BUGS
+#ifdef FIX_BUGS
 	for (int i = 0; i < NUMPLAYERS; i++) {
 		CPlayerPed* pPlayerPed = (CPlayerPed*)CPools::GetPedPool()->GetAt(nHandleOfPlayerPed[i]);
 		assert(pPlayerPed);
 		CWorld::Players[i].m_pPed = pPlayerPed;
 		pPlayerPed->RegisterReference((CEntity**)&CWorld::Players[i].m_pPed);
 	}
-#endif*/
+#endif
 	FindPlayerPed()->m_pWanted = new CWanted(PlayerWanted);
 	CWorld::Players[0] = PlayerInfo;
 	int i = CPools::GetPedPool()->GetSize();

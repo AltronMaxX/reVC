@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_CUTSCENEMGR_H__
+#define __GTA_CUTSCENEMGR_H__
 #include "CutsceneObject.h"
 
 #define CUTSCENENAMESIZE 8
@@ -24,6 +25,10 @@ class CCutsceneMgr
 	static bool ms_wasCutsceneSkipped;
 	static bool ms_cutsceneProcessing;
 	static bool ms_useCutsceneShadows;
+	static bool ms_waitingForAudioAfterWindowPause;
+	static bool ms_cutsceneAudioResumeRequested;
+	static bool ms_cutsceneAudioSyncUnavailable;
+	static uint8 ms_cutsceneAudioResumeFrames;
 public:
 	static CDirectory *ms_pCutsceneDir;
 	static uint32 ms_cutsceneLoadStatus;
@@ -33,6 +38,7 @@ public:
 	static bool HasLoaded(void) { return ms_loaded; }
 	static bool IsCutsceneProcessing(void) { return ms_cutsceneProcessing; }
 	static bool WasCutsceneSkipped(void) { return ms_wasCutsceneSkipped; }
+	static bool IsWaitingForAudioAfterWindowPause(void) { return ms_waitingForAudioAfterWindowPause; }
 	static bool UseLodMultiplier(void) { return ms_useLodMultiplier; }
 	static CCutsceneObject* GetCutsceneObject(int id) { return ms_pCutsceneObjects[id]; }
 	static int GetCutsceneTimeInMilleseconds(void) { return 1000.0f * ms_cutsceneTimer; }
@@ -52,6 +58,7 @@ public:
 	static void DeleteCutsceneData(void);
 	static void LoadAnimationUncompressed(char const*);
 	static void Update(void);
+	static void RecordWindowPause(void);
 
 	static void AttachObjectToParent(CObject *pObject, CEntity *pAttachTo);
 	static void AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const char *frame);
@@ -59,3 +66,5 @@ public:
 	static void RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
 	static void DisableCutsceneShadows() { ms_useCutsceneShadows = false; }
 };
+
+#endif // __GTA_CUTSCENEMGR_H__

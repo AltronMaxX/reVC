@@ -113,6 +113,7 @@ cDMAudio::SetMusicFadeVol(uint8 volume)
 	AudioManager.SetMusicFadeVol(vol);
 }
 
+#ifdef GTA_PC
 uint8
 cDMAudio::GetNum3DProvidersAvailable(void)
 {
@@ -167,6 +168,21 @@ cDMAudio::ReacquireDigitalHandle(void)
 }
 
 void
+cDMAudio::SetStreamsPausedForWindowPause(bool paused)
+{
+	if (paused)
+		AudioManager.SetMissionAudioPausedForWindowPause(true);
+
+	if (AudioManager.m_bIsInitialised) {
+		for (uint8 stream = 0; stream < MAX_STREAMS; stream++)
+			SampleManager.PauseStream(paused ? TRUE : FALSE, stream);
+	}
+
+	if (!paused)
+		AudioManager.SetMissionAudioPausedForWindowPause(false);
+}
+
+void
 cDMAudio::SetDynamicAcousticModelingStatus(bool8 status)
 {
 #ifdef AUDIO_REFLECTIONS
@@ -191,6 +207,7 @@ cDMAudio::IsAudioInitialised(void)
 {
 	return AudioManager.IsAudioInitialised();
 }
+#endif
 
 void
 cDMAudio::ResetPoliceRadio()
@@ -297,6 +314,24 @@ void
 cDMAudio::StopCutSceneMusic(void)
 {
 	MusicManager.StopCutSceneMusic();
+}
+
+bool8
+cDMAudio::IsCutSceneMusicPlaying(void)
+{
+	return MusicManager.IsCutSceneMusicPlaying();
+}
+
+void
+cDMAudio::ResumeCutSceneMusicAfterPause(void)
+{
+	MusicManager.ResumeCutSceneMusicAfterPause();
+}
+
+int32
+cDMAudio::GetCutSceneMusicPosition(void)
+{
+	return MusicManager.GetCutSceneMusicPosition();
 }
 
 void

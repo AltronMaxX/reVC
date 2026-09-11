@@ -219,6 +219,7 @@ class CWavFile : public IDecoder
 	tFormatHeader m_FormatHeader;
 
 	uint32 m_DataStartOffset; // TODO: 64 bit?
+	uint32 m_DataSize;
 	uint32 m_nSampleCount;
 	uint32 m_nSamplesPerBlock;
 
@@ -310,6 +311,7 @@ public:
 		}
 		
 		m_DataStartOffset = ftell(m_pFile);
+		m_DataSize = DataHeader.Size;
 		m_nSampleCount = DataHeader.Size / m_FormatHeader.BlockAlign * m_nSamplesPerBlock;
 
 		m_bIsOpen = true;
@@ -372,7 +374,8 @@ public:
 		if (m_FormatHeader.AudioFormat == WAVEFMT_PCM)
 		{
 			// just read the file and sort the samples
-			uint32 size = fread(buffer, 1, GetBufferSize(), m_pFile);
+			uint32 bytesLeft = m_DataSize - (ftell(m_pFile) - m_DataStartOffset);
+			uint32 size = fread(buffer, 1, Min(GetBufferSize(), bytesLeft), m_pFile);
 			if (m_FormatHeader.NumChannels == 2)
 				SortStereoBuffer.SortStereo(buffer, size);
 			return size;
@@ -400,7 +403,8 @@ public:
 			{
 				// read the file
 				uint8 *pAdpcmBuf = m_pAdpcmBuffer;
-				if (fread(m_pAdpcmBuffer, 1, m_FormatHeader.BlockAlign, m_pFile) == 0)
+				uint32 bytesLeft = m_DataSize - (ftell(m_pFile) - m_DataStartOffset);
+				if (fread(m_pAdpcmBuffer, 1, Min(m_FormatHeader.BlockAlign, bytesLeft), m_pFile) == 0)
 					return 0;
 
 				// get the first sample in adpcm block and initialise the decoder(s)
@@ -1267,17 +1271,15 @@ bool CStream::Open(const char* filename, uint32 overrideSampleRate)
 #if !defined(_WIN32)
 	char *real = casepath(filename);
 	if (real) {
-		strncpy(m_aFilename, real, MAX_PATH - 1);
-		m_aFilename[MAX_PATH - 1] = '\0';
+		strcpy(m_aFilename, real);
 		free(real);
 	} else {
 #else
 	{
 #endif
-		strncpy(m_aFilename, filename, MAX_PATH - 1);
-		m_aFilename[MAX_PATH - 1] = '\0';
+		strcpy(m_aFilename, filename);
 	}
-
+		
 	DEV("Stream %s\n", m_aFilename);
 
 	if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".wav")], ".wav"))
@@ -1298,7 +1300,7 @@ bool CStream::Open(const char* filename, uint32 overrideSampleRate)
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".opus")], ".opus"))
 		m_pSoundFile = new COpusFile(m_aFilename);
 #endif
-	else
+	else 
 		m_pSoundFile = nil;
 
 	if ( m_pSoundFile && m_pSoundFile->IsOpened() )
@@ -1382,7 +1384,7 @@ bool CStream::IsOpened()
 bool CStream::IsPlaying()
 {
 	if ( !HasSource() || !IsOpened() ) return false;
-
+	
 	if ( !m_bPaused )
 	{
 		ALint sourceState[2];
@@ -1399,7 +1401,7 @@ bool CStream::IsPlaying()
 			return true;
 #endif
 	}
-
+	
 	return false;
 }
 
@@ -1459,11 +1461,13 @@ void CStream::SetVolume(uint32 nVol)
 
 void CStream::SetPan(uint8 nPan)
 {
-	m_nPan = Clamp((int8)nPan - 63, 0, 63);
-	SetPosition(0, (m_nPan - 63) / 64.0f, 0.0f, Sqrt(1.0f - SQR((m_nPan - 63) / 64.0f)));
+	int iPan = nPan;
+	iPan = Clamp(iPan - 63, 0, 63);
+	SetPosition(0, (iPan - 63) / 64.0f, 0.0f, -Sqrt(1.0f - SQR((iPan - 63) / 64.0f)));
 
-	m_nPan = Clamp((int8)nPan + 64, 64, 127);
-	SetPosition(1, (m_nPan - 63) / 64.0f, 0.0f, Sqrt(1.0f - SQR((m_nPan - 63) / 64.0f)));
+	iPan = nPan;
+	iPan = Clamp(iPan + 64, 64, 127);
+	SetPosition(1, (iPan - 63) / 64.0f, 0.0f, -Sqrt(1.0f - SQR((iPan - 63) / 64.0f)));
 
 	m_nPan = nPan;
 }
@@ -1472,7 +1476,7 @@ void CStream::SetPan(uint8 nPan)
 void CStream::SetPosMS(uint32 nPos)
 {
 	if ( !IsOpened() ) return;
-
+	
 #ifdef MULTITHREADED_AUDIO
 	std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -1483,12 +1487,12 @@ void CStream::SetPosMS(uint32 nPos)
 		m_bDoSeek = true;
 		m_SeekPos = nPos;
 	} else
-#endif
+#endif	
 	{
 		m_pSoundFile->Seek(nPos);
-	}
+	}	
 	ClearBuffers();
-
+	
 	// adding to gStreamsToProcess not needed, someone always calls Start() / BuffersShouldBeFilled() after SetPosMS
 }
 
@@ -1496,7 +1500,7 @@ uint32 CStream::GetPosMS()
 {
 	if ( !HasSource() ) return 0;
 	if ( !IsOpened() ) return 0;
-
+	
 	// Deferred init causes division by zero
 	if (m_pSoundFile->GetChannels() == 0)
 		return 0;
@@ -1536,7 +1540,7 @@ bool CStream::FillBuffer(ALuint *alBuffer)
 		return false;
 
 	uint32 channelSize = size / m_pSoundFile->GetChannels();
-
+	
 	alBufferData(alBuffer[0], AL_FORMAT_MONO16, m_pBuffer, channelSize, m_pSoundFile->GetSampleRate());
 	// TODO: use just one buffer if we play mono
 	if (m_pSoundFile->GetChannels() == 1)
@@ -1561,7 +1565,7 @@ bool CStream::QueueBuffers()
 
 		buffersQueued = true;
 	}
-	return buffersQueued;
+	return buffersQueued;	
 }
 #endif
 
@@ -1576,14 +1580,14 @@ int32 CStream::FillBuffers()
 		alSourceQueueBuffers(m_pAlSources[0], 1, &m_alBuffers[i*2]);
 		alSourceQueueBuffers(m_pAlSources[1], 1, &m_alBuffers[i*2+1]);
 	}
-
+	
 	return i;
 }
 
 void CStream::ClearBuffers()
 {
 	if ( !HasSource() ) return;
-
+	
 	ALint buffersQueued[2];
 	alGetSourcei(m_pAlSources[0], AL_BUFFERS_QUEUED, &buffersQueued[0]);
 	alGetSourcei(m_pAlSources[1], AL_BUFFERS_QUEUED, &buffersQueued[1]);
@@ -1627,7 +1631,7 @@ bool CStream::Setup(bool imSureQueueIsEmpty, bool lock)
 		//SetPan(m_nPan);
 		//SetVolume(100);
 	}
-
+	
 	return IsOpened();
 }
 
@@ -1674,7 +1678,7 @@ void CStream::SetPlay(bool state)
 void CStream::Start()
 {
 	if ( !HasSource() ) return;
-
+	
 #ifdef MULTITHREADED_AUDIO
 	std::lock_guard<std::mutex> lock(m_mutex);
 	tsQueue<std::pair<ALuint, ALuint>>().swapNts(m_queueBuffers); // TSness not required, second thread always access it when stream mutex acquired
@@ -1692,16 +1696,16 @@ void CStream::Update()
 {
 	if ( !IsOpened() )
 		return;
-
+	
 	if ( !HasSource() )
 		return;
-
+	
 	if ( m_bReset )
 		return;
-
+	
 	if ( !m_bPaused )
 	{
-
+		
 		bool buffersQueuedAndStarted = false;
 		bool buffersQueuedButNotStarted = false;
 #ifdef MULTITHREADED_AUDIO
@@ -1736,7 +1740,7 @@ void CStream::Update()
 		// AL_BUFFERS_QUEUED = Number of *all* buffers in queue, including processed, processing and pending
 		// AL_BUFFERS_PROCESSED = Index of the buffer being processing right now. Buffers coming after that(have greater index) are pending buffers.
 		// which means: totalBuffers[0] - buffersProcessed[0] = pending buffers
-
+		
 		// We should wait queue to be cleared to loop track, because position calculation relies on queue.
 		if (m_nLoopCount != 1 && m_bActive && totalBuffers[0] == 0)
 		{
@@ -1759,7 +1763,7 @@ void CStream::Update()
 			while ( buffersProcessed[0]-- )
 			{
 				ALuint buffer[2];
-
+				
 				alSourceUnqueueBuffers(m_pAlSources[0], 1, &buffer[0]);
 				alSourceUnqueueBuffers(m_pAlSources[1], 1, &buffer[1]);
 
@@ -1838,5 +1842,5 @@ void CStream::ProviderTerm()
 	Stop();
 	ClearBuffers();
 }
-
+	
 #endif
