@@ -2142,13 +2142,74 @@ SkipMovieButtonJustDown()
 }
 
 #ifdef _WIN32
+
+static void
+SetGameWorkingDirectory(void)
+{
+	wchar_t exeDir[4096];
+	DWORD n = GetModuleFileNameW(NULL, exeDir, sizeof(exeDir) / sizeof(exeDir[0]));
+	if (n == 0 || n >= sizeof(exeDir) / sizeof(exeDir[0]))
+		return;
+	exeDir[n] = L'\0';
+
+	wchar_t *lastSep = NULL;
+	for (wchar_t *p = exeDir; *p != L'\0'; p++)
+		if (*p == L'/' || *p == L'\\')
+			lastSep = p;
+	if (lastSep == NULL)
+		return;
+	*lastSep = L'\0';
+
+	wchar_t imgPath[4096 + 64];
+	swprintf(imgPath, sizeof(imgPath) / sizeof(imgPath[0]),
+		 L"%ls/models/gta3.img", exeDir);
+
+	if (GetFileAttributesW(imgPath) == INVALID_FILE_ATTRIBUTES)
+		return;
+	SetCurrentDirectoryW(exeDir);
+}
+
+#else
+
+static void
+SetGameWorkingDirectory(void)
+{
+	char exeDir[4096];
+#ifdef __APPLE__
+	uint32_t size = sizeof(exeDir);
+	if (_NSGetExecutablePath(exeDir, &size) != 0)
+		return;
+#else
+	ssize_t n = readlink("/proc/self/exe", exeDir, sizeof(exeDir) - 1);
+	if (n <= 0)
+		return;
+	exeDir[n] = '\0';
+#endif
+
+	char *lastSep = strrchr(exeDir, '/');
+	if (lastSep == NULL)
+		return;
+	*lastSep = '\0';
+
+	char imgPath[4096 + 64];
+	snprintf(imgPath, sizeof(imgPath), "%s/models/gta3.img", exeDir);
+
+	struct stat st;
+	if (stat(imgPath, &st) != 0)
+		return;
+	chdir(exeDir);
+}
+
+#endif
+
+#ifdef _WIN32
 int PASCAL
 WinMain(HINSTANCE instance,
 	HINSTANCE prevInstance	__RWUNUSED__,
 	CMDSTR cmdLine,
 	int cmdShow)
 {
-
+	SetGameWorkingDirectory();
 	RwInt32 argc;
 	RwChar** argv;
 	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, nil, SPIF_SENDCHANGE);
@@ -2169,6 +2230,7 @@ int
 main(int argc, char *argv[])
 {
 #endif
+	SetGameWorkingDirectory();
 	RwV2d pos;
 	RwInt32 i;
 
