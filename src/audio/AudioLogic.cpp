@@ -5182,6 +5182,26 @@ cAudioManager::ProcessPedOneShots(cPedParams &params)
 			SET_SOUND_REFLECTION(TRUE);
 			break;
 		}
+#ifdef SWIMMING
+		case SOUND_MOVING_IN_WATER:
+			m_sQueueSample.m_nCounter = 38;
+			m_sQueueSample.m_nSampleIndex = SFX_BOAT_WATER_LOOP;
+			m_sQueueSample.m_nBankIndex = SFX_BANK_0;
+			m_sQueueSample.m_bIs2D = FALSE;
+			m_sQueueSample.m_nPriority = 3;
+			m_sQueueSample.m_nFrequency = 22050;
+			m_sQueueSample.m_nLoopCount = 0;
+			Vol = 15;
+			SET_EMITTING_VOLUME(Vol);
+			SET_LOOP_OFFSETS(m_sQueueSample.m_nSampleIndex)
+				m_sQueueSample.m_fSpeedMultiplier = 2.0f;
+			maxDist = BOAT_MOVING_OVER_WATER_MAX_DIST;
+			m_sQueueSample.m_bStatic = FALSE;
+			m_sQueueSample.m_nFramesToPlay = 6;
+			SET_SOUND_REVERB(TRUE);
+			SET_SOUND_REFLECTION(FALSE);
+			break;
+#endif
 		default:
 			SetupPedComments(params, sound);
 			continue;

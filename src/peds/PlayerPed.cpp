@@ -15,7 +15,9 @@
 #include "PlayerPed.h"
 
 #include "AudioManager.h"
+#include "Floater.h"
 #include "Messages.h"
+#include "Particle.h"
 #include "Pools.h"
 #include "Population.h"
 #include "Replay.h"
@@ -29,6 +31,10 @@
 #include "WeaponEffects.h"
 #include "World.h"
 #include "sampman.h"
+#ifdef CUSTOM_SWIMMING
+#include "WaterLevel.h"
+#include "AnimManager.h"
+#endif
 
 #define PAD_MOVE_TO_GAME_WORLD_MOVE 60.0f
 
@@ -105,6 +111,10 @@ CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
 	idleAnimBlockIndex = CAnimManager::GetAnimationBlockIndex("playidles");
 #ifdef FREE_CAM
 	m_bFreeAimActive = false;
+#endif
+
+#ifdef CUSTOM_SWIMMING
+	bIsTiredSwimmingFast = false;
 #endif
 }
 
@@ -204,6 +214,105 @@ CPlayerPed::ReactivatePlayerPed(int32 index)
 {
 	CWorld::Add(CWorld::Players[index].m_pPed);
 }
+
+#ifdef CUSTOM_SWIMMING
+void CPlayerPed::ProcessSwimming(void)
+{
+	if (!bIsSwimming)
+		return;
+
+	if (m_pFire)
+		m_pFire->Extinguish();
+
+	AnimationId otherAnims[] = { ANIM_STD_ROLLOUT_LHS, ANIM_STD_ROLLOUT_RHS, ANIM_STD_FALL, ANIM_STD_FALL_GLIDE,
+								   ANIM_STD_JUMP_GLIDE, ANIM_STD_JUMP_LAUNCH, ANIM_STD_FALL_ONBACK, ANIM_STD_FALL_ONBACK };
+	for (int i = 0; i < ARRAY_SIZE(otherAnims); i++) {
+		CAnimBlendAssociation* curAnimAssoc = RpAnimBlendClumpGetAssociation(GetClump(), otherAnims[i]);
+		if (curAnimAssoc) {
+			curAnimAssoc->flags |= ASSOC_DELETEFADEDOUT;
+			curAnimAssoc->blendDelta = -4.0f;
+		}
+	}
+
+	CAnimBlendAssociation* curSwimBreastAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_BREAST);
+	CAnimBlendAssociation* curSwimCrawlAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_CRAWL);
+	CAnimBlendAssociation* curSwimTreadAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_TREAD);
+
+	SetPosition(CVector(GetPosition().x, GetPosition().y, mod_Buoyancy.m_waterlevel - 0.41f));
+
+	CPad* pad = GetPadFromPlayer(this);
+	int16 padUpDown = pad->GetPedWalkUpDown();
+	int16 padLeftRight = pad->GetPedWalkLeftRight();
+
+	if (m_fMoveSpeed < 0.1f && !curSwimTreadAssoc)
+		curSwimTreadAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SWIM_TREAD, 4.0f);
+
+	float magnitude = 0.05f;
+	if (pad->GetSprint() && (padLeftRight != 0 || padUpDown != 0)) {
+		if (m_fCurrentStamina <= -150.0f)
+			bIsTiredSwimmingFast = true;
+
+		if (!bIsTiredSwimmingFast) {
+			UseSprintEnergy();
+
+			magnitude = 0.1f;
+		}
+	}
+
+	if ((!pad->GetSprint() || curSwimTreadAssoc) && m_fCurrentStamina < 0.0f)
+		bIsTiredSwimmingFast = true;
+
+	if (m_fMoveSpeed > 0.1f && (padLeftRight != 0 || padUpDown != 0)) {
+		if (pad->GetSprint() && !bIsTiredSwimmingFast && !curSwimCrawlAssoc)
+			curSwimCrawlAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SWIM_CRAWL, 4.0f);
+		else if ((!pad->GetSprint() || bIsTiredSwimmingFast) && !curSwimBreastAssoc)
+			curSwimBreastAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SWIM_BREAST, 4.0f);
+
+		if (m_vecMoveSpeed.Magnitude2D() < magnitude)
+			ApplyMoveForce(GetForward() * 0.7f);
+	}
+
+	ApplyMoveForce(CVector(-m_vecMoveSpeed.x * 3.0f, -m_vecMoveSpeed.y * 3.0f, 0.0f));
+
+	if (!curSwimBreastAssoc && curSwimCrawlAssoc) {
+		DMAudio.PlayOneShot(m_audioEntityId, SOUND_MOVING_IN_WATER, 0.0f);
+
+		RwRGBA waterSprayCol = { 48, 48, 64, 0 };
+		CVector waterSprayPos = GetPosition() + GetForward() * 0.25f + CVector(0.0f, 0.0f, 1.0f);
+		CParticle::AddParticle(PARTICLE_WATERSPRAY, waterSprayPos, -m_vecMoveSpeed, nil, 0.6f, waterSprayCol);
+	}
+
+	if (pad->JumpJustDown()) {
+		CEntity* hitEntity;
+		CColPoint hitPoint;
+		bool isHit = CWorld::ProcessLineOfSight(GetPosition() + CVector(0.0f, 0.0f, 0.5f), GetPosition() + CVector(0.0f, 0.0f, 0.5f) + GetForward() * 1.5f, hitPoint, hitEntity, false, true, false, false, false, true);
+		if (!isHit)
+			isHit = CWorld::ProcessLineOfSight(GetPosition() + CVector(0.0f, 0.0f, 0.75f), GetPosition() + CVector(0.0f, 0.0f, 0.75f) + GetForward() * 1.5f, hitPoint, hitEntity, false, true, false, false, false, true);
+
+		if (isHit && CWorld::GetIsLineOfSightClear(GetPosition(), GetPosition() + CVector(0.0f, 0.0f, 3.0f), false, true, false, false, false, true)) {
+			CVehicle* hitVehicle = (CVehicle*)hitEntity;
+			if (hitVehicle->IsBoat()) {
+				CVector startPos = hitPoint.point + GetForward() * 0.5f + CVector(0.0f, 0.0f, 3.0f);
+				CVector endPos = startPos - CVector(0.0f, 0.0f, 3.0f);
+				if (CWorld::ProcessLineOfSight(startPos, endPos, hitPoint, hitEntity, false, true, false, false, false, true)) {
+					bIsSwimming = false;
+					bAffectedByGravity = true;
+
+					SetPosition(hitPoint.point);
+
+					AddWeaponModel(GetWeapon()->GetInfo()->m_nModelId);
+
+					return;
+				}
+			}
+		}
+
+		CColPoint hitForwardPoint;
+		CColPoint hitBackwardPoint;
+		CColPoint hitJumpBPoint;
+	}
+}
+#endif
 
 void
 CPlayerPed::UseSprintEnergy(void)
@@ -320,6 +429,14 @@ CPlayerPed::SetInitialState(void)
 void
 CPlayerPed::SetRealMoveAnim(void)
 {
+
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming) {
+		ProcessSwimming();
+
+		return;
+	}
+#endif
 	CAnimBlendAssociation *curWalkAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_WALK);
 	CAnimBlendAssociation *curRunAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_RUN);
 	CAnimBlendAssociation *curSprintAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_RUNFAST);
@@ -1237,6 +1354,10 @@ CPlayerPed::ProcessAnimGroups(void)
 void
 CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 {
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return;
+#endif
 	CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
 	if (m_bHasLockOnTarget && !m_pPointGunAt) {
 		TheCamera.ClearPlayerWeaponMode();
@@ -1556,7 +1677,11 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 		return;
 	}
 
+#ifdef CUSTOM_SWIMMING
+	if (!CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY) && padUsed->GetSprint() && !bIsTiredSwimmingFast) {
+#else
 	if (!CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY) && padUsed->GetSprint()) {
+#endif
 		if (!m_pCurrentPhysSurface || (!m_pCurrentPhysSurface->bInfiniteMass || m_pCurrentPhysSurface->m_phy_flagA08))
 			m_nMoveState = PEDMOVE_SPRINT;
 	}
@@ -1670,9 +1795,9 @@ static bool showSkipText = false;
 void
 CPlayerPed::ProcessControl(void)
 {
-#ifdef PED_SWIMMING
-	if (bIsInWater)
-		SetHeading(m_fRotationCur);
+#ifdef CUSTOM_SWIMMING
+	if (m_fCurrentStamina >= 0.0f && bIsTiredSwimmingFast)
+		bIsTiredSwimmingFast = false;
 #endif
 	// Mobile has some debug/abandoned cheat thing in here: "gbFrankenTommy"
 
@@ -1745,39 +1870,6 @@ CPlayerPed::ProcessControl(void)
 		DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
 	}
 
-#ifdef PED_SWIMMING
-	if (!DyingOrDead() && m_nPedState != PED_DRIVING) {
-		if (bIsInWater && !bIsStanding) {
-			float leftRight = padUsed ? padUsed->GetPedWalkLeftRight() : 0.0f;
-			float upDown = padUsed ? padUsed->GetPedWalkUpDown() : 0.0f;
-			float padMove = CVector2D(leftRight, upDown).Magnitude();
-			if (padMove > 0.0f) {
-				float swimHeading = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown) - TheCamera.Orientation;
-				m_fRotationDest = CGeneral::LimitRadianAngle(swimHeading);
-				float turn = m_fRotationDest - m_fRotationCur;
-				while (turn > PI) turn -= TWOPI;
-				while (turn < -PI) turn += TWOPI;
-				m_fRotationCur = CGeneral::LimitRadianAngle(m_fRotationCur + turn * Min(1.0f, 0.15f * CTimer::GetTimeStep()));
-				float swimSpeed = 0.09f * Min(padMove / 60.0f, 1.0f);
-				m_vecMoveSpeed.x = -Sin(m_fRotationCur) * swimSpeed;
-				m_vecMoveSpeed.y = Cos(m_fRotationCur) * swimSpeed;
-				m_nMoveState = PEDMOVE_WALK;
-			} else {
-				m_vecMoveSpeed.x *= 0.9f;
-				m_vecMoveSpeed.y *= 0.9f;
-				m_nMoveState = PEDMOVE_STILL;
-			}
-			if (!RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL))
-				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_FALL, 4.0f);
-			return;
-		} else if (bIsStanding) {
-			CAnimBlendAssociation *fallAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL);
-			if (fallAssoc)
-				fallAssoc->blendDelta = -4.0f;
-		}
-	}
-#endif
-
 	if (m_nMoveState != PEDMOVE_RUN && m_nMoveState != PEDMOVE_SPRINT)
 		RestoreSprintEnergy(1.0f);
 	else if (m_nMoveState == PEDMOVE_RUN)
@@ -1846,6 +1938,9 @@ CPlayerPed::ProcessControl(void)
 		case PED_FIGHT:
 		case PED_AIM_GUN:
 		case PED_ANSWER_MOBILE:
+#ifdef CUSTOM_SWIMMING
+	case PED_SWIM:
+#endif
 			if (!RpAnimBlendClumpGetFirstAssociation(GetClump(), ASSOC_BLOCK) && !m_attachedTo) {
 				if (TheCamera.Using1stPersonWeaponMode()) {
 					if (padUsed)
@@ -2066,6 +2161,11 @@ void
 CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 {
 	CAnimBlendAssociation* assoc;
+
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return;
+#endif
 
 	if (TheCamera.m_WideScreenOn || bIsDucking)
 		return;

@@ -106,6 +106,11 @@ bool gbDrawVersionText; // Our addition, we think it was always enabled on !MAST
 #ifdef NO_MOVIES
 bool gbNoMovies;
 #endif
+#ifdef FEATURES_INI
+#ifdef CUSTOM_SWIMMING
+bool bEnableSwimming;
+#endif
+#endif
 
 volatile int32 frameCount;
 

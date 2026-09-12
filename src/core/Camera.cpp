@@ -1247,13 +1247,17 @@ CCamera::CamControl(void)
 						ReqMode = CCam::MODE_LIGHTHOUSE;
 
 			// Fallen into water
+#ifdef CUSTOM_SWIMMING
+			if (!bEnableSwimming)
+				if(Cams[ActiveCam].IsTargetInWater(Cams[ActiveCam].Source) &&
+					Cams[ActiveCam].CamTargetEntity->IsPed())
+					ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
+#else
 			if(Cams[ActiveCam].IsTargetInWater(Cams[ActiveCam].Source) &&
-			Cams[ActiveCam].CamTargetEntity->IsPed()
-#ifdef PED_SWIMMING
-			&& !((CPed*)Cams[ActiveCam].CamTargetEntity)->IsPlayer()
-#endif
-			)
+					Cams[ActiveCam].CamTargetEntity->IsPed())
 				ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
+#endif
+
 
 			// Set top down
 			if(PedZoomIndicator == CAM_ZOOM_TOPDOWN &&

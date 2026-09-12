@@ -324,7 +324,11 @@ CPlayerInfo::Process(void)
 							}
 
 							if (canJumpOff || veh->m_vecMoveSpeed.Magnitude() < 0.1f) {
+#ifdef CUSTOM_SWIMMING
+								if (bEnableSwimming || (!bEnableSwimming && !veh->bIsInWater))
+#else
 								if (!veh->bIsInWater)
+#endif
 									m_pPed->SetObjective(OBJECTIVE_LEAVE_CAR, veh);
 
 							} else if (veh->GetStatus() != STATUS_PLAYER && veh != CGameLogic::pShortCutTaxi) {
@@ -391,6 +395,11 @@ CPlayerInfo::Process(void)
 							m_pPed->m_vehDoor = 0;
 							m_pPed->SetEnterCar(carBelow, m_pPed->m_vehDoor);
 						}
+#ifdef CUSTOM_SWIMMING
+					} else if (m_pPed->bIsSwimming && carBelow->GetModelIndex() == MI_SEASPAR && bEnableSwimming) {					} else if (m_pPed->bIsSwimming && carBelow->GetModelIndex() == MI_SEASPAR) {
+						m_pPed->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, carBelow);
+						m_pPed->WarpPedIntoCar(carBelow);
+#endif
 					} else {
 						m_pPed->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, carBelow);
 					}

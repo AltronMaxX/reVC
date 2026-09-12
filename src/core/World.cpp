@@ -2215,7 +2215,11 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 						float fDamage = 250.0f * fDamageMultiplier;
 						pPed->InflictDamage(pCreator, WEAPONTYPE_EXPLOSION, fDamage,
 						                    PEDPIECE_TORSO, direction);
+#ifdef CUSTOM_SWIMMING
+						if(pPed->m_nPedState != PED_DIE && !pPed->bIsSwimming)						if(pPed->m_nPedState != PED_DIE && !pPed->bIsSwimming)
+#else
 						if(pPed->m_nPedState != PED_DIE)
+#endif
 							pPed->SetFall(2000,
 							              (AnimationId)(direction + ANIM_STD_HIGHIMPACT_FRONT), 0);
 						if(pCreator && pCreator->IsPed()) {
