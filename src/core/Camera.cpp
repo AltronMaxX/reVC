@@ -1254,7 +1254,7 @@ CCamera::CamControl(void)
 					ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
 #else
 			if(Cams[ActiveCam].IsTargetInWater(Cams[ActiveCam].Source) &&
-					Cams[ActiveCam].CamTargetEntity->IsPed())
+			    Cams[ActiveCam].CamTargetEntity->IsPed())
 				ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
 #endif
 

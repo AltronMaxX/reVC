@@ -325,7 +325,7 @@ CPlayerInfo::Process(void)
 
 							if (canJumpOff || veh->m_vecMoveSpeed.Magnitude() < 0.1f) {
 #ifdef CUSTOM_SWIMMING
-								if (bEnableSwimming || (!bEnableSwimming && !veh->bIsInWater))
+								if (bEnableSwimming || !bEnableSwimming && !veh->bIsInWater)
 #else
 								if (!veh->bIsInWater)
 #endif
