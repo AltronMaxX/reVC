@@ -3058,6 +3058,11 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 		}
 	}
 
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		dieAnim = ANIM_STD_DROWN;
+#endif
+
 	if (m_fArmour != 0.0f && method != WEAPONTYPE_DROWNING) {
 		if (player == this)
 			CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss = CTimer::GetTimeInMilliseconds();

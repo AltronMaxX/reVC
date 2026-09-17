@@ -571,6 +571,11 @@ bool LoadINISettings()
 #ifdef NO_MOVIES
 	ReadIniIfExists("General", "NoMovies", &gbNoMovies);
 #endif
+#ifdef FEATURES_INI
+#ifdef CUSTOM_SWIMMING
+	ReadIniIfExists("Features", "Swimming", &bEnableSwimming);
+#endif
+#endif
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
 	bool migrate = cfg.get("FrontendOptions").size() != 0;
@@ -680,6 +685,11 @@ void SaveINISettings()
 #endif
 #ifdef NO_MOVIES
 	StoreIni("General", "NoMovies", gbNoMovies);
+#endif
+#ifdef FEATURES_INI
+#ifdef CUSTOM_SWIMMING
+	StoreIni("Features", "Swimming", bEnableSwimming);
+#endif
 #endif
 #ifdef CUSTOM_FRONTEND_OPTIONS
 	for (int i = 0; i < MENUPAGES; i++) {
