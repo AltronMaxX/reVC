@@ -1,4 +1,7 @@
-#pragma once
+#ifndef __GTA_COMMON_H__
+#define __GTA_COMMON_H__
+
+#include <limits.h>
 
 #define _CRT_SECURE_NO_WARNINGS
 #define _USE_MATH_DEFINES
@@ -218,6 +221,14 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #define SCALE_AND_CENTER_X(x) SCREEN_STRETCH_X(x)
 #endif
 
+#ifndef MAX_PATH
+#if !defined _WIN32 || defined __MINGW32__
+#define MAX_PATH PATH_MAX
+#else
+#define MAX_PATH 260
+#endif
+#endif
+
 #include "maths.h"
 #include "Vector.h"
 #ifdef GTA_PS2
@@ -371,7 +382,7 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 #endif
 #define ASSERT assert
 
-#ifdef __MWERKS__
+#if defined(__MWERKS__) || defined(GTA_PS2)
 #define static_assert(bool_constexpr, message)
 #endif
 
@@ -401,3 +412,5 @@ template<int s, int t> struct check_size {
 #define CONCAT_(x,y) x##y
 #define CONCAT(x,y) CONCAT_(x,y)
 
+
+#endif // __GTA_COMMON_H__

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_SAMPMAN_H__
+#define __GTA_SAMPMAN_H__
 #include "AudioSamples.h"
 #include "audio_enums.h"
 
@@ -6,11 +7,15 @@
 #define MAX_FREQ DIGITALRATE
 
 struct tSample {
+#ifndef GTA_PS2
 	uint32 nOffset;
+#endif
 	uint32 nSize;
 	uint32 nFrequency;
+#ifndef GTA_PS2
 	uint32 nLoopStart;
 	int32 nLoopEnd;
+#endif
 };
 
 #ifdef GTA_PS2
@@ -148,15 +153,19 @@ class cSampleManager
 	uint8   m_nEffectsFadeVolume;
 	uint8   m_nMusicFadeVolume;
 	bool8   m_nMonoMode;
+#ifdef GTA_PC
 	char    m_szCDRomRootPath[80];
 	bool8   m_bInitialised;
 	uint8   m_nNumberOfProviders;
 	char   *m_aAudioProviders[MAXPROVIDERS];
+#endif
 	tSample m_aSamples[TOTAL_AUDIO_SAMPLES];
+#ifdef GTA_PC
 	char    m_MiscomPath[260];
 	char    m_WavFilesPath[260];
 	char    m_MP3FilesPath[188];
-	void   *m_aChannels[18];
+	void   *m_aChannels[18]; // what's this?
+#endif
 
 public:
 	
@@ -239,17 +248,21 @@ public:
 	void  StartChannel            (uint32 nChannel);
 	void  StopChannel             (uint32 nChannel);
 	
-	void  PreloadStreamedFile                                    (uint32 nFile, uint8 nStream = 0);
+	void  PreloadStreamedFile                                    (tTrack nFile, uint8 nStream = 0);
 	void  PauseStream                                        (bool8 nPauseFlag, uint8 nStream = 0);
 	void  StartPreloadedStreamedFile                                           (uint8 nStream = 0);
-	bool8 StartStreamedFile                         (uint32 nFile, uint32 nPos, uint8 nStream = 0);
+	bool8 StartStreamedFile                         (tTrack nFile, uint32 nPos, uint8 nStream = 0);
 	void  StopStreamedFile                                                     (uint8 nStream = 0);
 	int32 GetStreamedFilePosition                                              (uint8 nStream = 0);
+#ifdef GTA_PS2
+	void  SetStreamedVolumeAndPan(uint8 nVolume, uint8 nLRPan, uint8 nFRPan, bool8 nEffectFlag, uint8 nStream = 0);
+#else
 	void  SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, bool8 nEffectFlag, uint8 nStream = 0);
+#endif
 	int32 GetStreamedFileLength                                                (uint8 nStream = 0);
 	bool8 IsStreamPlaying                                                      (uint8 nStream = 0);
 	void  SetStreamedFileLoopFlag                             (bool8 nLoopFlag, uint8 nStream = 0);
-#ifdef AUDIO_OAL
+#ifndef AUDIO_MSS
 	void  Service(void);
 #endif
 	bool8 InitialiseSampleBanks(void);
@@ -2717,3 +2730,5 @@ static char StreamedNameTable[][25] =
 	"AUDIO\\BUST_27.WAV",
 	"AUDIO\\BUST_28.WAV",
 };
+
+#endif // __GTA_SAMPMAN_H__

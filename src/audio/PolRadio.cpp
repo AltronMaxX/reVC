@@ -88,6 +88,19 @@ cAudioManager::SetMissionScriptPoliceAudio(uint32 sfx)
 	}
 }
 
+void
+cAudioManager::RestartMissionScriptPoliceAudioAfterPause(uint32 sfx)
+{
+	if (!m_bIsInitialised)
+		return;
+
+#ifndef GTA_PS2
+	SampleManager.StopStreamedFile(1);
+#endif
+	g_nMissionAudioSfx = sfx;
+	g_nMissionAudioPlayingStatus = sfx == NO_SAMPLE ? PLAY_STATUS_FINISHED : PLAY_STATUS_STOPPED;
+}
+
 int8
 cAudioManager::GetMissionScriptPoliceAudioPlayingStatus()
 {
@@ -243,8 +256,8 @@ cAudioManager::ServicePoliceRadioChannel(uint8 wantedLevel)
 #endif
 				SampleManager.SetChannelVolume(CHANNEL_POLICE_RADIO, 100);
 				SampleManager.SetChannelPan(CHANNEL_POLICE_RADIO, 63);
-				SampleManager.SetChannelLoopCount(CHANNEL_POLICE_RADIO, 1);
 #ifndef GTA_PS2
+				SampleManager.SetChannelLoopCount(CHANNEL_POLICE_RADIO, 1);
 				SampleManager.SetChannelLoopPoints(CHANNEL_POLICE_RADIO, 0, -1);
 #endif
 				SampleManager.StartChannel(CHANNEL_POLICE_RADIO);

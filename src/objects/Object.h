@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_OBJECT_H__
+#define __GTA_OBJECT_H__
 
 #include "Physical.h"
 
@@ -111,12 +112,8 @@ public:
 	static void DeleteAllMissionObjects();
 	static void DeleteAllTempObjects();
 	static void DeleteAllTempObjectsInArea(CVector point, float fRadius);
-
-	static CObject *NT_ROADBLOCKCI;
-	static CObject *NT_ROADBLOCKGF;
-	static CObject *WSH_ROADBLOCK;
-	static CObject *COMGATE1CLOSED;
-	static CObject *COMGATE2CLOSED;
 };
 
 bool IsObjectPointerValid(CObject* pObject);
+
+#endif // __GTA_OBJECT_H__

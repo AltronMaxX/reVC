@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_VUVECTOR_H__
+#define __GTA_VUVECTOR_H__
 
 class TYPEALIGN(16) CVuVector : public CVector
 {
@@ -9,6 +10,8 @@ public:
 	CVuVector(float x, float y, float z, float w) : CVector(x, y, z), w(w) {}
 	CVuVector(const CVector &v) : CVector(v.x, v.y, v.z) {}
 	CVuVector(const RwV3d &v) : CVector(v) {}
+
+	float MagnitudeSqr(void) const;
 /*
 	void Normalise(void) {
 		float sq = MagnitudeSqr();
@@ -30,3 +33,5 @@ void TransformPoint(CVuVector &out, const CMatrix &mat, const CVuVector &in);
 void TransformPoint(CVuVector &out, const CMatrix &mat, const RwV3d &in);
 void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const RwV3d *in, int stride);
 void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const CVuVector *in);
+
+#endif // __GTA_VUVECTOR_H__

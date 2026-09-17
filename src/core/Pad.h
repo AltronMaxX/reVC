@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_PAD_H__
+#define __GTA_PAD_H__
 
 enum {
 	PLAYERCONTROL_ENABLED = 0,
@@ -32,6 +33,16 @@ public:
 
 	bool CheckForInput();
 	void Clear(void);
+	bool IsAnyButtonPressed(void) {
+		return RightStickX || RightStickY ||
+			LeftStickX || LeftStickY ||
+			DPadUp || DPadDown || DPadLeft || DPadRight ||
+			Triangle || Cross || Circle || Square ||
+			Start || Select ||
+			LeftShoulder1 || LeftShoulder2 ||
+			RightShoulder1 || RightShoulder2 ||
+			LeftShock || RightShock;
+	}
 };
 VALIDATE_SIZE(CControllerState, 0x2A);
 
@@ -147,9 +158,11 @@ public:
 	CControllerState OldState;
 	int16 SteeringLeftRightBuffer[DRUNK_STEERING_BUFFER_SIZE];
 	int32 DrunkDrivingBufferUsed;
+#ifdef GTA_PC_CONTROLS
 	CControllerState PCTempKeyState;
 	CControllerState PCTempJoyState;
 	CControllerState PCTempMouseState;
+#endif
 	// straight out of my IDB
 	int16 Phase;
 	int16 Mode;
@@ -179,6 +192,7 @@ public:
 	static bool bHasPlayerCheated;
 	static bool bInvertLook4Pad;
 	
+#ifdef GTA_PC_CONTROLS
 	static CKeyboardState OldKeyState;
 	static CKeyboardState NewKeyState;
 	static CKeyboardState TempKeyState;
@@ -186,6 +200,7 @@ public:
 	static CMouseControllerState OldMouseControllerState;
 	static CMouseControllerState NewMouseControllerState;
 	static CMouseControllerState PCTempMouseControllerState;
+#endif
 	
 	
 #ifdef GTA_PS2_STUFF
@@ -281,6 +296,7 @@ public:
 	void AffectFromXinput(uint32 pad);
 #endif
 
+#ifdef GTA_PC_CONTROLS
 	// mouse
 	bool GetLeftMouseJustDown()           { return !!(NewMouseControllerState.LMB && !OldMouseControllerState.LMB); }
 	bool GetRightMouseJustDown()          { return !!(NewMouseControllerState.RMB && !OldMouseControllerState.RMB); }
@@ -421,6 +437,7 @@ public:
 	bool GetLeftWin()             { return NewKeyState.LWIN; }
 	bool GetRightWin()            { return NewKeyState.RWIN; }
 	bool GetApps()                { return NewKeyState.APPS; }
+#endif
 	// pad
 
 	bool GetTriangleJustDown()       { return !!(NewState.Triangle && !OldState.Triangle); }
@@ -483,3 +500,5 @@ public:
 
 VALIDATE_SIZE(CPad, 0xFC);
 extern CPad Pads[MAX_PADS];
+
+#endif // __GTA_PAD_H__

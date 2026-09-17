@@ -114,6 +114,7 @@ uint8 nCurrentPedSlot;
 #ifdef FIX_BUGS
 uint32 gPlayerTalkSfx = UINT32_MAX;
 void *gPlayerTalkData = 0;
+size_t gPlayerTalkDataSize = 0;
 #endif
 
 CChannel aChannel[NUM_CHANNELS];
@@ -864,9 +865,9 @@ cSampleManager::Initialise(void)
 		alcMakeContextCurrent(ALContext);
 	
 		const char* ext=(const char*)alGetString(AL_EXTENSIONS);
-		ASSERT(strstr(ext,"AL_SOFT_loop_points")!=NULL);
 		if ( strstr(ext,"AL_SOFT_loop_points")==NULL )
 		{
+			ASSERT(strstr(ext, "AL_SOFT_loop_points") != NULL);
 			Terminate();
 			return FALSE;
 		}
@@ -986,6 +987,8 @@ cSampleManager::Initialise(void)
 
 		gPlayerTalkData = malloc(nMaxPedSize);
 		ASSERT(gPlayerTalkData != 0);
+
+		gPlayerTalkDataSize = nMaxPedSize;
 #endif
 
 		LoadSampleBank(SFX_BANK_0);
@@ -1153,6 +1156,8 @@ cSampleManager::Terminate(void)
 	{
 		free(gPlayerTalkData);
 		gPlayerTalkData = 0;
+		gPlayerTalkDataSize = 0;
+		gPlayerTalkSfx = UINT32_MAX;
 	}
 #endif
 	
@@ -1711,7 +1716,7 @@ cSampleManager::StopChannel(uint32 nChannel)
 }
 
 void
-cSampleManager::PreloadStreamedFile(uint32 nFile, uint8 nStream)
+cSampleManager::PreloadStreamedFile(tTrack nFile, uint8 nStream)
 {	
 	ASSERT( nStream < MAX_STREAMS );
 
@@ -1753,12 +1758,13 @@ cSampleManager::StartPreloadedStreamedFile(uint8 nStream)
 	
 	if ( stream->IsOpened() )
 	{
+		stream->SetPosMS(0);
 		stream->Start();
 	}
 }
 
 bool8
-cSampleManager::StartStreamedFile(uint32 nFile, uint32 nPos, uint8 nStream)
+cSampleManager::StartStreamedFile(tTrack nFile, uint32 nPos, uint8 nStream)
 {
 	uint32 i = 0;
 	uint32 position = nPos;
@@ -2023,12 +2029,6 @@ cSampleManager::Service(void)
 		
 		if ( stream->IsOpened() )
 			stream->Update();
-	}
-	int refCount = CChannel::channelsThatNeedService;
-	for ( int32 i = 0; refCount && i < NUM_CHANNELS; i++ )
-	{
-		if ( aChannel[i].Update() )
-			refCount--;
 	}
 }
 

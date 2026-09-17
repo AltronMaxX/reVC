@@ -4751,6 +4751,10 @@ CPed::RemoveWeaponWhenEnteringVehicle(void)
 			m_storedWeapon = GetWeapon()->m_eWeaponType;
 		SetCurrentWeapon(GetWeapon(5).m_eWeaponType);
 	} else {
+		if (IsPlayer() && HasWeaponSlot(5) && GetWeapon(5).m_nAmmoTotal > 0) { // Anyway storee weapon
+			if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED) // Fix for https://github.com/AltronMaxX/reVC/issues/28
+				m_storedWeapon = GetWeapon()->m_eWeaponType;
+		}
 		CWeaponInfo *ourWeapon = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		RemoveWeaponModel(ourWeapon->m_nModelId);
 	}
@@ -5064,7 +5068,7 @@ CPed::CheckAroundForPossibleCollisions(void)
 	if (CTimer::GetTimeInMilliseconds() <= m_nPedStateTimer)
 		return;
 
-	GetBoundCentre(ourCentre);
+	ourCentre = GetBoundCentre();
 
 	CWorld::FindObjectsInRange(ourCentre, 10.0f, true, &maxObject, 6, objects, false, true, false, true, false);
 	for (int i = 0; i < maxObject; i++) {
@@ -5073,7 +5077,7 @@ CPed::CheckAroundForPossibleCollisions(void)
 			if (gPhoneInfo.PhoneAtThisPosition(object->GetPosition()))
 				break;
 		}
-		object->GetBoundCentre(objCentre);
+		objCentre = object->GetBoundCentre();
 		float radius = object->GetBoundRadius();
 		if (radius > 4.5f || radius < 1.0f)
 			radius = 1.0f;

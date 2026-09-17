@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_FONT_H__
+#define __GTA_FONT_H__
 
 #include "Sprite2d.h"
 
@@ -85,6 +86,7 @@ enum
 	FONT_LANGSET_RUSSIAN,
 	FONT_LANGSET_POLISH,
 	FONT_LANGSET_JAPANESE,
+	FONT_LANGSET_UKRAINIAN,
 	LANGSET_MAX
 };
 
@@ -207,6 +209,9 @@ public:
 	static void FilterOutTokensFromString(wchar*);
 #ifdef MORE_LANGUAGES
 	static void ReloadFonts(uint8 set);
+	static bool LoadSizes(uint8 set, const char *path);
+	static void ReloadSizes(void);
+	static float fTracking;
 
 	// japanese stuff
 	static bool IsAnsiCharacter(wchar* s);
@@ -215,3 +220,5 @@ public:
 	static bool IsJapaneseFont() { return IsJapanese() && (Details.style == FONT_JAPANESE);  }
 #endif
 };
+
+#endif // __GTA_FONT_H__

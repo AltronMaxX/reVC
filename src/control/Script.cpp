@@ -16,6 +16,7 @@
 #include "EmergencyPed.h"
 #include "FileMgr.h"
 #include "Frontend.h"
+#include "Game.h"
 #include "General.h"
 #ifdef MISSION_REPLAY
 #include "GenericGameStorage.h"
@@ -876,6 +877,9 @@ CRunningScript* CTheScripts::StartNewScript(uint32 ip)
 
 void CTheScripts::Process()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 	if (CReplay::IsPlayingBack())
 		return;
 	CommandsExecuted = 0;
@@ -980,6 +984,9 @@ bool CTheScripts::IsPlayerOnAMission()
 
 void CRunningScript::Process()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return;
+
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 	LogOnStartProcessing();
 #endif
@@ -1007,6 +1014,9 @@ void CRunningScript::Process()
 
 int8 CRunningScript::ProcessOneCommand()
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause())
+		return 1;
+
 	int8 retval = -1;
 	++CTheScripts::CommandsExecuted;
 	int32 command = (uint16)CTheScripts::Read2BytesFromScript(&m_nIp);
@@ -2845,8 +2855,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 	{
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
-		if (pPed)
-			UpdateCompareFlag(pPed->bInVehicle && pPed->m_pMyVehicle->GetModelIndex() == ScriptParams[1]);
+		UpdateCompareFlag(pPed->bInVehicle && pPed->m_pMyVehicle->GetModelIndex() == ScriptParams[1]);
 		return 0;
 	}
 	case COMMAND_IS_CHAR_IN_ANY_CAR:
@@ -2860,8 +2869,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 	{
 		CollectParameters(&m_nIp, 1);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
-		if (pPed)
-			UpdateCompareFlag(pPed->bInVehicle && pPed->m_pMyVehicle);
+		UpdateCompareFlag(pPed->bInVehicle && pPed->m_pMyVehicle);
 		return 0;
 	}
 	case COMMAND_IS_BUTTON_PRESSED:
@@ -2954,14 +2962,6 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_OBJECT);
-		switch(mi) {
-			case 2446: CObject::COMGATE1CLOSED = pObj; break;
-			case 2447: CObject::COMGATE2CLOSED = pObj; break;
-			case 590: CObject::NT_ROADBLOCKCI = pObj; break;
-			case 2141: CObject::NT_ROADBLOCKGF = pObj; break;
-			case 3518: CObject::WSH_ROADBLOCK = pObj; break;
-			default: break;
-		}
 		return 0;
 	}
 	case COMMAND_DELETE_OBJECT:

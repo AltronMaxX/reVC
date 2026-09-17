@@ -1091,6 +1091,7 @@ CStats::ConstructStatLine(int rowIdx)
 		case CMenuManager::LANGUAGE_POLISH:
 		case CMenuManager::LANGUAGE_RUSSIAN:
 		case CMenuManager::LANGUAGE_JAPANESE:
+		case CMenuManager::LANGUAGE_UKRAINIAN:
 #endif
 			STAT_LINE_1(float, "FESTDFM", DistanceTravelledOnFoot, 1);
 			STAT_LINE_1(float, "FESTDCM", DistanceTravelledByCar, 1);

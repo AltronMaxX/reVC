@@ -1,7 +1,5 @@
-#pragma once
-#ifndef nil
-#define nil NULL
-#endif
+#ifndef __GTA_LISTS_H__
+#define __GTA_LISTS_H__
 
 class CPtrNode
 {
@@ -131,3 +129,5 @@ public:
 		}
 	}
 };
+
+#endif // __GTA_LISTS_H__

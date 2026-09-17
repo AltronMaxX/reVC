@@ -1,6 +1,5 @@
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
-#define NOMINMAX
 #include <windows.h>
 #include <xinput.h>
 #if !defined(PSAPI_VERSION) || (PSAPI_VERSION > 1)
@@ -28,6 +27,7 @@
 #include "Pad.h"
 #include "ControllerConfig.h"
 #include "DMAudio.h"
+#include "Game.h"
 #include "IniFile.h"
 #include "CarCtrl.h"
 #include "Population.h"
@@ -222,7 +222,8 @@ void MultiSamplingButtonPress(int8 action) {
 		if (FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
 			FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel;
 			_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
-			DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+			if (!CGame::ShouldPreserveWindowPauseMusicMode())
+				DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
 			DMAudio.Service();
 			FrontEndMenuManager.SetHelperText(0);
 			FrontEndMenuManager.SaveSettings();
@@ -284,10 +285,29 @@ wchar* MultiSamplingDraw(bool *disabled, bool userHovering) {
 const char* screenModes[] = { "FED_FLS", "FED_WND", "FED_BDL" };
 void ScreenModeAfterChange(int8 before, int8 after)
 {
+	const int32 currOption = FrontEndMenuManager.m_nCurrOption;
+	const bool showMouse = FrontEndMenuManager.m_bShowMouse;
+
 	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
-	DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+
+	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+	FrontEndMenuManager.m_nCurrOption = currOption;
+	FrontEndMenuManager.CentreMousePointer();
+	const int32 mouseCentreX = SCREEN_WIDTH / 2;
+	const int32 mouseCentreY = SCREEN_HEIGHT / 2;
+	FrontEndMenuManager.m_nMouseTempPosX = mouseCentreX;
+	FrontEndMenuManager.m_nMouseTempPosY = mouseCentreY;
+	FrontEndMenuManager.m_nMousePosX = mouseCentreX;
+	FrontEndMenuManager.m_nMousePosY = mouseCentreY;
+	FrontEndMenuManager.m_nMouseOldPosX = mouseCentreX;
+	FrontEndMenuManager.m_nMouseOldPosY = mouseCentreY;
+	FrontEndMenuManager.m_bShowMouse = showMouse;
+
+	if (!CGame::ShouldPreserveWindowPauseMusicMode())
+		DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio.Service();
 	FrontEndMenuManager.SetHelperText(0);
+	FrontEndMenuManager.SaveSettings();
 }
 
 #endif

@@ -1,11 +1,5 @@
-#pragma once
-#ifndef MAX_PATH
-#ifdef _WIN32
-#define MAX_PATH 260
-#else
-#define MAX_PATH 4096
-#endif
-#endif
+#ifndef __GTA_FILEMGR_H__
+#define __GTA_FILEMGR_H__
 
 class CFileMgr
 {
@@ -20,7 +14,7 @@ public:
 	static int OpenFile(const char *file, const char *mode);
 	static int OpenFile(const char *file) { return OpenFile(file, "rb"); }
 	static int OpenFileForWriting(const char *file);
-	static size_t Read(int fd, const char *buf, ssize_t len);
+	static size_t Read(int fd, char *buf, ssize_t len);
 	static size_t Write(int fd, const char *buf, ssize_t len);
 	static bool Seek(int fd, int offset, int whence);
 	static bool ReadLine(int fd, char *buf, int len);
@@ -28,3 +22,5 @@ public:
 	static int GetErrorReadWrite(int fd);
 	static char *GetRootDirName() { return ms_rootDirName; }
 };
+
+#endif // __GTA_FILEMGR_H__

@@ -3527,7 +3527,7 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 		}
 	}
 
-	if (autoZPos.z > neededPos.z) {
+	if (autoZPos.z > neededPos.z && m_pVehicleAnim != nullptr) {
 		vehAnim = m_pVehicleAnim->animId;
 		if (veh->IsBike() && (m_pVehicleAnim && vehAnim != ANIM_BIKE_KICK)) {
 			float zBlend;
