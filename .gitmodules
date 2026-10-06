@@ -10,9 +10,6 @@
 	path = vendor/opusfile
 	url = https://github.com/xiph/opusfile.git
 	branch = main
-[submodule "vendor/librw"]
-	path = vendor/librw
-	url = https://github.com/AltronMaxX/librw-wgpu.git
 [submodule "gamefiles"]
 	path = gamefiles
 	url = https://github.com/AltronMaxX/reVC-gamefiles.git
