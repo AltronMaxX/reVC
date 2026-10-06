@@ -28,6 +28,7 @@
 #include "DMAudio.h"
 #include "FileMgr.h"
 #include "Frontend.h"
+#include "Game.h"
 #include "SceneEdit.h"
 #include "Pools.h"
 #include "Debug.h"
@@ -250,6 +251,10 @@ CCamera::Init(void)
 void
 CCamera::Process(void)
 {
+	if (CGame::IsWindowPauseMenuActive() || CTimer::GetWindowMinimizedPause() ||
+	    CCutsceneMgr::IsWaitingForAudioAfterWindowPause())
+		return;
+
 	// static bool InterpolatorNotInitialised = true;	// unused
 	static float PlayerMinDist = 1.3f;
 	static bool WasPreviouslyInterSyhonFollowPed = false;	// only written
@@ -986,23 +991,27 @@ CCamera::CamControl(void)
 			if(CPad::GetPad(0)->CycleCameraModeUpJustDown() && !CReplay::IsPlayingBack() &&
 			   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 			   !m_WideScreenOn && !m_bFailedCullZoneTestPreviously && !m_bFirstPersonBeingUsed){
+#ifdef GTA_PC_CONTROLS
 				if(FrontEndMenuManager.m_ControlMethod == CONTROL_STANDARD){
 					if(PedZoomIndicator == CAM_ZOOM_3)
 						PedZoomIndicator = CAM_ZOOM_1;
 					else
 						PedZoomIndicator = CAM_ZOOM_3;
 				}else
+#endif
 					PedZoomIndicator--;
 			}
 			if(CPad::GetPad(0)->CycleCameraModeDownJustDown() && !CReplay::IsPlayingBack() &&
 			   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 			   !m_WideScreenOn && !m_bFailedCullZoneTestPreviously && !m_bFirstPersonBeingUsed){
+#ifdef GTA_PC_CONTROLS
 				if(FrontEndMenuManager.m_ControlMethod == CONTROL_STANDARD){
 					if(PedZoomIndicator == CAM_ZOOM_3)
 						PedZoomIndicator = CAM_ZOOM_1;
 					else
 						PedZoomIndicator = CAM_ZOOM_3;
 				}else
+#endif
 					PedZoomIndicator++;
 			}
 			// disabled top down and obbe's cam here
@@ -1238,9 +1247,17 @@ CCamera::CamControl(void)
 						ReqMode = CCam::MODE_LIGHTHOUSE;
 
 			// Fallen into water
+#ifdef CUSTOM_SWIMMING
+			if (!bEnableSwimming)
+				if(Cams[ActiveCam].IsTargetInWater(Cams[ActiveCam].Source) &&
+					Cams[ActiveCam].CamTargetEntity->IsPed())
+					ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
+#else
 			if(Cams[ActiveCam].IsTargetInWater(Cams[ActiveCam].Source) &&
-			   Cams[ActiveCam].CamTargetEntity->IsPed())
+			    Cams[ActiveCam].CamTargetEntity->IsPed())
 				ReqMode = CCam::MODE_PLAYER_FALLEN_WATER;
+#endif
+
 
 			// Set top down
 			if(PedZoomIndicator == CAM_ZOOM_TOPDOWN &&

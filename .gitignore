@@ -362,5 +362,6 @@ codewarrior/Debug/
 
 src/extras/GitSHA1.cpp
 vendor/librw1/
+/.direnv
 /build-wgpu
 /build-release

@@ -2083,12 +2083,10 @@ CPed::FightStrike(CVector &touchedNodePos, bool fightWithWeapon)
 			maxDistanceToBeat = nearPed->GetBoundRadius() + radius;
 
 		if ((nearPed->bUsesCollision || nearPed->m_nPedState == PED_DEAD) && (m_pedInObjective != FindPlayerPed() || nearPed == FindPlayerPed())) {
-			CVector nearPedCentre;
-
 			// Have to animate a skinned clump because the initial col model is useless
 			hisCol = ((CPedModelInfo*)CModelInfo::GetModelInfo(nearPed->GetModelIndex()))->AnimatePedColModelSkinnedWorld(nearPed->GetClump());
 
-			nearPed->GetBoundCentre(nearPedCentre);
+			CVector nearPedCentre = nearPed->GetBoundCentre();
 			CVector potentialAttackDistance = nearPedCentre - touchedNodePos;
 
 			// He can beat us
@@ -3059,6 +3057,11 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 				break;
 		}
 	}
+
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		dieAnim = ANIM_STD_DROWN;
+#endif
 
 	if (m_fArmour != 0.0f && method != WEAPONTYPE_DROWNING) {
 		if (player == this)

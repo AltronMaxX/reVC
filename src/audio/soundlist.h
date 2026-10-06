@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_SOUNDLIST_H__
+#define __GTA_SOUNDLIST_H__
 
 enum eSound
 {
@@ -165,6 +166,9 @@ enum eSound
 	SOUND_RACE_START_2,
 	SOUND_RACE_START_1,
 	SOUND_RACE_START_GO,
+#ifdef CUSTOM_SWIMMING
+SOUND_MOVING_IN_WATER,
+#endif
 	SOUND_SPLASH,
 	SOUND_WATER_FALL,
 	SOUND_SPLATTER,
@@ -280,3 +284,5 @@ enum eScriptSounds {
 	SCRIPT_SOUND_TOTAL,
 	SCRIPT_SOUND_INVALID,
 };
+
+#endif // __GTA_SOUNDLIST_H__

@@ -436,7 +436,7 @@ ReadInSizeofSaveFileBuffer(int32 &file, uint32 &size)
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_OPEN;
 		return false;
 	}
-	CFileMgr::Read(file, (const char*)&size, sizeof(size));
+	CFileMgr::Read(file, (char*)&size, sizeof(size));
 	if (CFileMgr::GetErrorReadWrite(file)) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_READ;
 		if (!CloseFile(file))
@@ -453,7 +453,7 @@ ReadDataFromFile(int32 file, uint8 *buf, uint32 size)
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_OPEN;
 		return false;
 	}
-	size_t read_size = CFileMgr::Read(file, (const char*)buf, size);
+	size_t read_size = CFileMgr::Read(file, (char*)buf, size);
 	if (CFileMgr::GetErrorReadWrite(file) || read_size != size) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_READ;
 		if (!CloseFile(file))
@@ -479,7 +479,7 @@ DoGameSpecificStuffAfterSucessLoad()
 	StillToFadeOut = true;
 	JustLoadedDontFadeInYet = true;
 	TheCamera.Fade(0.0f, FADE_OUT);
-	//CTheScripts::Process();
+	CTheScripts::Process();
 }
 
 bool
@@ -647,9 +647,9 @@ align4bytes(int32 size)
 #ifdef FIX_INCOMPATIBLE_SAVES
 #define LoadSaveDataBlockNoCheck(buf, file, size) \
 do { \
-	CFileMgr::Read(file, (const char *)&size, sizeof(size)); \
+	CFileMgr::Read(file, (char *)&size, sizeof(size)); \
 	size = align4bytes(size); \
-	CFileMgr::Read(file, (const char *)work_buff, size); \
+	CFileMgr::Read(file, (char *)work_buff, size); \
 	buf = work_buff; \
 } while(0)
 
@@ -704,10 +704,10 @@ GetSaveType(char *savename)
 	int file = CFileMgr::OpenFile(savename, "rb");
 
 	uint32 size;
-	CFileMgr::Read(file, (const char *)&size, sizeof(size));
+	CFileMgr::Read(file, (char *)&size, sizeof(size));
 
 	uint8 *buf = work_buff;
-	CFileMgr::Read(file, (const char *)work_buff, size); // simple vars + scripts
+	CFileMgr::Read(file, (char *)work_buff, size); // simple vars + scripts
 
 	buf += 0x40 + sizeof(int32) + sizeof(int32) + sizeof(float) * 3;
 
@@ -1076,11 +1076,11 @@ FixSave(int32 slot, uint8 save_type)
 	CheckSum = 0;
 	totalSize = 0;
 
-	CFileMgr::Read(file_in, (const char *)&size, sizeof(size));
+	CFileMgr::Read(file_in, (char *)&size, sizeof(size));
 	size = align4bytes(size);
 
 	buf = work_buff;
-	CFileMgr::Read(file_in, (const char *)work_buff, size); // simple vars + scripts
+	CFileMgr::Read(file_in, (char *)work_buff, size); // simple vars + scripts
 
 	if (save_type & SAVE_TYPE_STEAM && save_type & SAVE_TYPE_MSVC && save_type & SAVE_TYPE_32_BIT) {
 		memset(work_buff2, 0, sizeof(work_buff2));

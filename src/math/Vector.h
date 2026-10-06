@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_VECTOR_H__
+#define __GTA_VECTOR_H__
 
 class CVector : public RwV3d
 {
@@ -19,9 +20,9 @@ public:
 	}
 	// (0,1,0) means no rotation. So get right vector and its atan
 	float Heading(void) const { return Atan2(-x, y); }
-	float Magnitude(void) const { return Sqrt(x*x + y*y + z*z); }
+	float Magnitude(void) const { return Sqrt(MagnitudeSqr()); }
 	float MagnitudeSqr(void) const { return x*x + y*y + z*z; }
-	float Magnitude2D(void) const { return Sqrt(x*x + y*y); }
+	float Magnitude2D(void) const { return Sqrt(MagnitudeSqr2D()); }
 	float MagnitudeSqr2D(void) const { return x*x + y*y; }
 	void Normalise(void);
 	
@@ -127,3 +128,5 @@ class CMatrix;
 CVector Multiply3x3(const CMatrix &mat, const CVector &vec);
 CVector Multiply3x3(const CVector &vec, const CMatrix &mat);
 CVector operator*(const CMatrix &mat, const CVector &vec);
+
+#endif // __GTA_VECTOR_H__

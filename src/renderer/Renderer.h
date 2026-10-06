@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_RENDERER_H__
+#define __GTA_RENDERER_H__
 
 class CEntity;
 
@@ -46,7 +47,7 @@ class CRenderer
 	static CEntity *ms_aVisibleBuildingPtrs[NUMVISIBLEENTITIES];
 #endif
 
-	static CVector ms_vecCameraPosition;
+	static CVUVECTOR ms_vecCameraPosition;
 	static CVehicle *m_pFirstPersonVehicle;
 
 	// unused
@@ -103,3 +104,5 @@ public:
 #endif
 	static void InsertEntityIntoList(CEntity *ent);
 };
+
+#endif // __GTA_RENDERER_H__

@@ -11,6 +11,14 @@
 #include "Camera.h"
 #include "World.h"
 #include "ZoneCull.h"
+#include "debugmenu.h"
+
+#ifdef DEBUGMENU
+SETTWEAKPATH("Audio");
+TWEAKBOOLN(AudioManager.m_bIsSurround, "Surround/Reverb");
+TWEAKBOOLN(AudioManager.m_bDoubleVolume, "Double volume");
+TWEAKBOOLN(AudioManager.m_bDynamicAcousticModelingStatus, "Dynamic Acoustic Modeling Status");
+#endif
 
 cAudioManager AudioManager;
 
@@ -583,7 +591,7 @@ cAudioManager::ServiceSoundEffects()
 	AdjustSamplesVolume();
 #endif
 	ProcessActiveQueues();
-#ifdef AUDIO_OAL
+#ifndef AUDIO_MSS
 	SampleManager.Service();
 #endif
 	for (int32 i = 0; i < m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal; i++) {
@@ -1207,8 +1215,10 @@ cAudioManager::ProcessActiveQueues()
 							SampleManager.SetChannel3DPosition(j, position.x, position.y, position.z);
 							SampleManager.SetChannel3DDistances(j, sample.m_MaxDistance, 0.25f * sample.m_MaxDistance);
 #else
-							sample.m_nPan = ComputePan(sample.m_fDistance, &position);
-							SampleManager.SetChannelPan(j, sample.m_nPan);
+							sample.m_nPan = ComputePan(sample.m_MaxDistance, &position);
+							if (sample.m_nPan != m_asActiveSamples[j].m_nPan)
+								m_asActiveSamples[j].m_nPan = Clamp2((int8)sample.m_nPan, (int8)m_asActiveSamples[j].m_nPan, 10);
+							SampleManager.SetChannelPan(j, m_asActiveSamples[j].m_nPan);
 #endif
 						}
 #if !defined(GTA_PS2) || defined(AUDIO_REVERB)
@@ -1254,7 +1264,7 @@ cAudioManager::ProcessActiveQueues()
 						if (!m_asActiveSamples[k].m_bIs2D) {
 							TranslateEntity(&m_asActiveSamples[k].m_vecPos, &position);
 #ifndef EXTERNAL_3D_SOUND
-							m_asActiveSamples[j].m_nPan = ComputePan(m_asActiveSamples[j].m_fDistance, &position);
+							m_asActiveSamples[j].m_nPan = ComputePan(m_asActiveSamples[j].m_MaxDistance, &position);
 #endif
 						}
 						emittingVol = m_bDoubleVolume ? 2 * Min(63, m_asActiveSamples[j].WORKING_VOLUME_FIELD) : m_asActiveSamples[j].WORKING_VOLUME_FIELD;
@@ -1291,8 +1301,8 @@ cAudioManager::ProcessActiveQueues()
 #endif
 #ifndef GTA_PS2
 							SampleManager.SetChannelLoopPoints(k, m_asActiveSamples[k].m_nLoopStart, m_asActiveSamples[k].m_nLoopEnd);
-#endif
 							SampleManager.SetChannelLoopCount(k, m_asActiveSamples[k].m_nLoopCount);
+#endif
 #if !defined(GTA_PS2) || defined(AUDIO_REVERB)
 							SampleManager.SetChannelReverbFlag(k, m_asActiveSamples[k].m_bReverb);
 #endif

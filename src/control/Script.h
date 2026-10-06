@@ -1,5 +1,7 @@
-#pragma once
+#ifndef __GTA_SCRIPT_H__
+#define __GTA_SCRIPT_H__
 #include "Font.h"
+#include "Ped.h"
 #include "PedType.h"
 #include "Text.h"
 #include "Sprite2d.h"
@@ -637,3 +639,5 @@ enum {
 	MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART,
 };
 #endif
+
+#endif // __GTA_SCRIPT_H__

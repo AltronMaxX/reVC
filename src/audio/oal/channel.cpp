@@ -9,15 +9,14 @@
 #endif
 
 extern bool IsFXSupported();
+extern size_t gPlayerTalkDataSize;
 
 ALuint alSources[NUM_CHANNELS];
 ALuint alFilters[NUM_CHANNELS];
 ALuint alBuffers[NUM_CHANNELS];
 bool bChannelsCreated = false;
 
-int32 CChannel::channelsThatNeedService = 0;
-
-uint8 tempStereoBuffer[PED_BLOCKSIZE * 2];
+uint8* tempStereoBuffer = nil;
 
 void
 CChannel::InitChannels()
@@ -26,6 +25,8 @@ CChannel::InitChannels()
 	alGenBuffers(NUM_CHANNELS, alBuffers);
 	if (IsFXSupported())
 		alGenFilters(NUM_CHANNELS, alFilters);
+
+	tempStereoBuffer = new uint8[Max(PED_BLOCKSIZE, gPlayerTalkDataSize) * 2];
 	bChannelsCreated = true;
 }
 
@@ -43,6 +44,7 @@ CChannel::DestroyChannels()
 			alDeleteFilters(NUM_CHANNELS, alFilters);
 			memset(alFilters, 0, sizeof(alFilters));
 		}
+		delete[]tempStereoBuffer;
 		bChannelsCreated = false;
 	}
 }
@@ -52,12 +54,13 @@ CChannel::CChannel()
 {
 	Data = nil;
 	DataSize = 0;
-	bIs2D = false;
+	bIs2DDefault = bForce2D = false;
 	SetDefault();
 }
 
 void CChannel::SetDefault()
 {
+	Pan = 63;
 	Pitch = 1.0f;
 	Gain = 1.0f;
 	Mix = 0.0f;
@@ -65,19 +68,14 @@ void CChannel::SetDefault()
 	Position[0] = 0.0f; Position[1] = 0.0f; Position[2] = 0.0f;
 	Distances[0] = 0.0f; Distances[1] = FLT_MAX;
 
-	LoopCount = 1;
-	LastProcessedOffset = UINT32_MAX;
 	LoopPoints[0] = 0; LoopPoints[1] = -1;
 	
 	Frequency = MAX_FREQ;
+	bForce2D = bIs2DDefault;
 }
 
 void CChannel::Reset()
 {
-	// Here is safe because ctor don't call this
-	if (LoopCount > 1)
-		channelsThatNeedService--;
-
 	ClearBuffer();
 	SetDefault();
 }
@@ -93,7 +91,7 @@ void CChannel::Init(uint32 _id, bool Is2D)
 		
 		if ( Is2D )
 		{
-			bIs2D = true;
+			bIs2DDefault = bForce2D = true;
 			alSource3f(alSources[id], AL_POSITION, 0.0f, 0.0f, 0.0f);
 			alSourcef(alSources[id], AL_GAIN, 1.0f);
 		}
@@ -103,6 +101,7 @@ void CChannel::Init(uint32 _id, bool Is2D)
 void CChannel::Term()
 {
 	Stop();
+	Reset();
 	if ( HasSource() )
 	{
 		if ( IsFXSupported() )
@@ -117,15 +116,18 @@ void CChannel::Start()
 	if ( !HasSource() ) return;
 	if ( !Data ) return;
 
-	if ( bIs2D )
+	if ( bForce2D )
 	{
 		// convert mono data to stereo
+		int LVol = Pan <= 63 ? 128 : (127-Pan) / 64.0f * 128;
+		int RVol = Pan >= 63 ? 128 : Pan / 64.0f * 128;
+
 		int16 *monoData = (int16*)Data;
 		int16 *stereoData = (int16*)tempStereoBuffer;
 		for (size_t i = 0; i < DataSize / 2; i++)
 		{
-			*(stereoData++) = *monoData;
-			*(stereoData++) = *(monoData++);
+			*(stereoData++) = (*monoData * LVol) >> 7;
+			*(stereoData++) = (*(monoData++) * RVol) >> 7;
 		}
 		alBufferData(alBuffers[id], AL_FORMAT_STEREO16, tempStereoBuffer, DataSize * 2, Frequency);
 	}
@@ -141,8 +143,6 @@ void CChannel::Stop()
 {
 	if ( HasSource() )
 		alSourceStop(alSources[id]);
-	
-	Reset();
 }
 
 bool CChannel::HasSource()
@@ -173,12 +173,12 @@ void CChannel::SetGain(float gain)
 	alSourcef(alSources[id], AL_GAIN, gain);
 }
 	
-void CChannel::SetVolume(int32 vol)
+void CChannel::SetVolume(uint32 vol)
 {
 	SetGain(ALfloat(vol) / MAX_VOLUME);
 }
 
-void CChannel::SetSampleData(void *_data, size_t _DataSize, int32 freq)
+void CChannel::SetSampleData(void *_data, size_t _DataSize, uint32 freq)
 {
 	Data = _data;
 	DataSize = _DataSize;
@@ -190,51 +190,12 @@ void CChannel::SetCurrentFreq(uint32 freq)
 	SetPitch(ALfloat(freq) / Frequency);
 }
 
-void CChannel::SetLoopCount(int32 count)
+void CChannel::SetLoopCount(uint32 count)
 {
 	if ( !HasSource() ) return;
 
-	// 0: loop indefinitely, 1: play one time, 2: play two times etc...
-	// only > 1 needs manual processing
-
-	if (LoopCount > 1 && count < 2)
-		channelsThatNeedService--;
-	else if (LoopCount < 2 && count > 1)
-		channelsThatNeedService++;
-
+	// 0: loop indefinitely, 1: play one time, 2: play two times etc... in our case controlled by audio manager
 	alSourcei(alSources[id], AL_LOOPING, count == 1 ? AL_FALSE : AL_TRUE);
-	LoopCount = count;
-}
-
-bool CChannel::Update()
-{
-	if (!HasSource()) return false;
-	if (LoopCount < 2) return false;
-
-	ALint state;
-	alGetSourcei(alSources[id], AL_SOURCE_STATE, &state);
-	if (state == AL_STOPPED) {
-		debug("Looping channels(%d in this case) shouldn't report AL_STOPPED, but nvm\n", id);
-		SetLoopCount(1);
-		return true;
-	}
-
-	assert(channelsThatNeedService > 0 && "Ref counting is broken");
-
-	ALint offset;
-	alGetSourcei(alSources[id], AL_SAMPLE_OFFSET, &offset);
-
-	// Rewound
-	if (offset < LastProcessedOffset) {
-		LoopCount--;
-		if (LoopCount == 1) {
-			// Playing last tune...
-			channelsThatNeedService--;
-			alSourcei(alSources[id], AL_LOOPING, AL_FALSE);
-		}
-	}
-	LastProcessedOffset = offset;
-	return true;
 }
 
 void CChannel::SetLoopPoints(ALint start, ALint end)
@@ -247,6 +208,7 @@ void CChannel::SetPosition(float x, float y, float z)
 {
 	if ( !HasSource() ) return;
 	alSource3f(alSources[id], AL_POSITION, x, y, z);
+	bForce2D = false;
 }
 	
 void CChannel::SetDistances(float max, float min)
@@ -256,11 +218,18 @@ void CChannel::SetDistances(float max, float min)
 	alSourcef   (alSources[id], AL_REFERENCE_DISTANCE, min);
 	alSourcef   (alSources[id], AL_MAX_GAIN, 1.0f);
 	alSourcef   (alSources[id], AL_ROLLOFF_FACTOR, 1.0f);
+	bForce2D = false;
 }
 	
-void CChannel::SetPan(int32 pan)
+void CChannel::SetPan(uint8 pan)
 {
-	SetPosition((pan-63)/64.0f, 0.0f, Sqrt(1.0f-SQR((pan-63)/64.0f)));
+	if (IsUsed())
+		debug("Channel %i changes pan during playback, we don't support that yet :(\n", id);
+
+	// this is kinda pointless
+	//SetPosition(((int)pan-63)/64.0f, 0.0f, -Sqrt(1.0f-SQR(((int)pan-63)/64.0f)));
+	Pan = pan;
+	bForce2D = true;
 }
 
 void CChannel::ClearBuffer()

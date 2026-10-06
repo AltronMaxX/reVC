@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_DMAUDIO_H__
+#define __GTA_DMAUDIO_H__
 
 #include "audio_enums.h"
 #include "soundlist.h"
@@ -51,6 +52,7 @@ public:
 	
 	void ReleaseDigitalHandle(void);
 	void ReacquireDigitalHandle(void);
+	void SetStreamsPausedForWindowPause(bool paused);
 	
 	void SetDynamicAcousticModelingStatus(bool8 status);
 	
@@ -82,6 +84,9 @@ public:
 	void PreloadCutSceneMusic(uint32 track);
 	void PlayPreloadedCutSceneMusic(void);
 	void StopCutSceneMusic(void);
+	bool8 IsCutSceneMusicPlaying(void);
+	void ResumeCutSceneMusicAfterPause(void);
+	int32 GetCutSceneMusicPosition(void);
 	
 	void PreloadMissionAudio(uint8 slot, Const char *missionAudio);
 	uint8 GetMissionAudioLoadingStatus(uint8 slot);
@@ -105,3 +110,5 @@ public:
 	void ShutUpPlayerTalking(bool8 state);
 };
 extern cDMAudio DMAudio;
+
+#endif // __GTA_DMAUDIO_H__

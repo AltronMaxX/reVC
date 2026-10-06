@@ -1,12 +1,5 @@
-#pragma once
-
-#ifndef MAX_PATH
-#ifdef _WIN32
-#define MAX_PATH 260
-#else
-#define MAX_PATH 4096
-#endif
-#endif
+#ifndef __GTA_STREAM_H__
+#define __GTA_STREAM_H__
 
 #ifdef AUDIO_OAL
 #include <AL/al.h>
@@ -17,50 +10,50 @@ class IDecoder
 {
 public:
 	virtual ~IDecoder() { }
-
+	
 	virtual bool   IsOpened() = 0;
 	virtual void   FileOpen() = 0;
-
+	
 	virtual uint32 GetSampleSize() = 0;
 	virtual uint32 GetSampleCount() = 0;
 	virtual uint32 GetSampleRate() = 0;
 	virtual uint32 GetChannels() = 0;
-
+	
 	uint32 GetAvgSamplesPerSec()
 	{
 		return GetChannels() * GetSampleRate();
 	}
-
+	
 	uint32 ms2samples(uint32 ms)
 	{
 		return float(ms) / 1000.0f * float(GetSampleRate());
 	}
-
+	
 	uint32 samples2ms(uint32 sm)
 	{
 		return float(sm) * 1000.0f / float(GetSampleRate());
 	}
-
+	
 	uint32 GetBufferSamples()
 	{
 		//return (GetAvgSamplesPerSec() >> 2) - (GetSampleCount() % GetChannels());
 		return (GetAvgSamplesPerSec() / 4); // 250ms
 	}
-
+	
 	uint32 GetBufferSize()
 	{
 		return GetBufferSamples() * GetSampleSize();
 	}
-
+	
 	virtual void   Seek(uint32 milliseconds) = 0;
 	virtual uint32 Tell() = 0;
-
+	
 	uint32 GetLength()
 	{
 		FileOpen(); // abort deferred init, we need length now - game has to cache audio file sizes
 		return float(GetSampleCount()) * 1000.0f / float(GetSampleRate());
 	}
-
+	
 	virtual uint32 Decode(void *buffer) = 0;
 };
 #ifdef MULTITHREADED_AUDIO
@@ -68,7 +61,7 @@ template <typename T> class tsQueue
 {
 public:
 	tsQueue() : count(0) { }
-
+	
 	void push(const T &value)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
@@ -115,7 +108,7 @@ public:
 		return emptyNts();
 	}
 	*/
-
+	
 	std::queue<T> m_queue;
 	int count;
 	mutable std::mutex m_mutex;
@@ -123,13 +116,14 @@ public:
 #endif
 class CStream
 {
-	char     m_aFilename[MAX_PATH];
+	static const uint32 MAX_STREAM_PATH = 4096;
+	char     m_aFilename[MAX_STREAM_PATH];
 	ALuint  *m_pAlSources;
 	ALuint (&m_alBuffers)[NUM_STREAMBUFFERS];
-
+	
 	bool     m_bPaused;
 	bool     m_bActive;
-
+	
 public:
 #ifdef MULTITHREADED_AUDIO
 	std::mutex	m_mutex;
@@ -142,13 +136,13 @@ public:
 #endif
 
 	void    *m_pBuffer;
-
+	
 	bool     m_bReset;
 	uint32   m_nVolume;
 	uint8    m_nPan;
 	uint32   m_nPosBeforeReset;
 	int32   m_nLoopCount;
-
+	
 	IDecoder *m_pSoundFile;
 
 	void BuffersShouldBeFilled(); // all
@@ -164,37 +158,39 @@ public:
 	void SetGain(float gain);
 	void   Pause();
 	void   SetPlay(bool state);
-
+	
 	bool   FillBuffer(ALuint *alBuffer);
 	int32	FillBuffers();
 	void   ClearBuffers();
 //public:
 	static void Initialise();
 	static void Terminate();
-
+	
 	CStream(ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS]);
 	~CStream();
 	void   Delete();
 	bool   Open(const char *filename, uint32 overrideSampleRate = 32000);
 	void   Close();
-
+	
 	bool   IsOpened();
 	bool   IsPlaying();
 	void   SetPause (bool bPause);
 	void   SetVolume(uint32 nVol);
 	void   SetPan   (uint8 nPan);
-	void   SetPosMS (uint32 nPos);
+	void   SetPosMS (uint32 nPos); 
 	uint32 GetPosMS();
 	uint32 GetLengthMS();
-
+	
 	bool Setup(bool imSureQueueIsEmpty = false, bool lock = true);
 	void Start();
 	void Stop();
 	void Update(void);
 	void SetLoopCount(int32);
-
+	
 	void ProviderInit();
 	void ProviderTerm();
 };
 
 #endif
+
+#endif // __GTA_STREAM_H__

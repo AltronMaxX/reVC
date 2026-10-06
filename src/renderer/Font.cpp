@@ -3,9 +3,7 @@
 #include "Sprite2d.h"
 #include "TxdStore.h"
 #include "Font.h"
-#ifdef BUTTON_ICONS
 #include "FileMgr.h"
-#endif
 #include "Timer.h"
 
 void
@@ -56,6 +54,7 @@ CFontRenderState CFont::RenderState;
 #ifdef MORE_LANGUAGES
 uint8 CFont::LanguageSet = FONT_LANGSET_EFIGS;
 int32 CFont::Slot = -1;
+float CFont::fTracking = 0.0f;
 #define JAP_TERMINATION (0x8000 | '~')
 
 int16 CFont::Size[LANGSET_MAX][MAX_FONTS][210] = {
@@ -71,7 +70,7 @@ int16 CFont::Size[MAX_FONTS][210] = {
 		18, 10, 17, 17, 17, 17, 17, 15, 12, 16,  5, 30, 30, 30, 30, 30,
 		//   A,  B,  C,  D,  E,  F,  G,  H,  I,  J,  K,  L,  M,  N,  O,
 		12, 16, 19, 16, 19, 18, 18, 17, 22, 11, 17, 18, 18, 30, 22, 19,
-		//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, ??, ??, ??,  ¡,  \,
+		//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, ??, ??, ??,  ï¿½,  \,
 		#ifdef FIX_BUGS
 		22, 19, 19, 20, 18, 19, 19, 29, 19, 18, 19, 19, 33, 33, 10, 19,
 		#else
@@ -81,11 +80,11 @@ int16 CFont::Size[MAX_FONTS][210] = {
 		12, 14, 11, 11, 16, 11, 12, 14, 14, 10, 13, 12, 10, 19, 18, 12,
 		//p, q,  r,  s,  t,  u,  v,  w,  x,  y,  z, ??, ??, ??, ??, ??,
 		16, 13, 13, 11, 12, 15, 12, 15, 13, 12, 12, 37, 33, 37, 35, 37,
-		//À, Á,  Â,  Ä,  Æ,  Ç,  È,  É,  Ê,  Ë,  Ì,  Í,  Î,  Ï,  Ò,  Ó,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		16, 16, 16, 16, 33, 17, 18, 18, 18, 18, 11, 11, 11, 11, 19, 19,
-		//Ô, Ö,  Ù,  Ú,  Û,  Ü,  ß,  à,  á,  â,  ä,  æ,  ç,  è,  é,  ê,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		19, 19, 19, 19, 19, 19, 15, 14, 14, 14, 14, 20, 14, 11, 11, 11,
-		//ë, ì,  í,  î,  ï,  ò,  ó,  ô,  ö,  ù,  ú,  û,  ü,  Ñ,  ñ,  ¿,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		#ifdef FIX_BUGS
 		11, 10, 10, 10, 10, 12, 12, 12, 12, 15, 15, 15, 15, 22, 18, 21,
 		#else
@@ -110,7 +109,7 @@ int16 CFont::Size[MAX_FONTS][210] = {
 		20,  7, 20, 20, 21, 20, 20, 19, 21, 20,  8, 30, 24, 30, 24, 19,
 		//TM,A,  B,  C,  D,  E,  F,  G,  H,  I,  J,  K,  L,  M,  N,  O,
 		20, 22, 22, 21, 22, 18, 18, 22, 22,  9, 14, 21, 18, 27, 21, 24,
-		//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, *I,  \, *I,  ¡,  °,
+		//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, *I,  \, *I,  ï¿½,  ï¿½,
 		#ifdef FIX_BUGS
 		22, 22, 23, 20, 19, 23, 22, 31, 23, 23, 21, 25, 13, 30,  7, 19,
 		#else
@@ -120,11 +119,11 @@ int16 CFont::Size[MAX_FONTS][210] = {
 		10, 17, 17, 16, 17, 17, 11, 17, 17,  7,  7, 18,  7, 25, 17, 17,
 		//p, q,  r,  s,  t,  u,  v,  w,  x,  y,  z, *I, *I, $2, (2, )2,
 		17, 17, 11, 17, 11, 17, 18, 25, 19, 18, 17, 28, 26, 20, 15, 15,
-		//À, Á,  Â,  Ä,  Æ,  Ç,  È,  É,  Ê,  Ë,  Ì,  Í,  Î,  Ï,  Ò,  Ó,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		20, 20, 20, 20, 29, 22, 19, 19, 19, 19,  9,  9,  9,  9, 23, 23,
-		//Ô, Ö,  Ù,  Ú,  Û,  Ü,  ß,  à,  á,  â,  ä,  æ,  ç,  è,  é,  ê,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		23, 23, 24, 24, 24, 24, 20, 19, 17, 17, 17, 30, 16, 17, 17, 17,
-		//ë, ì,  í,  î,  ï,  ò,  ó,  ô,  ö,  ù,  ú,  û,  ü,  Ñ,  ñ,  ¿,
+		//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 		#ifdef FIX_BUGS
 		17, 11, 11, 15, 12, 17, 17, 17, 17, 17, 17, 17, 17, 21, 17, 19,
 		#else
@@ -134,9 +133,9 @@ int16 CFont::Size[MAX_FONTS][210] = {
 		20, 18, 19, 19, 21, 19, 19, 19, 19, 19, 16, 19, 19, 19, 20, 19,
 		//F2,G2,H2, I2, J2, K2, L2, M2, N2, O2, P2, Q2, R2, S2, T2, U2,
 		16, 19, 19,  9, 19, 20, 14, 29, 19, 19, 19, 19, 19, 19, 21, 19,
-		//V2,W2,X2, Y2, Z2, À2, Á2, Â2, Ä2, Æ2, Ç2, È2, É2, Ê2, Ë2, Ì2,
+		//V2,W2,X2, Y2, Z2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2,
 		20, 32, 20, 19, 19, 19, 19, 19, 19, 29, 19, 19, 19, 19, 19,  9,
-		//Í2,Î2,Ï2, Ò2, Ó2, Ô2, Ö2, Ù2, Ú2, Û2, Ü2, ß2, Ñ2, ¿2, '2, .2,
+		//ï¿½2,ï¿½2,ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, '2, .2,
 		#ifdef FIX_BUGS
 		 9,  9,  9, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 10,  9,
 		#else
@@ -191,17 +190,17 @@ int16 CFont::Size[MAX_FONTS][210] = {
 			18, 10, 17, 17, 17, 17, 17, 15, 12, 16,  5, 30, 30, 30, 30, 30,
 			//   A,  B,  C,  D,  E,  F,  G,  H,  I,  J,  K,  L,  M,  N,  O,
 			12, 16, 19, 16, 19, 18, 18, 17, 22, 11, 17, 18, 18, 30, 22, 19,
-			//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, ??, ??, ??,  ¡,  \,
+			//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, ??, ??, ??,  ï¿½,  \,
 			22, 19, 19, 20, 18, 19, 19, 29, 19, 18, 19, 19, 33, 33, 10, 19,
 			//??,a,  b,  c,  d,  e,  f,  g,  h,  i,  j,  k,  l,  m,  n,  o,
 			12, 14, 11, 11, 16, 11, 12, 14, 14, 10, 13, 12, 10, 19, 18, 12,
 			//p, q,  r,  s,  t,  u,  v,  w,  x,  y,  z, ??, ??, ??, ??, ??,
 			16, 13, 13, 11, 12, 15, 12, 15, 13, 12, 12, 37, 33, 37, 35, 37,
-			//À, Á,  Â,  Ä,  Æ,  Ç,  È,  É,  Ê,  Ë,  Ì,  Í,  Î,  Ï,  Ò,  Ó,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			16, 16, 16, 16, 33, 17, 18, 18, 18, 18, 11, 11, 11, 11, 19, 19,
-			//Ô, Ö,  Ù,  Ú,  Û,  Ü,  ß,  à,  á,  â,  ä,  æ,  ç,  è,  é,  ê,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			19, 19, 19, 19, 19, 19, 15, 14, 14, 14, 14, 20, 14, 11, 11, 11,
-			//ë, ì,  í,  î,  ï,  ò,  ó,  ô,  ö,  ù,  ú,  û,  ü,  Ñ,  ñ,  ¿,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			11, 10, 10, 10, 10, 12, 12, 12, 12, 15, 15, 15, 15, 22, 18, 21,
 			//i,BLANKS
 			10, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19,
@@ -222,25 +221,25 @@ int16 CFont::Size[MAX_FONTS][210] = {
 			20,  7, 20, 20, 21, 20, 20, 19, 21, 20,  8, 30, 24, 30, 24, 19,
 			//TM,A,  B,  C,  D,  E,  F,  G,  H,  I,  J,  K,  L,  M,  N,  O,
 			20, 22, 22, 21, 22, 18, 18, 22, 22,  9, 14, 21, 18, 27, 21, 24,
-			//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, *I,  \, *I,  ¡,  °,
+			//P, Q,  R,  S,  T,  U,  V,  W,  X,  Y,  Z, *I,  \, *I,  ï¿½,  ï¿½,
 			22, 22, 23, 20, 19, 23, 22, 31, 23, 23, 21, 25, 13, 30,  7, 19,
 			//(C),a, b,  c,  d,  e,  f,  g,  h,  i,  j,  k,  l,  m,  n,  o,
 			10, 17, 17, 16, 17, 17, 11, 17, 17,  7,  7, 18,  7, 25, 17, 17,
 			//p, q,  r,  s,  t,  u,  v,  w,  x,  y,  z, *I, *I, $2, (2, )2,
 			17, 17, 11, 17, 11, 17, 18, 25, 19, 18, 17, 28, 26, 20, 15, 15,
-			//À, Á,  Â,  Ä,  Æ,  Ç,  È,  É,  Ê,  Ë,  Ì,  Í,  Î,  Ï,  Ò,  Ó,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			20, 20, 20, 20, 29, 22, 19, 19, 19, 19,  9,  9,  9,  9, 23, 23,
-			//Ô, Ö,  Ù,  Ú,  Û,  Ü,  ß,  à,  á,  â,  ä,  æ,  ç,  è,  é,  ê,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			23, 23, 24, 24, 24, 24, 20, 19, 17, 17, 17, 30, 16, 17, 17, 17,
-			//ë, ì,  í,  î,  ï,  ò,  ó,  ô,  ö,  ù,  ú,  û,  ü,  Ñ,  ñ,  ¿,
+			//ï¿½, ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,  ï¿½,
 			17, 11, 11, 15, 12, 17, 17, 17, 17, 17, 17, 17, 17, 21, 17, 19,
 			//02,12,22, 32, 42, 52, 62, 72, 82, 92, :2, A2, B2, C2, D2, E2,
 			20, 18, 19, 19, 21, 19, 19, 19, 19, 19, 16, 19, 19, 19, 20, 19,
 			//F2,G2,H2, I2, J2, K2, L2, M2, N2, O2, P2, Q2, R2, S2, T2, U2,
 			16, 19, 19,  9, 19, 20, 14, 29, 19, 19, 19, 19, 19, 19, 21, 19,
-			//V2,W2,X2, Y2, Z2, À2, Á2, Â2, Ä2, Æ2, Ç2, È2, É2, Ê2, Ë2, Ì2,
+			//V2,W2,X2, Y2, Z2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2,
 			20, 32, 20, 19, 19, 19, 19, 19, 19, 29, 19, 19, 19, 19, 19,  9,
-			//Í2,Î2,Ï2, Ò2, Ó2, Ô2, Ö2, Ù2, Ú2, Û2, Ü2, ß2, Ñ2, ¿2, '2, .2,
+			//ï¿½2,ï¿½2,ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, ï¿½2, '2, .2,
 			 9,  9,  9, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 10,  9,
 			//space, unprop
 			10, 20
@@ -301,6 +300,136 @@ int CFont::PS2Symbol = BUTTON_NONE;
 int CFont::ButtonsSlot = -1;
 #endif // BUTTON_ICONS
 
+#ifdef MORE_LANGUAGES
+static const char*
+GetSizeFileName(uint8 set)
+{
+	switch (set) {
+	case FONT_LANGSET_RUSSIAN:   return "FONTS_R.INI";
+	case FONT_LANGSET_POLISH:    return "FONTS_P.INI";
+	case FONT_LANGSET_JAPANESE:  return "FONTS_J.INI";
+	case FONT_LANGSET_UKRAINIAN: return "FONTS_UKR.INI";
+	default:                     return "FONTS.INI";
+	}
+}
+
+bool
+CFont::LoadSizes(uint8 set, const char *file)
+{
+    if (set >= LANGSET_MAX)
+        return false;
+
+    CFileMgr::SetDir("TEXT");
+    int fd = CFileMgr::OpenFile(file, "r");
+    if (fd == 0) {
+        char lower[32];
+        int i;
+        for (i = 0; file[i] != '\0' && i < 31; i++) {
+            char c = file[i];
+            if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+            lower[i] = c;
+        }
+        lower[i] = '\0';
+        fd = CFileMgr::OpenFile(lower, "r");
+    }
+    if (fd == 0) {
+        printf("CFont::LoadSizes: %s not found\n", file);
+        CFileMgr::SetDir("");
+        return false;
+    }
+
+    char buf[16384];
+    int len = 0;
+    while (len < (int)sizeof(buf) - 1) {
+        int n = CFileMgr::Read(fd, buf + len, (int)sizeof(buf) - 1 - len);
+        if (n <= 0)
+            break;
+        len += n;
+    }
+    buf[len] = '\0';
+    CFileMgr::CloseFile(fd);
+    CFileMgr::SetDir("");
+
+    int font = -1;
+    char *line = buf;
+    while (line != nil && *line != '\0') {
+        char *next = strchr(line, '\n');
+        if (next != nil)
+            *next++ = '\0';
+
+        char *s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        char *cut = strpbrk(s, ";\r#");
+        if (cut != nil) *cut = '\0';
+
+        if (*s != '\0') {
+            if (*s == '[') {
+                font = -1;
+                if (!strncmp(s, "[font2", 6)) font = FONT_BANK;
+                else if (!strncmp(s, "[font1", 6)) font = FONT_STANDARD;
+                else if (!strncmp(s, "[tuning", 7)) font = -2;
+            } else {
+                char *eq = strchr(s, '=');
+                if (eq != nil) {
+                    *eq = '\0';
+                    char *e = eq;
+                    while (e > s && (e[-1] == ' ' || e[-1] == '\t')) e--;
+                    *e = '\0';
+
+                    if (font == -2) {
+                        if (!strcmp(s, "tracking"))
+                            fTracking = (float)atof(eq + 1);
+                    } else if (font >= 0) {
+                        int val = atoi(eq + 1);
+                        if (val >= 0 && val <= 64) {
+                            if (!strcmp(s, "unprop"))
+                                Size[set][font][209] = val;
+                            else if (!strcmp(s, "space"))
+                                Size[set][font][208] = val;
+                            else {
+                                int code = (int)strtoul(s, nil, 0);
+                                if (code >= 0x20 && code <= 0xEF)
+                                    Size[set][font][code - 0x20] = val;
+                            }
+                        }
+                    }
+                } else if (font >= 0) {
+                    char *colon = strchr(s, ':');
+                    if (colon != nil) {
+                        *colon = '\0';
+                        int code = (int)strtoul(s, nil, 0);
+                        if (code >= 0x20 && code <= 0xEF) {
+                            char *p = colon + 1;
+                            while (*p != '\0' && code <= 0xEF) {
+                                char *end;
+                                long val = strtol(p, &end, 10);
+                                if (end == p)
+                                    break;
+                                if (val < 0 || val > 64)
+                                    break;
+                                Size[set][font][code - 0x20] = (int16)val;
+                                code++;
+                                p = end;
+                                while (*p == ',' || *p == ' ' || *p == '\t')
+                                    p++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        line = next;
+    }
+    return true;
+}
+
+void
+CFont::ReloadSizes(void)
+{
+    LoadSizes(LanguageSet, GetSizeFileName(LanguageSet));
+}
+#endif
+
 void
 CFont::Initialise(void)
 {
@@ -309,8 +438,7 @@ CFont::Initialise(void)
 	slot = CTxdStore::AddTxdSlot("fonts");
 #ifdef MORE_LANGUAGES
 	Slot = slot;
-	switch (LanguageSet)
-	{
+	switch (LanguageSet) {
 	case FONT_LANGSET_EFIGS:
 	default:
 		CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD");
@@ -323,6 +451,9 @@ CFont::Initialise(void)
 		break;
 	case FONT_LANGSET_JAPANESE:
 		CTxdStore::LoadTxd(slot, "MODELS/FONTS_J.TXD");
+		break;
+	case FONT_LANGSET_UKRAINIAN:
+		CTxdStore::LoadTxd(slot, "MODELS/FONTS_UKR.TXD");
 		break;
 	}
 #else
@@ -360,6 +491,9 @@ CFont::Initialise(void)
 #if !defined(GAMEPAD_MENU) && defined(BUTTON_ICONS)
 	// loaded in CMenuManager with GAMEPAD_MENU defined
 	LoadButtons("MODELS/X360BTNS.TXD");
+#endif
+#ifdef MORE_LANGUAGES
+	LoadSizes(LanguageSet, GetSizeFileName(LanguageSet));
 #endif
 }
 
@@ -437,6 +571,9 @@ CFont::ReloadFonts(uint8 set)
 		case FONT_LANGSET_JAPANESE:
 			CTxdStore::LoadTxd(Slot, "MODELS/FONTS_J.TXD");
 			break;
+		case FONT_LANGSET_UKRAINIAN:
+			CTxdStore::LoadTxd(Slot, "MODELS/FONTS_UKR.TXD");
+			break;
 		}
 		CTxdStore::SetCurrentTxd(Slot);
 		Sprite[0].SetTexture("font2", "font2_mask");
@@ -447,6 +584,7 @@ CFont::ReloadFonts(uint8 set)
 		CTxdStore::PopCurrentTxd();
 	}
 	LanguageSet = set;
+	LoadSizes(set, GetSizeFileName(set));
 }
 #endif
 
@@ -711,7 +849,7 @@ CFont::RenderFontBuffer()
 		// PS2 uses different chars for some symbols
 		if (!RenderState.bFontHalfTexture && c == 30) c = 61; // wanted star
 #endif
-		textPosX += RenderState.scaleX * GetCharacterWidth(c);
+		textPosX += RenderState.scaleX * (GetCharacterWidth(c) + fTracking);
 		if (c == '\0')
 			textPosX += RenderState.fExtraSpace;
 	}
@@ -1266,7 +1404,7 @@ CFont::GetCharacterSize(wchar c)
 		if (Details.bFontHalfTexture)
 			c = FindNewCharacter(c);
 		if (Details.proportional)
-			return Size[LanguageSet][Details.style][c] * Details.scaleX;
+			return (Size[LanguageSet][Details.style][c] + fTracking) * Details.scaleX;
 		else
 			return Size[LanguageSet][Details.style][209] * Details.scaleX;
 	}

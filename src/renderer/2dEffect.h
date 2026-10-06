@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_2DEFFECT_H__
+#define __GTA_2DEFFECT_H__
 
 enum {
 	EFFECT_LIGHT,
@@ -59,21 +60,21 @@ public:
 	};
 	struct Particle {
 		int particleType;
-		CVector dir;
+		RwV3d dir;
 		float scale;
 	};
 	struct Attractor {
-		CVector dir;
+		RwV3d dir;
 		int8 type;
 		uint8 probability;
 	};
 	struct PedAttractor {
-		CVector queueDir;
-		CVector useDir;
+		RwV3d queueDir;
+		RwV3d useDir;
 		int8 type;
 	};
 
-	CVector pos;
+	RwV3d pos;
 	CRGBA col;
 	uint8 type;
 	union {
@@ -97,3 +98,5 @@ public:
 };
 
 VALIDATE_SIZE(C2dEffect, 0x34);
+
+#endif // __GTA_2DEFFECT_H__

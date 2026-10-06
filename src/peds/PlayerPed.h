@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_PLAYERPED_H__
+#define __GTA_PLAYERPED_H__
 
 #include "Ped.h"
 
@@ -56,6 +57,11 @@ public:
 	static bool bDebugPlayerInfo;
 #endif
 
+
+#ifdef CUSTOM_SWIMMING
+	bool bIsTiredSwimmingFast;
+#endif
+
 	CPlayerPed();
 	~CPlayerPed();
 	void SetMoveAnim() { };
@@ -93,6 +99,9 @@ public:
 	void ProcessAnimGroups(void);
 	void ProcessPlayerWeapon(CPad*);
 	void PlayerControlZelda(CPad*);
+#ifdef CUSTOM_SWIMMING
+	void ProcessSwimming(CPad*);	// reVC fork addition: surface swimming controller
+#endif
 	bool DoesPlayerWantNewWeapon(eWeaponType, bool);
 	void PlayIdleAnimations(CPad*);
 	void RemovePedFromMeleeList(CPed*);
@@ -104,6 +113,9 @@ public:
 	void FindNewAttackPoints(void);
 	void SetNearbyPedsToInteractWithPlayer(void);
 	void UpdateMeleeAttackers(void);
+#ifdef CUSTOM_SWIMMING
+	void ProcessSwimming(void);
+#endif
 
 	static void SetupPlayerPed(int32);
 	static void DeactivatePlayerPed(int32);
@@ -118,3 +130,5 @@ public:
 };
 
 //VALIDATE_SIZE(CPlayerPed, 0x5F0);
+
+#endif // __GTA_PLAYERPED_H__

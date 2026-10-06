@@ -367,6 +367,10 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 	m_delayedSoundTimer = 0;
 	CPopulation::UpdatePedCount((ePedType)m_nPedType, false);
 	m_lastComment = UINT32_MAX;
+
+#ifdef CUSTOM_SWIMMING
+	bIsSwimming = false;
+#endif
 }
 
 CPed::~CPed(void)
@@ -1018,6 +1022,29 @@ CPed::ScanForDelayedResponseThreats(void)
 	m_threatCheckTimer = 0;
 }
 
+#ifdef CUSTOM_SWIMMING
+void CPed::RemoveSwimAnims(void)
+{
+	CAnimBlendAssociation* curSwimBreastAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_BREAST);
+	if (curSwimBreastAssoc) {
+		curSwimBreastAssoc->flags |= ASSOC_DELETEFADEDOUT;
+		curSwimBreastAssoc->blendDelta = -6.0f;
+	}
+
+	CAnimBlendAssociation* curSwimCrawlAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_CRAWL);
+	if (curSwimCrawlAssoc) {
+		curSwimCrawlAssoc->flags |= ASSOC_DELETEFADEDOUT;
+		curSwimCrawlAssoc->blendDelta = -6.0f;
+	}
+
+	CAnimBlendAssociation* curSwimTreadAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_SWIM_TREAD);
+	if (curSwimTreadAssoc) {
+		curSwimTreadAssoc->flags |= ASSOC_DELETEFADEDOUT;
+		curSwimTreadAssoc->blendDelta = -6.0f;
+	}
+}
+#endif
+
 void
 CPed::CheckThreatValidity(void)
 {
@@ -1632,6 +1659,16 @@ CPed::ProcessBuoyancy(void)
 	static uint32 nGenerateWaterCircles = 0;
 	CRGBA color;
 
+#ifdef CUSTOM_SWIMMING
+	if (bInVehicle && bIsSwimming || bIsSwimming && DyingOrDead() || (m_nPedState == PED_SWIM && !bTouchingWater) && bEnableSwimming) {
+		RestorePreviousState();
+		bIsSwimming = false;
+		bAffectedByGravity = true;
+
+		RemoveSwimAnims();
+	}
+#endif
+
 	if (bInVehicle)
 		return;
 
@@ -1650,35 +1687,99 @@ CPed::ProcessBuoyancy(void)
 			bIsInWater = false;
 			return;
 		}
+		bIsInWater = true;
 		color.r = (0.5f * CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed()) * 127.5f;
 		color.g = (0.5f * CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue()) * 127.5f;
 		color.b = (0.5f * CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen()) * 127.5f;
 		color.a = CGeneral::GetRandomNumberInRange(48.0f, 96.0f);
-		bIsInWater = true;
-		ApplyMoveForce(buoyancyImpulse);
-		if (!DyingOrDead()) {
-			if (bTryingToReachDryLand) {
-				if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.4f * CTimer::GetTimeStep()) {
-					bTryingToReachDryLand = false;
-					CVector pos = GetPosition();
-					if (PlacePedOnDryLand()) {
-						if (m_fHealth > 20.0f)
-							InflictDamage(nil, WEAPONTYPE_DROWNING, 15.0f, PEDPIECE_TORSO, false);
+#ifdef CUSTOM_SWIMMING
+		if (!bEnableSwimming) {
+			ApplyMoveForce(buoyancyImpulse);
+			if (!DyingOrDead()) {
+				if (bTryingToReachDryLand) {
+					if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.4f * CTimer::GetTimeStep()) {
+						bTryingToReachDryLand = false;
+						CVector pos = GetPosition();
+						if (PlacePedOnDryLand()) {
+							if (m_fHealth > 20.0f)
+								InflictDamage(nil, WEAPONTYPE_DROWNING, 15.0f, PEDPIECE_TORSO, false);
 
-						if (bIsInTheAir) {
-							RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
-							bIsInTheAir = false;
+							if (bIsInTheAir) {
+								RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
+								bIsInTheAir = false;
+							}
+							pos.z = pos.z - 0.8f;
+							CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, pos, CVector(0.0f, 0.0f, 0.0f), 0.0f, 50, color, true);
+							m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
+							SetPedState(PED_IDLE);
+							return;
 						}
-						pos.z = pos.z - 0.8f;
-						CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, pos, CVector(0.0f, 0.0f, 0.0f), 0.0f, 50, color, true);
-						m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-						SetPedState(PED_IDLE);
-						return;
 					}
 				}
 			}
 		}
+#endif
 		float speedMult = 0.0f;
+#ifdef CUSTOM_SWIMMING
+		if (bEnableSwimming) {
+			if (buoyancyImpulse.z / m_fMass > GRAVITY * CTimer::GetTimeStep()
+				|| mod_Buoyancy.m_waterlevel > GetPosition().z + 0.2f) {
+				if (IsPlayer() && !bIsSwimming && !DyingOrDead()) {
+					RemoveWeaponModel(GetWeapon()->GetInfo()->m_nModelId);
+
+					if (bIsDucking) {
+						ClearDuck();
+						bCrouchWhenShooting = false;
+					}
+
+					if (bFallenDown)
+						SetGetUp();
+
+					ClearLook();
+					ClearAimFlag();
+
+					if (m_nPedState == PED_JUMP) {
+						CAnimBlendAssociation* swimTreadAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SWIM_TREAD, 4.0f);
+						swimTreadAssoc->SetFinishCallback(PedLandCB, this);
+						bIsLanding = true;
+					}
+
+					SetPedState(PED_SWIM);
+					bIsSwimming = true;
+
+					bIsInTheAir = false;
+					bAffectedByGravity = false;
+					m_vecMoveSpeed.z = 0.0f;
+				} else if (!IsPlayer() || IsPlayer() && DyingOrDead()) {
+					m_vecMoveSpeed.x = 0.0f;
+					m_vecMoveSpeed.y = 0.0f;
+					m_vecMoveSpeed.z = 0.0f;
+					bIsStanding = false;
+					bIsDrowning = true;
+					InflictDamage(nil, WEAPONTYPE_DROWNING, 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
+				}
+			} else if (bIsSwimming && bIsStanding) {
+				AddWeaponModel(GetWeapon()->GetInfo()->m_nModelId);
+
+				RestorePreviousState();
+				bIsSwimming = false;
+				bAffectedByGravity = true;
+
+				RemoveSwimAnims();
+			}
+		} else {
+			if (buoyancyImpulse.z / m_fMass > GRAVITY * CTimer::GetTimeStep()
+				|| mod_Buoyancy.m_waterlevel > GetPosition().z + 0.6f) {
+				speedMult = pow(0.9f, CTimer::GetTimeStep());
+				m_vecMoveSpeed.x *= speedMult;
+				m_vecMoveSpeed.y *= speedMult;
+				m_vecMoveSpeed.z *= speedMult;
+				bIsStanding = false;
+				bIsDrowning = true;
+				InflictDamage(nil, WEAPONTYPE_DROWNING, 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
+			}
+		}
+#else
 		if (buoyancyImpulse.z / m_fMass > GRAVITY * CTimer::GetTimeStep()
 			|| mod_Buoyancy.m_waterlevel > GetPosition().z + 0.6f) {
 			speedMult = pow(0.9f, CTimer::GetTimeStep());
@@ -1689,12 +1790,74 @@ CPed::ProcessBuoyancy(void)
 			bIsDrowning = true;
 			InflictDamage(nil, WEAPONTYPE_DROWNING, 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
 		}
+#endif
 		if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.25f * CTimer::GetTimeStep()) {
+#ifdef CUSTOM_SWIMMING
+			if (bEnableSwimming) {
+				if (IsPlayer() && !bIsSwimming && m_vecMoveSpeed.z < -0.2f) {
+					DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
+					CVector aBitForward = 2.2f * m_vecMoveSpeed + GetPosition();
+					float level = 0.0f;
+					if (CWaterLevel::GetWaterLevel(aBitForward, &level, false))
+						aBitForward.z = level;
+
+					CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, aBitForward, CVector(0.0f, 0.0f, 0.1f), 0.0f, 200, color, true);
+					nGenerateRaindrops = CTimer::GetTimeInMilliseconds() + 80;
+					nGenerateWaterCircles = CTimer::GetTimeInMilliseconds() + 100;
+				} else if (!IsPlayer()) {
+					if (speedMult == 0.0f) {
+						speedMult = pow(0.9f, CTimer::GetTimeStep());
+					}
+					m_vecMoveSpeed.x *= speedMult;
+					m_vecMoveSpeed.y *= speedMult;
+
+					if (m_vecMoveSpeed.z >= -0.1f) {
+						if (m_vecMoveSpeed.z < -0.04f)
+							m_vecMoveSpeed.z = -0.02f;
+					}
+					else {
+						m_vecMoveSpeed.z = -0.01f;
+						DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
+						CVector aBitForward = 2.2f * m_vecMoveSpeed + GetPosition();
+						float level = 0.0f;
+						if (CWaterLevel::GetWaterLevel(aBitForward, &level, false))
+							aBitForward.z = level;
+
+						CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, aBitForward, CVector(0.0f, 0.0f, 0.1f), 0.0f, 200, color, true);
+						nGenerateRaindrops = CTimer::GetTimeInMilliseconds() + 80;
+						nGenerateWaterCircles = CTimer::GetTimeInMilliseconds() + 100;
+					}
+				}
+			} else {
+				if (speedMult == 0.0f) {
+					speedMult = pow(0.9f, CTimer::GetTimeStep());
+				}
+				m_vecMoveSpeed.x *= speedMult;
+				m_vecMoveSpeed.y *= speedMult;
+
+				if (m_vecMoveSpeed.z >= -0.1f) {
+					if (m_vecMoveSpeed.z < -0.04f)
+						m_vecMoveSpeed.z = -0.02f;
+				} else {
+					m_vecMoveSpeed.z = -0.01f;
+					DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
+					CVector aBitForward = 2.2f * m_vecMoveSpeed + GetPosition();
+					float level = 0.0f;
+					if (CWaterLevel::GetWaterLevel(aBitForward, &level, false))
+						aBitForward.z = level;
+
+					CParticleObject::AddObject(POBJECT_PED_WATER_SPLASH, aBitForward, CVector(0.0f, 0.0f, 0.1f), 0.0f, 200, color, true);
+					nGenerateRaindrops = CTimer::GetTimeInMilliseconds() + 80;
+					nGenerateWaterCircles = CTimer::GetTimeInMilliseconds() + 100;
+				}
+			}
+#else
 			if (speedMult == 0.0f) {
 				speedMult = pow(0.9f, CTimer::GetTimeStep());
 			}
 			m_vecMoveSpeed.x *= speedMult;
 			m_vecMoveSpeed.y *= speedMult;
+
 			if (m_vecMoveSpeed.z >= -0.1f) {
 				if (m_vecMoveSpeed.z < -0.04f)
 					m_vecMoveSpeed.z = -0.02f;
@@ -1710,6 +1873,7 @@ CPed::ProcessBuoyancy(void)
 				nGenerateRaindrops = CTimer::GetTimeInMilliseconds() + 80;
 				nGenerateWaterCircles = CTimer::GetTimeInMilliseconds() + 100;
 			}
+#endif
 		}
 		if (nGenerateWaterCircles && CTimer::GetTimeInMilliseconds() >= nGenerateWaterCircles) {
 			CVector pos = GetPosition();
@@ -3905,6 +4069,10 @@ CPed::CanSetPedState(void)
 bool
 CPed::CanStrafeOrMouseControl(void)
 {
+#ifdef CUSTOM_SWIMMING
+	if (m_nPedState == PED_SWIM)
+		return false;
+#endif
 #ifdef FREE_CAM
 	if (CCamera::bFreeCam)
 		return false;
@@ -4378,7 +4546,7 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 
 		if (!veh->bEngineOn) {
 			veh->bEngineOn = true;
-			DMAudio.PlayOneShot(ped->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
+			DMAudio.PlayOneShot(veh->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
 		}
 		if (ped->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && ped->CharCreatedBy == RANDOM_CHAR
 			&& ped != FindPlayerPed() && ped->m_nPedType != PEDTYPE_EMERGENCY) {
@@ -4751,6 +4919,10 @@ CPed::RemoveWeaponWhenEnteringVehicle(void)
 			m_storedWeapon = GetWeapon()->m_eWeaponType;
 		SetCurrentWeapon(GetWeapon(5).m_eWeaponType);
 	} else {
+		if (IsPlayer() && HasWeaponSlot(5) && GetWeapon(5).m_nAmmoTotal > 0) { // Anyway storee weapon
+			if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED) // Fix for https://github.com/AltronMaxX/reVC/issues/28
+				m_storedWeapon = GetWeapon()->m_eWeaponType;
+		}
 		CWeaponInfo *ourWeapon = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		RemoveWeaponModel(ourWeapon->m_nModelId);
 	}
@@ -5064,7 +5236,7 @@ CPed::CheckAroundForPossibleCollisions(void)
 	if (CTimer::GetTimeInMilliseconds() <= m_nPedStateTimer)
 		return;
 
-	GetBoundCentre(ourCentre);
+	ourCentre = GetBoundCentre();
 
 	CWorld::FindObjectsInRange(ourCentre, 10.0f, true, &maxObject, 6, objects, false, true, false, true, false);
 	for (int i = 0; i < maxObject; i++) {
@@ -5073,7 +5245,7 @@ CPed::CheckAroundForPossibleCollisions(void)
 			if (gPhoneInfo.PhoneAtThisPosition(object->GetPosition()))
 				break;
 		}
-		object->GetBoundCentre(objCentre);
+		objCentre = object->GetBoundCentre();
 		float radius = object->GetBoundRadius();
 		if (radius > 4.5f || radius < 1.0f)
 			radius = 1.0f;
@@ -5146,6 +5318,10 @@ CPed::Pause(void)
 void
 CPed::SetFall(int extraTime, AnimationId animId, uint8 evenIfNotInControl)
 {
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return;
+#endif
 	if (m_attachedTo)
 		return;
 
@@ -5275,6 +5451,10 @@ CPed::Fall(void)
 bool
 CPed::CheckIfInTheAir(void)
 {
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return false;
+#endif
 	if (bInVehicle)
 		return false;
 
@@ -6795,6 +6975,11 @@ void
 CPed::SetEvasiveStep(CPhysical *reason, uint8 animType)
 {
 	AnimationId stepAnim;
+
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return;
+#endif
 
 	if (m_nPedState == PED_STEP_AWAY || !IsPedInControl() || ((IsPlayer() || !bRespondsToThreats) && animType == 0))
 		return;
@@ -9135,6 +9320,10 @@ CPed::SetLeader(CEntity *leader)
 bool
 CPed::CanPedJumpThis(CEntity *unused, CVector *damageNormal)
 {
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return false;
+#endif
 	if (m_nSurfaceTouched == SURFACE_WATER)
 		return true;
 
@@ -9167,6 +9356,10 @@ CPed::CanPedJumpThis(CEntity *unused, CVector *damageNormal)
 void
 CPed::SetJump(void)
 {
+#ifdef CUSTOM_SWIMMING
+	if (bIsSwimming)
+		return;
+#endif
 	if (!bInVehicle && m_nPedState != PED_JUMP && !RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_JUMP_LAUNCH) &&
 		(m_nSurfaceTouched != SURFACE_STEEP_CLIFF || DotProduct(GetForward(), m_vecDamageNormal) >= 0.0f)) {
 

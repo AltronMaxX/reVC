@@ -25,11 +25,6 @@ int16 CObject::nNoTempObjects;
 //int16 CObject::nBodyCastHealth = 1000;
 float CObject::fDistToNearestTree;
 
-CObject *CObject::NT_ROADBLOCKCI = nullptr;
-CObject *CObject::NT_ROADBLOCKGF = nullptr;
-CObject *CObject::WSH_ROADBLOCK = nullptr;
-CObject *CObject::COMGATE1CLOSED = nullptr;
-CObject *CObject::COMGATE2CLOSED = nullptr;
 // Object pools tends to be full sometimes, let's free a temp. object in this case.
 #ifdef FIX_BUGS
 void *CObject::operator new(size_t sz) throw() {

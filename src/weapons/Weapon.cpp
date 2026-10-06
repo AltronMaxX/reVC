@@ -1,8 +1,10 @@
 #include "common.h"
 
-#include "Weapon.h"
 #include "AnimBlendAssociation.h"
 #include "AudioManager.h"
+#include "Automobile.h"
+#include "Bike.h"
+#include "Boat.h"
 #include "BulletInfo.h"
 #include "Camera.h"
 #include "Coronas.h"
@@ -16,26 +18,24 @@
 #include "Pad.h"
 #include "Particle.h"
 #include "Ped.h"
+#include "Pickups.h"
 #include "PointLights.h"
 #include "Pools.h"
 #include "ProjectileInfo.h"
 #include "RpAnimBlend.h"
+#include "SaveBuf.h"
 #include "ShotInfo.h"
 #include "SpecialFX.h"
+#include "Sprite.h"
 #include "Stats.h"
+#include "SurfaceTable.h"
 #include "TempColModels.h"
 #include "Timer.h"
-#include "Automobile.h"
-#include "Boat.h"
 #include "WaterLevel.h"
+#include "Weapon.h"
 #include "WeaponInfo.h"
 #include "World.h"
-#include "SurfaceTable.h"
-#include "Bike.h"
-#include "Glass.h"
-#include "Sprite.h"
-#include "Pickups.h"
-#include "SaveBuf.h"
+#include "screendroplets.h"
 
 float fReloadAnimSampleFraction[5] = {  0.5f,  0.7f,  0.75f,  0.75f,  0.7f };
 float fSeaSparrowAimingAngle = 10.0f;
@@ -675,6 +675,8 @@ CWeapon::FireMelee(CEntity *shooter, CVector &fireSource)
 										CGeneral::GetRandomNumberInRange(SCREEN_STRETCH_Y(50.0f), SCREEN_STRETCH_FROM_BOTTOM(50.0f)), 1.f);
 									CParticle::AddParticle(PARTICLE_BLOODDROP, dropPos, dropDir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.15f),
 										CRGBA(0, 0, 0, 0), 0, 0, CGeneral::GetRandomNumber() & 1, 0);
+
+									ScreenDroplets::FillScreenMoving(1.0f, true);
 
 								}
 								if (info->m_AnimToPlay == ASSOCGRP_KNIFE)

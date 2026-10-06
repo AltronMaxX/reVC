@@ -18,11 +18,11 @@ float CTimer::ms_fTimeStep;
 float CTimer::ms_fTimeStepNonClipped;
 bool  CTimer::m_UserPause;
 bool  CTimer::m_CodePause; 
+bool  CTimer::m_WindowMinimizedPause;
 #ifdef FIX_BUGS
 uint32 CTimer::m_LogicalFrameCounter;
 uint32 CTimer::m_LogicalFramesPassed;
 #endif
-bool  CTimer::m_WindowMinimizedPause;
 
 uint32 _nCyclesPerMS = 1;
 
@@ -49,7 +49,6 @@ void CTimer::Initialise(void)
 	suspendDepth = 0;
 	m_UserPause = false;
 	m_CodePause = false;
-	m_WindowMinimizedPause = false;
 	m_snTimeInMillisecondsNonClipped = 0;
 	m_snPreviousTimeInMilliseconds = 0;
 	m_snTimeInMilliseconds = 1;
@@ -79,6 +78,11 @@ void CTimer::Initialise(void)
 	m_FrameCounter = 0;
 	
 	DMAudio.ResetTimers(m_snPreviousTimeInMilliseconds);
+
+	// The platform owns this latch. Initialise can run while loading in a
+	// minimized window, so preserve the latch and rebuild its suspend level.
+	if (m_WindowMinimizedPause)
+		Suspend();
 	
 	debug("CTimer ready\n");
 }
@@ -94,6 +98,12 @@ void CTimer::Update(void)
 	static double frameTimeLogical = 0.0;
 	static double frameTimeFraction = 0.0;
 	static double frameTimeFractionScaled = 0.0;
+	if (m_WindowMinimizedPause) {
+		ms_fTimeStep = 0.0f;
+		ms_fTimeStepNonClipped = 0.0f;
+		return;
+	}
+
 	double frameTime;
 	double dblUpdInMs;
 
@@ -178,6 +188,12 @@ void CTimer::Update(void)
 #else
 void CTimer::Update(void)
 {
+	if (m_WindowMinimizedPause) {
+		ms_fTimeStep = 0.0f;
+		ms_fTimeStepNonClipped = 0.0f;
+		return;
+	}
+
 	m_snPreviousTimeInMilliseconds = m_snTimeInMilliseconds;
 	
 #ifdef _WIN32

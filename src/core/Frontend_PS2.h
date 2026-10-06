@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_FRONTEND_PS2_H__
+#define __GTA_FRONTEND_PS2_H__
 #include "Sprite2d.h"
 
 enum
@@ -84,6 +85,7 @@ public:
 		LANGUAGE_POLISH,
 		LANGUAGE_RUSSIAN,
 		LANGUAGE_JAPANESE,
+		LANGUAGE_UKRAINIAN,
 #endif
 	};
 	
@@ -245,3 +247,5 @@ public:
 };
 
 extern CMenuManager FrontEndMenuManager;
+
+#endif // __GTA_FRONTEND_PS2_H__

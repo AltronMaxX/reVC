@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_PED_H__
+#define __GTA_PED_H__
 
 #include "RwHelper.h"
 #include "AnimManager.h"
@@ -316,6 +317,9 @@ enum PedState
 	PED_FLASH,
 	PED_JOG,
 	PED_ANSWER_MOBILE,
+#ifdef CUSTOM_SWIMMING
+PED_SWIM,
+#endif
 
 	PED_UNKNOWN,	// Same with IDLE, but also infects up to 5 peds with same pedType and WANDER_PATH, so they become stone too. HANG_OUT in Fire_Head's idb
 
@@ -473,6 +477,9 @@ public:
 	uint32 bHeadStuckInCollision : 1;
 	uint32 bDeadPedInFrontOfCar : 1;
 	uint32 bStayInCarOnJack : 1;
+#ifdef CUSTOM_SWIMMING
+	uint32 bIsSwimming : 1;
+#endif
 
 	uint32 bDontFight : 1;
 	uint32 bDoomAim : 1;
@@ -494,7 +501,7 @@ public:
 
 #ifdef KANGAROO_CHEAT
 	// our own flags
-	uint32 m_ped_flagI80 : 1; // KANGAROO_CHEAT define makes use of this as cheat toggle 
+	uint32 m_ped_flagI80 : 1; // KANGAROO_CHEAT define makes use of this as cheat toggle
 #endif
 
 	uint8 m_gangFlags;
@@ -873,6 +880,9 @@ public:
 	void PositionAttachedPed();
 	bool CanUseTorsoWhenLooking();
 	void ScanForDelayedResponseThreats();
+#ifdef CUSTOM_SWIMMING
+	void RemoveSwimAnims(void);
+#endif
 
 	// Static methods
 	static CVector GetLocalPositionToOpenCarDoor(CVehicle *veh, uint32 component, float offset);
@@ -1190,3 +1200,5 @@ VALIDATE_SIZE(CPed, 0x5F4);
 
 bool IsPedPointerValid(CPed*);
 bool IsPedPointerValid_NotInWorld(CPed*);
+
+#endif // __GTA_PED_H__

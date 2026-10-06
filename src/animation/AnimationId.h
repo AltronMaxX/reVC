@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __GTA_ANIMATIONID_H__
+#define __GTA_ANIMATIONID_H__
 
 enum AnimationId
 {
@@ -199,6 +200,13 @@ enum AnimationId
 	ANIM_STD_ATM,
 	ANIM_STD_ABSEIL,
 
+#ifdef CUSTOM_SWIMMING
+ANIM_STD_SWIM_BREAST,
+ANIM_STD_SWIM_CRAWL,
+ANIM_STD_SWIM_JUMPOUT,
+ANIM_STD_SWIM_TREAD,
+#endif
+
 	ANIM_STD_NUM,
 
 	ANIM_STD_VAN_OPEN_DOOR_REAR_LHS,
@@ -285,3 +293,5 @@ enum AnimationId
 	ANIM_STRIP_F,
 	ANIM_STRIP_G,
 };
+
+#endif // __GTA_ANIMATIONID_H__
