@@ -117,7 +117,7 @@ const char *off_on[] = { "FEM_OFF", "FEM_ON" };
 // WebGPU backend choices. Index maps to rw::wgpu::BACKEND_* in the startup
 // plumbing (glfw.cpp). D3D12 is Windows-only; OpenGL is the desktop-GL path.
 #if defined(_WIN32)
-const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GDX" };  // Auto, Vulkan, Direct3D 12
+const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GDX", "FEM_GGL"  };  // Auto, Vulkan, Direct3D 12, OpenGL
 #else
 const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GGL" };  // Auto, Vulkan, OpenGL
 #endif

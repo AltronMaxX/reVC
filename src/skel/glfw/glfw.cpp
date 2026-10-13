@@ -2,11 +2,11 @@
 #include "MoviePlayer.h"
 
 #ifdef _WIN32
-#include <shlobj.h>
 #include <basetsd.h>
 #include <mmsystem.h>
 #include <regstr.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #include <windowsx.h>
 
 DWORD _dwOperatingSystemVersion;
@@ -31,32 +31,32 @@ long _dwOperatingSystemVersion;
 #if (defined(_MSC_VER))
 #include <tchar.h>
 #endif /* (defined(_MSC_VER)) */
-#include <stdio.h>
+#include "crossplatform.h"
+#include "platform.h"
 #include "rwcore.h"
 #include "skeleton.h"
-#include "platform.h"
-#include "crossplatform.h"
+#include <stdio.h>
 
-#include "main.h"
-#include "FileMgr.h"
-#include "Text.h"
-#include "Pad.h"
-#include "Timer.h"
-#include "DMAudio.h"
+#include "AnimViewer.h"
 #include "ControllerConfig.h"
+#include "DMAudio.h"
+#include "FileMgr.h"
+#include "Font.h"
 #include "Frontend.h"
 #include "Game.h"
-#include "PCSave.h"
 #include "MemoryCard.h"
-#include "Sprite2d.h"
-#include "AnimViewer.h"
-#include "Font.h"
 #include "MemoryMgr.h"
+#include "PCSave.h"
+#include "Pad.h"
+#include "Sprite2d.h"
+#include "Text.h"
+#include "Timer.h"
+#include "main.h"
 
 // This is defined on project-level, via premake5 or cmake
 #ifdef GET_KEYBOARD_INPUT_FROM_X11
-#include <X11/Xlib.h>
 #include <X11/XKBlib.h>
+#include <X11/Xlib.h>
 #define GLFW_EXPOSE_NATIVE_X11
 #include <GLFW/glfw3native.h>
 #endif
@@ -66,22 +66,22 @@ long _dwOperatingSystemVersion;
 #include <GLFW/glfw3native.h>
 #endif
 
-#define MAX_SUBSYSTEMS		(16)
+#define MAX_SUBSYSTEMS (16)
 
 rw::EngineOpenParams openParams;
 
-static RwBool		  ForegroundApp = TRUE;
-static RwBool		  WindowIconified = FALSE;
-static RwBool		  WindowFocused = TRUE;
-static RwBool		  WindowFocusLostLatch = FALSE;
-static RwBool		  WindowPlatformPaused = FALSE;
-static RwInt32		  WindowActivePollCount = 2;
+static RwBool ForegroundApp = TRUE;
+static RwBool WindowIconified = FALSE;
+static RwBool WindowFocused = TRUE;
+static RwBool WindowFocusLostLatch = FALSE;
+static RwBool WindowPlatformPaused = FALSE;
+static RwInt32 WindowActivePollCount = 2;
 
-static RwBool		  RwInitialised = FALSE;
+static RwBool RwInitialised = FALSE;
 
 static RwSubSystemInfo GsubSysInfo[MAX_SUBSYSTEMS];
-static RwInt32		GnumSubSystems = 0;
-static RwInt32		GcurSel = 0, GcurSelVM = 0;
+static RwInt32 GnumSubSystems = 0;
+static RwInt32 GcurSel = 0, GcurSelVM = 0;
 
 static RwBool useDefault;
 
@@ -94,7 +94,6 @@ static RwInt32 bestWndMode = -1;
 #endif
 
 static psGlobalType PsGlobal;
-
 
 #define PSGLOBAL(var) (((psGlobalType *)(RsGlobal.ps))->var)
 
@@ -112,12 +111,10 @@ static RwBool
 IsWindowActuallyActive(void)
 {
 	GLFWwindow *window = PSGLOBAL(window);
-	if (window == nil || glfwGetWindowAttrib(window, GLFW_ICONIFIED) != GLFW_FALSE)
-		return FALSE;
+	if(window == nil || glfwGetWindowAttrib(window, GLFW_ICONIFIED) != GLFW_FALSE) return FALSE;
 
 #ifdef _WIN32
-	if (glfwGetWindowAttrib(window, GLFW_FOCUSED) != GLFW_TRUE)
-		return FALSE;
+	if(glfwGetWindowAttrib(window, GLFW_FOCUSED) != GLFW_TRUE) return FALSE;
 	return GetForegroundWindow() == glfwGetWin32Window(window);
 #else
 	return TRUE;
@@ -128,7 +125,7 @@ static void
 SetWindowAudioSuspended(RwBool suspended)
 {
 	DMAudio.SetStreamsPausedForWindowPause(!!suspended || CGame::IsWindowPauseMenuActive());
-	if (suspended) {
+	if(suspended) {
 		DMAudio.SetEffectsMasterVolume(0);
 		DMAudio.SetMusicMasterVolume(0);
 	} else {
@@ -141,17 +138,15 @@ SetWindowAudioSuspended(RwBool suspended)
 static void
 RefreshWindowPauseMouse(void)
 {
-	if (PSGLOBAL(window) == nil)
-		return;
+	if(PSGLOBAL(window) == nil) return;
 
-	_InputInitialiseMouse(!CGame::IsWindowPauseMenuActive() &&
-		!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
+	_InputInitialiseMouse(!CGame::IsWindowPauseMenuActive() && !FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
 }
 
 static void
 ApplyWindowMinimizedPause(RwBool paused)
 {
-	if (WindowPlatformPaused == paused) {
+	if(WindowPlatformPaused == paused) {
 		ForegroundApp = !paused;
 		CTimer::SetWindowMinimizedPause(!!paused);
 		return;
@@ -162,7 +157,7 @@ ApplyWindowMinimizedPause(RwBool paused)
 	CTimer::SetWindowMinimizedPause(!!paused);
 	MoviePlayer::SetPaused(!!paused);
 
-	if (paused) {
+	if(paused) {
 		CGame::InitAfterFocusLoss();
 	} else {
 		CGame::ResumeWindowPauseMenuAfterFocusRestore();
@@ -187,7 +182,7 @@ bool
 psRefreshAndGetWindowMinimizedPause()
 {
 	GLFWwindow *window = PSGLOBAL(window);
-	if (window != nil) {
+	if(window != nil) {
 		WindowIconified = glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
 		WindowFocused = IsWindowActuallyActive();
 	} else {
@@ -195,11 +190,11 @@ psRefreshAndGetWindowMinimizedPause()
 		WindowFocused = TRUE;
 	}
 
-	if (WindowIconified || !WindowFocused) {
+	if(WindowIconified || !WindowFocused) {
 		WindowFocusLostLatch = TRUE;
 		WindowActivePollCount = 0;
-	} else if (WindowFocusLostLatch) {
-		if (++WindowActivePollCount >= 2) {
+	} else if(WindowFocusLostLatch) {
+		if(++WindowActivePollCount >= 2) {
 			WindowFocusLostLatch = FALSE;
 			WindowActivePollCount = 2;
 		}
@@ -213,9 +208,7 @@ psRefreshAndGetWindowMinimizedPause()
 
 void
 psRefreshFocusAfterPause()
-{
-	(void)psRefreshAndGetWindowMinimizedPause();
-}
+{ (void)psRefreshAndGetWindowMinimizedPause(); }
 
 void
 psRestoreFocusAfterPause()
@@ -224,7 +217,7 @@ psRestoreFocusAfterPause()
 	WindowIconified = window != nil && glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
 	WindowFocused = window == nil || glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE;
 
-	if (WindowIconified || !WindowFocused || !IsWindowActuallyActive()) {
+	if(WindowIconified || !WindowFocused || !IsWindowActuallyActive()) {
 		WindowFocusLostLatch = TRUE;
 		WindowActivePollCount = 0;
 		ApplyWindowMinimizedPause(TRUE);
@@ -235,8 +228,7 @@ psRestoreFocusAfterPause()
 	WindowActivePollCount = 2;
 	const RwBool wasPaused = WindowPlatformPaused;
 	ApplyWindowMinimizedPause(FALSE);
-	if (!wasPaused)
-		RefreshWindowPauseMouse();
+	if(!wasPaused) RefreshWindowPauseMouse();
 }
 
 size_t _dwMemAvailPhys;
@@ -249,17 +241,13 @@ char gSelectedJoystickName[128] = "";
 /*
  *****************************************************************************
  */
-void _psCreateFolder(const char *path)
+void
+_psCreateFolder(const char *path)
 {
 #ifdef _WIN32
-	HANDLE hfle = CreateFile(path, GENERIC_READ, 
-									FILE_SHARE_READ,
-									nil,
-									OPEN_EXISTING,
-									FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL,
-									nil);
+	HANDLE hfle = CreateFile(path, GENERIC_READ, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, nil);
 
-	if ( hfle == INVALID_HANDLE_VALUE )
+	if(hfle == INVALID_HANDLE_VALUE)
 		CreateDirectory(path, nil);
 	else
 		CloseHandle(hfle);
@@ -268,10 +256,8 @@ void _psCreateFolder(const char *path)
 	char fullpath[PATH_MAX];
 	realpath(path, fullpath);
 
-	if (lstat(fullpath, &info) != 0) {
-		if (errno == ENOENT || (errno != EACCES && !S_ISDIR(info.st_mode))) {
-			mkdir(fullpath, 0755);
-		}
+	if(lstat(fullpath, &info) != 0) {
+		if(errno == ENOENT || (errno != EACCES && !S_ISDIR(info.st_mode))) { mkdir(fullpath, 0755); }
 	}
 #endif
 }
@@ -279,37 +265,27 @@ void _psCreateFolder(const char *path)
 /*
  *****************************************************************************
  */
-const char *_psGetUserFilesFolder()
+const char *
+_psGetUserFilesFolder()
 {
 #if defined USE_MY_DOCUMENTS && defined _WIN32
 	HKEY hKey = NULL;
 
 	static CHAR szUserFiles[256];
 
-	if ( RegOpenKeyEx(HKEY_CURRENT_USER,
-						REGSTR_PATH_SPECIAL_FOLDERS,
-						REG_OPTION_RESERVED,
-						KEY_READ,
-						&hKey) == ERROR_SUCCESS )
-	{
+	if(RegOpenKeyEx(HKEY_CURRENT_USER, REGSTR_PATH_SPECIAL_FOLDERS, REG_OPTION_RESERVED, KEY_READ, &hKey) == ERROR_SUCCESS) {
 		DWORD KeyType;
 		DWORD KeycbData = sizeof(szUserFiles);
-		if ( RegQueryValueEx(hKey,
-							"Personal",
-							NULL,
-							&KeyType,
-							(LPBYTE)szUserFiles,
-							&KeycbData) == ERROR_SUCCESS )
-		{
+		if(RegQueryValueEx(hKey, "Personal", NULL, &KeyType, (LPBYTE)szUserFiles, &KeycbData) == ERROR_SUCCESS) {
 			RegCloseKey(hKey);
 			strcat(szUserFiles, "\\GTA Vice City User Files");
 			_psCreateFolder(szUserFiles);
 			return szUserFiles;
-		}	
+		}
 
-		RegCloseKey(hKey);		
+		RegCloseKey(hKey);
 	}
-	
+
 	strcpy(szUserFiles, "data");
 	return szUserFiles;
 #else
@@ -326,12 +302,11 @@ const char *_psGetUserFilesFolder()
 RwBool
 psCameraBeginUpdate(RwCamera *camera)
 {
-	if ( !RwCameraBeginUpdate(Scene.camera) )
-	{
+	if(!RwCameraBeginUpdate(Scene.camera)) {
 		MarkWindowFocusLost();
 		return FALSE;
 	}
-	
+
 	return TRUE;
 }
 
@@ -342,9 +317,9 @@ void
 psCameraShowRaster(RwCamera *camera)
 {
 #ifdef LEGACY_MENU_OPTIONS
-	if (FrontEndMenuManager.m_PrefsVsync || FrontEndMenuManager.m_bMenuActive)
+	if(FrontEndMenuManager.m_PrefsVsync || FrontEndMenuManager.m_bMenuActive)
 #else
-	if (FrontEndMenuManager.m_PrefsFrameLimiter || FrontEndMenuManager.m_bMenuActive)
+	if(FrontEndMenuManager.m_PrefsFrameLimiter || FrontEndMenuManager.m_bMenuActive)
 #endif
 		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPWAITVSYNC);
 	else
@@ -361,7 +336,7 @@ psGrabScreen(RwCamera *pCamera)
 {
 #ifndef LIBRW
 	RwRaster *pRaster = RwCameraGetRaster(pCamera);
-	if (RwImage *pImage = RwImageCreate(pRaster->width, pRaster->height, 32)) {
+	if(RwImage *pImage = RwImageCreate(pRaster->width, pRaster->height, 32)) {
 		RwImageAllocatePixels(pImage);
 		RwImageSetFromRaster(pImage, pRaster);
 		return pImage;
@@ -369,8 +344,7 @@ psGrabScreen(RwCamera *pCamera)
 #else
 	rw::Image *image = RwCameraGetRaster(pCamera)->toImage();
 	image->removeMask();
-	if(image)
-		return image;
+	if(image) return image;
 #endif
 	return nil;
 }
@@ -379,29 +353,29 @@ psGrabScreen(RwCamera *pCamera)
  *****************************************************************************
  */
 #ifdef _WIN32
-#pragma comment( lib, "Winmm.lib" ) // Needed for time
+#pragma comment(lib, "Winmm.lib") // Needed for time
 RwUInt32
 psTimer(void)
 {
 	RwUInt32 time;
 
 	TIMECAPS TimeCaps;
-	
+
 	timeGetDevCaps(&TimeCaps, sizeof(TIMECAPS));
-	
+
 	timeBeginPeriod(TimeCaps.wPeriodMin);
-	
-	time = (RwUInt32) timeGetTime();
+
+	time = (RwUInt32)timeGetTime();
 
 	timeEndPeriod(TimeCaps.wPeriodMin);
-	
+
 	return time;
 }
 #else
 double
 psTimer(void)
 {
-	struct timespec start; 
+	struct timespec start;
 #if defined(CLOCK_MONOTONIC_RAW)
 	clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 #elif defined(CLOCK_MONOTONIC_FAST)
@@ -409,10 +383,9 @@ psTimer(void)
 #else
 	clock_gettime(CLOCK_MONOTONIC, &start);
 #endif
-	return start.tv_sec * 1000.0 + start.tv_nsec/1000000.0;
+	return start.tv_sec * 1000.0 + start.tv_nsec / 1000000.0;
 }
-#endif       
-
+#endif
 
 /*
  *****************************************************************************
@@ -421,7 +394,7 @@ void
 psMouseSetPos(RwV2d *pos)
 {
 	glfwSetCursorPos(PSGLOBAL(window), pos->x, pos->y);
-	
+
 	PSGLOBAL(lastMousePos.x) = (RwInt32)pos->x;
 
 	PSGLOBAL(lastMousePos.y) = (RwInt32)pos->y;
@@ -432,7 +405,7 @@ psMouseSetPos(RwV2d *pos)
 /*
  *****************************************************************************
  */
-RwMemoryFunctions*
+RwMemoryFunctions *
 psGetMemoryFunctions(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
@@ -447,27 +420,22 @@ psGetMemoryFunctions(void)
  */
 RwBool
 psInstallFileSystem(void)
-{
-	return (TRUE);
-}
-
+{ return (TRUE); }
 
 /*
  *****************************************************************************
  */
 RwBool
 psNativeTextureSupport(void)
-{
-	return true;
-}
+{ return true; }
 
 /*
  *****************************************************************************
  */
 #ifdef UNDER_CE
-#define CMDSTR	LPWSTR
+#define CMDSTR LPWSTR
 #else
-#define CMDSTR	LPSTR
+#define CMDSTR LPSTR
 #endif
 
 /*
@@ -485,52 +453,48 @@ static PadState SwitchPad;
 static Result HidInitializationResult[2];
 static Result HidInitializationGCResult;
 
-static void _psInitializeVibration()
+static void
+_psInitializeVibration()
 {
 	HidInitializationResult[0] = hidInitializeVibrationDevices(SwitchVibrationDeviceHandles[0], 2, HidNpadIdType_Handheld, HidNpadStyleTag_NpadHandheld);
-	if(R_FAILED(HidInitializationResult[0])) {
-		printf("Failed to initialize VibrationDevice for Handheld Mode\n");
-	}
+	if(R_FAILED(HidInitializationResult[0])) { printf("Failed to initialize VibrationDevice for Handheld Mode\n"); }
 	HidInitializationResult[1] = hidInitializeVibrationDevices(SwitchVibrationDeviceHandles[1], 2, HidNpadIdType_No1, HidNpadStyleSet_NpadFullCtrl);
-	if(R_FAILED(HidInitializationResult[1])) {
-		printf("Failed to initialize VibrationDevice for Detached Mode\n");
-	}
+	if(R_FAILED(HidInitializationResult[1])) { printf("Failed to initialize VibrationDevice for Detached Mode\n"); }
 	HidInitializationGCResult = hidInitializeVibrationDevices(&SwitchVibrationDeviceGC, 1, HidNpadIdType_No1, HidNpadStyleTag_NpadGc);
-	if(R_FAILED(HidInitializationResult[1])) {
-		printf("Failed to initialize VibrationDevice for GC Mode\n");
-	}
+	if(R_FAILED(HidInitializationResult[1])) { printf("Failed to initialize VibrationDevice for GC Mode\n"); }
 
-	SwitchVibrationValues[0].freq_low  = 160.0f;
+	SwitchVibrationValues[0].freq_low = 160.0f;
 	SwitchVibrationValues[0].freq_high = 320.0f;
 
 	padConfigureInput(1, HidNpadStyleSet_NpadFullCtrl);
 	padInitializeDefault(&SwitchPad);
 }
 
-static void _psHandleVibration()
+static void
+_psHandleVibration()
 {
 	padUpdate(&SwitchPad);
 
 	uint8 target_device = padIsHandheld(&SwitchPad) ? 0 : 1;
 
 	if(R_SUCCEEDED(HidInitializationResult[target_device])) {
-		CPad* pad = CPad::GetPad(0);
+		CPad *pad = CPad::GetPad(0);
 
 		// value conversion based on SDL2 switch port
 		SwitchVibrationValues[0].amp_high = SwitchVibrationValues[0].amp_low = pad->ShakeFreq == 0 ? 0.0f : 320.0f;
 		SwitchVibrationValues[0].freq_low = pad->ShakeFreq == 0.0 ? 160.0f : (float)pad->ShakeFreq * 1.26f;
 		SwitchVibrationValues[0].freq_high = pad->ShakeFreq == 0.0 ? 320.0f : (float)pad->ShakeFreq * 1.26f;
 
-		if (pad->ShakeDur < CTimer::GetTimeStepInMilliseconds())
+		if(pad->ShakeDur < CTimer::GetTimeStepInMilliseconds())
 			pad->ShakeDur = 0;
 		else
 			pad->ShakeDur -= CTimer::GetTimeStepInMilliseconds();
-		if (pad->ShakeDur == 0) pad->ShakeFreq = 0;
-
+		if(pad->ShakeDur == 0) pad->ShakeFreq = 0;
 
 		if(target_device == 1 && R_SUCCEEDED(HidInitializationGCResult)) {
 			// gamecube rumble
-			hidSendVibrationGcErmCommand(SwitchVibrationDeviceGC, pad->ShakeFreq > 0 ? HidVibrationGcErmCommand_Start : HidVibrationGcErmCommand_Stop);
+			hidSendVibrationGcErmCommand(SwitchVibrationDeviceGC,
+			                             pad->ShakeFreq > 0 ? HidVibrationGcErmCommand_Start : HidVibrationGcErmCommand_Stop);
 		}
 
 		memcpy(&SwitchVibrationValues[1], &SwitchVibrationValues[0], sizeof(HidVibrationValue));
@@ -538,8 +502,14 @@ static void _psHandleVibration()
 	}
 }
 #else
-static void _psInitializeVibration() {}
-static void _psHandleVibration() {}
+static void
+_psInitializeVibration()
+{
+}
+static void
+_psHandleVibration()
+{
+}
 #endif
 
 /*
@@ -551,7 +521,7 @@ psInitialize(void)
 	PsGlobal.lastMousePos.x = PsGlobal.lastMousePos.y = 0.0f;
 
 	RsGlobal.ps = &PsGlobal;
-	
+
 	PsGlobal.fullScreen = FALSE;
 	PsGlobal.cursorIsInWindow = FALSE;
 	ForegroundApp = TRUE;
@@ -561,11 +531,11 @@ psInitialize(void)
 	WindowPlatformPaused = FALSE;
 	WindowActivePollCount = 2;
 
-	PsGlobal.joy1id	= -1;
-	PsGlobal.joy2id	= -1;
+	PsGlobal.joy1id = -1;
+	PsGlobal.joy2id = -1;
 
 	CFileMgr::Initialise();
-	
+
 #ifdef PS2_MENU
 	CPad::Initialise();
 	CPad::GetPad(0)->Mode = 0;
@@ -577,43 +547,39 @@ psInitialize(void)
 
 #ifndef _WIN32
 	// Mandatory for Linux(Unix? Posix?) to set lang. to environment lang.
-	setlocale(LC_ALL, "");	
+	setlocale(LC_ALL, "");
 
 	char *systemLang, *keyboardLang;
 
-	systemLang = setlocale (LC_ALL, NULL);
-	keyboardLang = setlocale (LC_CTYPE, NULL);
-	
+	systemLang = setlocale(LC_ALL, NULL);
+	keyboardLang = setlocale(LC_CTYPE, NULL);
+
 	short lang;
-	lang = !strncmp(systemLang, "fr_",3) ? LANG_FRENCH :
-					!strncmp(systemLang, "de_",3) ? LANG_GERMAN :
-					!strncmp(systemLang, "en_",3) ? LANG_ENGLISH :
-					!strncmp(systemLang, "it_",3) ? LANG_ITALIAN :
-					!strncmp(systemLang, "es_",3) ? LANG_SPANISH :
-					LANG_OTHER;
+	lang = !strncmp(systemLang, "fr_", 3)   ? LANG_FRENCH
+	       : !strncmp(systemLang, "de_", 3) ? LANG_GERMAN
+	       : !strncmp(systemLang, "en_", 3) ? LANG_ENGLISH
+	       : !strncmp(systemLang, "it_", 3) ? LANG_ITALIAN
+	       : !strncmp(systemLang, "es_", 3) ? LANG_SPANISH
+	                                        : LANG_OTHER;
 #else
-	WORD lang	= PRIMARYLANGID(GetSystemDefaultLCID());
+	WORD lang = PRIMARYLANGID(GetSystemDefaultLCID());
 #endif
 
-	if ( lang  == LANG_ITALIAN )
+	if(lang == LANG_ITALIAN)
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_ITALIAN;
-	else if ( lang  == LANG_SPANISH )
+	else if(lang == LANG_SPANISH)
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_SPANISH;
-	else if ( lang  == LANG_GERMAN )
-	{
+	else if(lang == LANG_GERMAN) {
 		CGame::germanGame = true;
 		CGame::nastyGame = false;
 		CMenuManager::m_PrefsAllowNastyGame = false;
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_GERMAN;
-	}
-	else if ( lang  == LANG_FRENCH )
-	{
+	} else if(lang == LANG_FRENCH) {
 		CGame::frenchGame = true;
 		CGame::nastyGame = false;
 		CMenuManager::m_PrefsAllowNastyGame = false;
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_FRENCH;
-	}
-	else
+	} else
 		CMenuManager::m_PrefsLanguage = CMenuManager::LANGUAGE_AMERICAN;
 
 	FrontEndMenuManager.InitialiseMenuContentsAfterLoadingGame();
@@ -621,50 +587,39 @@ psInitialize(void)
 	TheMemoryCard.Init();
 #else
 	C_PcSave::SetSaveDirectory(_psGetUserFilesFolder());
-	
+
 	InitialiseLanguage();
 
 #endif
 
 	_psInitializeVibration();
-	
+
 	gGameState = GS_START_UP;
 	TRACE("gGameState = GS_START_UP");
 #ifdef _WIN32
 	OSVERSIONINFO verInfo;
 	verInfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	
+
 	GetVersionEx(&verInfo);
-	
+
 	_dwOperatingSystemVersion = OS_WIN95;
-	
-	if ( verInfo.dwPlatformId == VER_PLATFORM_WIN32_NT )
-	{
-		if ( verInfo.dwMajorVersion == 4 )
-		{
+
+	if(verInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+		if(verInfo.dwMajorVersion == 4) {
 			debug("Operating System is WinNT\n");
 			_dwOperatingSystemVersion = OS_WINNT;
-		}
-		else if ( verInfo.dwMajorVersion == 5 )
-		{
+		} else if(verInfo.dwMajorVersion == 5) {
 			debug("Operating System is Win2000\n");
 			_dwOperatingSystemVersion = OS_WIN2000;
-		}
-		else if ( verInfo.dwMajorVersion > 5 )
-		{
+		} else if(verInfo.dwMajorVersion > 5) {
 			debug("Operating System is WinXP or greater\n");
 			_dwOperatingSystemVersion = OS_WINXP;
 		}
-	}
-	else if ( verInfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS )
-	{
-		if ( verInfo.dwMajorVersion > 4 || verInfo.dwMajorVersion == 4 && verInfo.dwMinorVersion != 0 )
-		{
+	} else if(verInfo.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
+		if(verInfo.dwMajorVersion > 4 || verInfo.dwMajorVersion == 4 && verInfo.dwMinorVersion != 0) {
 			debug("Operating System is Win98\n");
 			_dwOperatingSystemVersion = OS_WIN98;
-		}
-		else
-		{
+		} else {
 			debug("Operating System is Win95\n");
 			_dwOperatingSystemVersion = OS_WIN95;
 		}
@@ -673,7 +628,6 @@ psInitialize(void)
 	_dwOperatingSystemVersion = OS_WINXP; // To fool other classes
 #endif
 
-	
 #ifndef PS2_MENU
 	FrontEndMenuManager.LoadSettings();
 #endif
@@ -684,18 +638,21 @@ psInitialize(void)
 	// (non-Windows) / Direct3D 12 (Windows) — see WGPU_BACKEND_SELECTOR.
 	{
 		int wgpuBe = rw::wgpu::BACKEND_AUTO;
-		if (FrontEndMenuManager.m_PrefsWgpuBackend == 1)
+		if(FrontEndMenuManager.m_PrefsWgpuBackend == 1)
 			wgpuBe = rw::wgpu::BACKEND_VULKAN;
-		else if (FrontEndMenuManager.m_PrefsWgpuBackend == 2)
+		else if(FrontEndMenuManager.m_PrefsWgpuBackend == 2)
 #if defined(_WIN32)
 			wgpuBe = rw::wgpu::BACKEND_D3D12;
 #else
 			wgpuBe = rw::wgpu::BACKEND_GL;
 #endif
+#if defined(_WIN32)
+	else if(FrontEndMenuManager.m_PrefsWgpuBackend == 3)
+		wgpuBe = rw::wgpu::BACKEND_GL;
+#endif
 		rw::wgpu::setBackend(wgpuBe);
 	}
 #endif
-
 
 #ifdef _WIN32
 	MEMORYSTATUS memstats;
@@ -705,7 +662,7 @@ psInitialize(void)
 
 	debug("Physical memory size %u\n", memstats.dwTotalPhys);
 	debug("Available physical memory %u\n", memstats.dwAvailPhys);
-#elif defined (__APPLE__)
+#elif defined(__APPLE__)
 	uint64_t size = 0;
 	uint64_t page_size = 0;
 	size_t uint64_len = sizeof(uint64_t);
@@ -718,12 +675,12 @@ psInitialize(void)
 	_dwMemAvailPhys = (uint64_t)(vm_stat.free_count * page_size);
 	debug("Physical memory size %llu\n", _dwMemAvailPhys);
 	debug("Available physical memory %llu\n", size);
-#elif defined (__SWITCH__)
+#elif defined(__SWITCH__)
 	svcGetInfo(&_dwMemAvailPhys, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
 	debug("Physical memory size %llu\n", _dwMemAvailPhys);
 #else
 #ifndef __APPLE__
- 	struct sysinfo systemInfo;
+	struct sysinfo systemInfo;
 	sysinfo(&systemInfo);
 	_dwMemAvailPhys = systemInfo.freeram;
 	debug("Physical memory size %u\n", systemInfo.totalram);
@@ -744,108 +701,95 @@ psInitialize(void)
 #endif
 	_dwOperatingSystemVersion = OS_WINXP; // To fool other classes
 #endif
-  
-  TheText.Unload();
+
+	TheText.Unload();
 
 	return TRUE;
 }
-
 
 /*
  *****************************************************************************
  */
 void
 psTerminate(void)
-{
-	return;
-}
+{ return; }
 
 /*
  *****************************************************************************
  */
 static RwChar **_VMList;
 
-RwInt32 _psGetNumVideModes()
+RwInt32
+_psGetNumVideModes()
+{ return RwEngineGetNumVideoModes(); }
+
+/*
+ *****************************************************************************
+ */
+RwBool
+_psFreeVideoModeList()
 {
-	return RwEngineGetNumVideoModes();
+	RwInt32 numModes;
+	RwInt32 i;
+
+	numModes = _psGetNumVideModes();
+
+	if(_VMList == nil) return TRUE;
+
+	for(i = 0; i < numModes; i++) { RwFree(_VMList[i]); }
+
+	RwFree(_VMList);
+
+	_VMList = nil;
+
+	return TRUE;
 }
 
 /*
  *****************************************************************************
  */
-RwBool _psFreeVideoModeList()
+RwChar **
+_psGetVideoModeList()
 {
 	RwInt32 numModes;
 	RwInt32 i;
-	
-	numModes = _psGetNumVideModes();
-	
-	if ( _VMList == nil )
-		return TRUE;
-	
-	for ( i = 0; i < numModes; i++ )
-	{
-		RwFree(_VMList[i]);
-	}
-	
-	RwFree(_VMList);
-	
-	_VMList = nil;
-	
-	return TRUE;
-}
-							
-/*
- *****************************************************************************
- */							
-RwChar **_psGetVideoModeList()
-{
-	RwInt32 numModes;
-	RwInt32 i;
-	
-	if ( _VMList != nil )
-	{
-		return _VMList;
-	}
-	
+
+	if(_VMList != nil) { return _VMList; }
+
 	numModes = RwEngineGetNumVideoModes();
-	
-	_VMList = (RwChar **)RwCalloc(numModes, sizeof(RwChar*));
-	
-	for ( i = 0; i < numModes; i++	)
-	{
-		RwVideoMode			vm;
-		
+
+	_VMList = (RwChar **)RwCalloc(numModes, sizeof(RwChar *));
+
+	for(i = 0; i < numModes; i++) {
+		RwVideoMode vm;
+
 		RwEngineGetVideoModeInfo(&vm, i);
-		
-		if ( vm.flags & rwVIDEOMODEEXCLUSIVE )
-		{
-			_VMList[i] = (RwChar*)RwCalloc(100, sizeof(RwChar));
-			rwsprintf(_VMList[i],"%d X %d X %d", vm.width, vm.height, vm.depth);
-		}
-		else
+
+		if(vm.flags & rwVIDEOMODEEXCLUSIVE) {
+			_VMList[i] = (RwChar *)RwCalloc(100, sizeof(RwChar));
+			rwsprintf(_VMList[i], "%d X %d X %d", vm.width, vm.height, vm.depth);
+		} else
 			_VMList[i] = nil;
 	}
-	
+
 	return _VMList;
 }
 
 /*
  *****************************************************************************
  */
-void _psSelectScreenVM(RwInt32 videoMode)
+void
+_psSelectScreenVM(RwInt32 videoMode)
 {
-	RwTexDictionarySetCurrent( nil );
-	
+	RwTexDictionarySetCurrent(nil);
+
 	FrontEndMenuManager.UnloadTextures();
-	
-	if (!_psSetVideoMode(RwEngineGetCurrentSubSystem(), videoMode))
-	{
+
+	if(!_psSetVideoMode(RwEngineGetCurrentSubSystem(), videoMode)) {
 		RsGlobal.quit = TRUE;
 
 		printf("ERROR: Failed to select new screen resolution\n");
-	}
-	else
+	} else
 		FrontEndMenuManager.LoadAllTextures();
 }
 
@@ -853,11 +797,9 @@ void _psSelectScreenVM(RwInt32 videoMode)
  *****************************************************************************
  */
 
-RwBool IsForegroundApp()
-{
-	return !!ForegroundApp;
-}
-
+RwBool
+IsForegroundApp()
+{ return !!ForegroundApp; }
 
 #ifdef IMPROVED_VIDEOMODE
 static GLFWmonitor *
@@ -867,10 +809,8 @@ GetSelectedMonitor(void)
 	GLFWmonitor **monitors = glfwGetMonitors(&numMonitors);
 	GLFWmonitor *monitor = nil;
 
-	if (monitors != nil && GcurSel >= 0 && GcurSel < numMonitors)
-		monitor = monitors[GcurSel];
-	if (monitor == nil)
-		monitor = glfwGetPrimaryMonitor();
+	if(monitors != nil && GcurSel >= 0 && GcurSel < numMonitors) monitor = monitors[GcurSel];
+	if(monitor == nil) monitor = glfwGetPrimaryMonitor();
 	return monitor;
 }
 
@@ -879,14 +819,14 @@ GetSelectedMonitorInfo(int *x, int *y, int *width, int *height, RwBool workArea)
 {
 	GLFWmonitor *monitor = GetSelectedMonitor();
 
-	if (monitor != nil) {
-		if (workArea) {
+	if(monitor != nil) {
+		if(workArea) {
 			glfwGetMonitorWorkarea(monitor, x, y, width, height);
 			return;
 		}
 
 		const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-		if (mode != nil) {
+		if(mode != nil) {
 			glfwGetMonitorPos(monitor, x, y);
 			*width = mode->width;
 			*height = mode->height;
@@ -904,24 +844,22 @@ static void
 ApplyGLFWWindowMode(const RwVideoMode &vm)
 {
 	GLFWwindow *window = PSGLOBAL(window);
-	if (window == nil)
-		return;
+	if(window == nil) return;
 
 	GLFWmonitor *monitor = GetSelectedMonitor();
 	const GLFWvidmode *monitorMode = monitor == nil ? nil : glfwGetVideoMode(monitor);
 
-	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN && monitor != nil) {
+	if(FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN && monitor != nil) {
 		glfwRestoreWindow(window);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
-		glfwSetWindowMonitor(window, monitor, 0, 0, vm.width, vm.height,
-			monitorMode == nil ? GLFW_DONT_CARE : monitorMode->refreshRate);
+		glfwSetWindowMonitor(window, monitor, 0, 0, vm.width, vm.height, monitorMode == nil ? GLFW_DONT_CARE : monitorMode->refreshRate);
 
 		RsGlobal.maximumWidth = vm.width;
 		RsGlobal.maximumHeight = vm.height;
 		RsGlobal.width = vm.width;
 		RsGlobal.height = vm.height;
 		PSGLOBAL(fullScreen) = TRUE;
-	} else if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
+	} else if(FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
 		int x, y, width, height;
 		GetSelectedMonitorInfo(&x, &y, &width, &height, FALSE);
 
@@ -943,9 +881,7 @@ ApplyGLFWWindowMode(const RwVideoMode &vm)
 
 		glfwRestoreWindow(window);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
-		glfwSetWindowMonitor(window, nil,
-			x + (width - windowWidth) / 2, y + (height - windowHeight) / 2,
-			windowWidth, windowHeight, GLFW_DONT_CARE);
+		glfwSetWindowMonitor(window, nil, x + (width - windowWidth) / 2, y + (height - windowHeight) / 2, windowWidth, windowHeight, GLFW_DONT_CARE);
 		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
 		glfwMaximizeWindow(window);
 
@@ -962,46 +898,46 @@ ApplyGLFWWindowMode(const RwVideoMode &vm)
 /*
 UINT GetBestRefreshRate(UINT width, UINT height, UINT depth)
 {
-	LPDIRECT3D8 d3d = Direct3DCreate8(D3D_SDK_VERSION);
-	
-	ASSERT(d3d != nil);
-	
-	UINT refreshRate = INT_MAX;
-	D3DFORMAT format;
+        LPDIRECT3D8 d3d = Direct3DCreate8(D3D_SDK_VERSION);
 
-	if ( depth == 32 )
-		format = D3DFMT_X8R8G8B8;
-	else if ( depth == 24 )
-		format = D3DFMT_R8G8B8;
-	else
-		format = D3DFMT_R5G6B5;
-	
-	UINT modeCount = d3d->GetAdapterModeCount(GcurSel);
-	
-	for ( UINT i = 0; i < modeCount; i++ )
-	{
-		D3DDISPLAYMODE mode;
-		
-		d3d->EnumAdapterModes(GcurSel, i, &mode);
-		
-		if ( mode.Width == width && mode.Height == height && mode.Format == format )
-		{
-			if ( mode.RefreshRate == 0 )
-				return 0;
+        ASSERT(d3d != nil);
 
-			if ( mode.RefreshRate < refreshRate && mode.RefreshRate >= 60 )
-				refreshRate = mode.RefreshRate;
-		}
-	}
-	
+        UINT refreshRate = INT_MAX;
+        D3DFORMAT format;
+
+        if ( depth == 32 )
+                format = D3DFMT_X8R8G8B8;
+        else if ( depth == 24 )
+                format = D3DFMT_R8G8B8;
+        else
+                format = D3DFMT_R5G6B5;
+
+        UINT modeCount = d3d->GetAdapterModeCount(GcurSel);
+
+        for ( UINT i = 0; i < modeCount; i++ )
+        {
+                D3DDISPLAYMODE mode;
+
+                d3d->EnumAdapterModes(GcurSel, i, &mode);
+
+                if ( mode.Width == width && mode.Height == height && mode.Format == format )
+                {
+                        if ( mode.RefreshRate == 0 )
+                                return 0;
+
+                        if ( mode.RefreshRate < refreshRate && mode.RefreshRate >= 60 )
+                                refreshRate = mode.RefreshRate;
+                }
+        }
+
 #ifdef FIX_BUGS
-	d3d->Release();
+        d3d->Release();
 #endif
-	
-	if ( refreshRate == -1 )
-		return -1;
 
-	return refreshRate;
+        if ( refreshRate == -1 )
+                return -1;
+
+        return refreshRate;
 }
 */
 /*
@@ -1010,58 +946,42 @@ UINT GetBestRefreshRate(UINT width, UINT height, UINT depth)
 RwBool
 psSelectDevice()
 {
-	RwVideoMode			vm;
-	RwInt32				subSysNum;
-	RwInt32				AutoRenderer = 0;
-	
+	RwVideoMode vm;
+	RwInt32 subSysNum;
+	RwInt32 AutoRenderer = 0;
 
 	RwBool modeFound = FALSE;
-	
-	if ( !useDefault )
-	{
+
+	if(!useDefault) {
 		GnumSubSystems = RwEngineGetNumSubSystems();
-		if ( !GnumSubSystems )
-		{
-			 return FALSE;
-		}
-		
+		if(!GnumSubSystems) { return FALSE; }
+
 		/* Just to be sure ... */
 		GnumSubSystems = (GnumSubSystems > MAX_SUBSYSTEMS) ? MAX_SUBSYSTEMS : GnumSubSystems;
-		
+
 		/* Get the names of all the sub systems */
-		for (subSysNum = 0; subSysNum < GnumSubSystems; subSysNum++)
-		{
-			RwEngineGetSubSystemInfo(&GsubSysInfo[subSysNum], subSysNum);
-		}
-		
+		for(subSysNum = 0; subSysNum < GnumSubSystems; subSysNum++) { RwEngineGetSubSystemInfo(&GsubSysInfo[subSysNum], subSysNum); }
+
 		/* Get the default selection */
 		GcurSel = RwEngineGetCurrentSubSystem();
 #ifdef IMPROVED_VIDEOMODE
-		if(FrontEndMenuManager.m_nPrefsSubsystem < GnumSubSystems)
-			GcurSel = FrontEndMenuManager.m_nPrefsSubsystem;
+		if(FrontEndMenuManager.m_nPrefsSubsystem < GnumSubSystems) GcurSel = FrontEndMenuManager.m_nPrefsSubsystem;
 #endif
 	}
-	
+
 	/* Set the driver to use the correct sub system */
-	if (!RwEngineSetSubSystem(GcurSel))
-	{
-		return FALSE;
-	}
+	if(!RwEngineSetSubSystem(GcurSel)) { return FALSE; }
 
 #ifdef IMPROVED_VIDEOMODE
 	FrontEndMenuManager.m_nPrefsSubsystem = GcurSel;
 #endif
 
 #ifndef IMPROVED_VIDEOMODE
-	if ( !useDefault )
-	{
-		if ( _psGetVideoModeList()[FrontEndMenuManager.m_nDisplayVideoMode] && FrontEndMenuManager.m_nDisplayVideoMode )
-		{
+	if(!useDefault) {
+		if(_psGetVideoModeList()[FrontEndMenuManager.m_nDisplayVideoMode] && FrontEndMenuManager.m_nDisplayVideoMode) {
 			FrontEndMenuManager.m_nPrefsVideoMode = FrontEndMenuManager.m_nDisplayVideoMode;
 			GcurSelVM = FrontEndMenuManager.m_nDisplayVideoMode;
-		}
-		else
-		{
+		} else {
 #ifdef DEFAULT_NATIVE_RESOLUTION
 			// get the native video mode
 			HDC hDevice = GetDC(NULL);
@@ -1073,20 +993,15 @@ psSelectDevice()
 			const int h = 480;
 			const int d = 16;
 #endif
-			while ( !modeFound && GcurSelVM < RwEngineGetNumVideoModes() )
-			{
+			while(!modeFound && GcurSelVM < RwEngineGetNumVideoModes()) {
 				RwEngineGetVideoModeInfo(&vm, GcurSelVM);
-				if ( defaultFullscreenRes	&& vm.width	 != w 
-											|| vm.height != h
-											|| vm.depth	 != d
-											|| !(vm.flags & rwVIDEOMODEEXCLUSIVE) )
+				if(defaultFullscreenRes && vm.width != w || vm.height != h || vm.depth != d || !(vm.flags & rwVIDEOMODEEXCLUSIVE))
 					++GcurSelVM;
 				else
 					modeFound = TRUE;
 			}
-			
-			if ( !modeFound )
-			{
+
+			if(!modeFound) {
 #ifdef DEFAULT_NATIVE_RESOLUTION
 				GcurSelVM = 1;
 #else
@@ -1097,11 +1012,8 @@ psSelectDevice()
 		}
 	}
 #else
-	if ( !useDefault )
-	{
-		if(FrontEndMenuManager.m_nPrefsWidth == 0 ||
-		   FrontEndMenuManager.m_nPrefsHeight == 0 ||
-		   FrontEndMenuManager.m_nPrefsDepth == 0){
+	if(!useDefault) {
+		if(FrontEndMenuManager.m_nPrefsWidth == 0 || FrontEndMenuManager.m_nPrefsHeight == 0 || FrontEndMenuManager.m_nPrefsDepth == 0) {
 			// Defaults if nothing specified
 			const GLFWvidmode *mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
 			FrontEndMenuManager.m_nPrefsWidth = mode->width;
@@ -1115,16 +1027,15 @@ psSelectDevice()
 		RwInt32 bestWidth = -1;
 		RwInt32 bestHeight = -1;
 		RwInt32 bestDepth = -1;
-		for(GcurSelVM = 0; GcurSelVM < RwEngineGetNumVideoModes(); GcurSelVM++){
+		for(GcurSelVM = 0; GcurSelVM < RwEngineGetNumVideoModes(); GcurSelVM++) {
 			RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
-			if (!(vm.flags & rwVIDEOMODEEXCLUSIVE)){
+			if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
 				bestWndMode = GcurSelVM;
 			} else {
 				// try the largest one that isn't larger than what we wanted
-				if(vm.width >= bestWidth && vm.width <= FrontEndMenuManager.m_nPrefsWidth &&
-				   vm.height >= bestHeight && vm.height <= FrontEndMenuManager.m_nPrefsHeight &&
-				   vm.depth >= bestDepth && vm.depth <= FrontEndMenuManager.m_nPrefsDepth){
+				if(vm.width >= bestWidth && vm.width <= FrontEndMenuManager.m_nPrefsWidth && vm.height >= bestHeight &&
+				   vm.height <= FrontEndMenuManager.m_nPrefsHeight && vm.depth >= bestDepth && vm.depth <= FrontEndMenuManager.m_nPrefsDepth) {
 					bestWidth = vm.width;
 					bestHeight = vm.height;
 					bestDepth = vm.depth;
@@ -1133,7 +1044,7 @@ psSelectDevice()
 			}
 		}
 
-		if(bestFsMode < 0){
+		if(bestFsMode < 0) {
 			printf("WARNING: Cannot find desired video mode, selecting device cancelled\n");
 			return FALSE;
 		}
@@ -1149,8 +1060,7 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
-	if (FrontEndMenuManager.m_nPrefsWindowed)
-		GcurSelVM = bestWndMode;
+	if(FrontEndMenuManager.m_nPrefsWindowed) GcurSelVM = bestWndMode;
 
 	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
@@ -1161,40 +1071,36 @@ psSelectDevice()
 #ifndef PS2_MENU
 	FrontEndMenuManager.m_nCurrOption = 0;
 #endif
-	
+
 	/* Set up the video mode and set the apps window
-	* dimensions to match */
+	 * dimensions to match */
 #ifdef IMPROVED_VIDEOMODE
 	glfwWindowHint(GLFW_DECORATED, FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_WINDOWED ? GLFW_TRUE : GLFW_FALSE);
 	glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
 #endif
-	if (!RwEngineSetVideoMode(GcurSelVM))
-	{
-		return FALSE;
-	}
+	if(!RwEngineSetVideoMode(GcurSelVM)) { return FALSE; }
 	/*
 	TODO
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
 	{
-		debug("%dx%dx%d", vm.width, vm.height, vm.depth);
-		
-		UINT refresh = GetBestRefreshRate(vm.width, vm.height, vm.depth);
-		
-		if ( refresh != (UINT)-1 )
-		{
-			debug("refresh %d", refresh);
-			RwD3D8EngineSetRefreshRate((RwUInt32)refresh);
-		}
+	        debug("%dx%dx%d", vm.width, vm.height, vm.depth);
+
+	        UINT refresh = GetBestRefreshRate(vm.width, vm.height, vm.depth);
+
+	        if ( refresh != (UINT)-1 )
+	        {
+	                debug("refresh %d", refresh);
+	                RwD3D8EngineSetRefreshRate((RwUInt32)refresh);
+	        }
 	}
 	*/
 #ifndef IMPROVED_VIDEOMODE
-	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
-	{
+	if(vm.flags & rwVIDEOMODEEXCLUSIVE) {
 		RsGlobal.maximumWidth = vm.width;
 		RsGlobal.maximumHeight = vm.height;
 		RsGlobal.width = vm.width;
 		RsGlobal.height = vm.height;
-		
+
 		PSGLOBAL(fullScreen) = TRUE;
 	}
 #else
@@ -1208,35 +1114,42 @@ psSelectDevice()
 }
 
 #ifndef GET_KEYBOARD_INPUT_FROM_X11
-void keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods);
+void
+keypressCB(GLFWwindow *window, int key, int scancode, int action, int mods);
 #endif
-void resizeCB(GLFWwindow* window, int width, int height);
-void scrollCB(GLFWwindow* window, double xoffset, double yoffset);
-void cursorCB(GLFWwindow* window, double xpos, double ypos);
-void cursorEnterCB(GLFWwindow* window, int entered);
-void windowFocusCB(GLFWwindow* window, int focused);
-void windowIconifyCB(GLFWwindow* window, int iconified);
-void joysChangeCB(int jid, int event);
+void
+resizeCB(GLFWwindow *window, int width, int height);
+void
+scrollCB(GLFWwindow *window, double xoffset, double yoffset);
+void
+cursorCB(GLFWwindow *window, double xpos, double ypos);
+void
+cursorEnterCB(GLFWwindow *window, int entered);
+void
+windowFocusCB(GLFWwindow *window, int focused);
+void
+windowIconifyCB(GLFWwindow *window, int iconified);
+void
+joysChangeCB(int jid, int event);
 
-bool IsThisJoystickBlacklisted(int i)
+bool
+IsThisJoystickBlacklisted(int i)
 {
 #ifndef DETECT_JOYSTICK_MENU
 	return false;
 #else
-	if (glfwJoystickIsGamepad(i))
-		return false;
+	if(glfwJoystickIsGamepad(i)) return false;
 
-	const char* joyname = glfwGetJoystickName(i);
+	const char *joyname = glfwGetJoystickName(i);
 
-	if (gSelectedJoystickName[0] != '\0' &&
-		strncmp(joyname, gSelectedJoystickName, strlen(gSelectedJoystickName)) == 0)
-		return false;
+	if(gSelectedJoystickName[0] != '\0' && strncmp(joyname, gSelectedJoystickName, strlen(gSelectedJoystickName)) == 0) return false;
 
 	return true;
 #endif
 }
 
-void _InputInitialiseJoys()
+void
+_InputInitialiseJoys()
 {
 	PSGLOBAL(joy1id) = -1;
 	PSGLOBAL(joy2id) = -1;
@@ -1244,45 +1157,43 @@ void _InputInitialiseJoys()
 	// Load our gamepad mappings.
 #define SDL_GAMEPAD_DB_PATH "gamecontrollerdb.txt"
 	FILE *f = fopen(SDL_GAMEPAD_DB_PATH, "rb");
-	if (f) {
+	if(f) {
 		fseek(f, 0, SEEK_END);
 		size_t fsize = ftell(f);
 		fseek(f, 0, SEEK_SET);
 
-		char *db = (char*)malloc(fsize + 1);
-		if (fread(db, 1, fsize, f) == fsize) {
+		char *db = (char *)malloc(fsize + 1);
+		if(fread(db, 1, fsize, f) == fsize) {
 			db[fsize] = '\0';
 
-			if (glfwUpdateGamepadMappings(db) == GLFW_FALSE)
-				Error("glfwUpdateGamepadMappings didn't succeed, check " SDL_GAMEPAD_DB_PATH ".\n");
+			if(glfwUpdateGamepadMappings(db) == GLFW_FALSE) Error("glfwUpdateGamepadMappings didn't succeed, check " SDL_GAMEPAD_DB_PATH ".\n");
 		} else
 			Error("fread on " SDL_GAMEPAD_DB_PATH " wasn't successful.\n");
 
 		free(db);
 		fclose(f);
 	} else
-		printf("You don't seem to have copied " SDL_GAMEPAD_DB_PATH " file from reVC/gamefiles to GTA: Vice City directory. Some gamepads may not be recognized.\n");
+		printf("You don't seem to have copied " SDL_GAMEPAD_DB_PATH
+		       " file from reVC/gamefiles to GTA: Vice City directory. Some gamepads may not be recognized.\n");
 
 #undef SDL_GAMEPAD_DB_PATH
 
 	// But always overwrite it with the one in SDL_GAMECONTROLLERCONFIG.
-	char const* EnvControlConfig = getenv("SDL_GAMECONTROLLERCONFIG");
-	if (EnvControlConfig != nil) {
-		glfwUpdateGamepadMappings(EnvControlConfig);
-	}
+	char const *EnvControlConfig = getenv("SDL_GAMECONTROLLERCONFIG");
+	if(EnvControlConfig != nil) { glfwUpdateGamepadMappings(EnvControlConfig); }
 
-	for (int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
-		if (glfwJoystickPresent(i) && !IsThisJoystickBlacklisted(i)) {
-			if (PSGLOBAL(joy1id) == -1)
+	for(int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
+		if(glfwJoystickPresent(i) && !IsThisJoystickBlacklisted(i)) {
+			if(PSGLOBAL(joy1id) == -1)
 				PSGLOBAL(joy1id) = i;
-			else if (PSGLOBAL(joy2id) == -1)
+			else if(PSGLOBAL(joy2id) == -1)
 				PSGLOBAL(joy2id) = i;
 			else
 				break;
 		}
 	}
 
-	if (PSGLOBAL(joy1id) != -1) {
+	if(PSGLOBAL(joy1id) != -1) {
 		int count;
 		glfwGetJoystickButtons(PSGLOBAL(joy1id), &count);
 #ifdef DETECT_JOYSTICK_MENU
@@ -1293,7 +1204,8 @@ void _InputInitialiseJoys()
 }
 
 int lastCursorMode = GLFW_CURSOR_HIDDEN;
-long _InputInitialiseMouse(bool exclusive)
+long
+_InputInitialiseMouse(bool exclusive)
 {
 	// Disabled = keep cursor centered and hide
 	lastCursorMode = exclusive ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_HIDDEN;
@@ -1301,20 +1213,21 @@ long _InputInitialiseMouse(bool exclusive)
 	return 0;
 }
 
-void _InputShutdownMouse()
+void
+_InputShutdownMouse()
 {
-	if (PSGLOBAL(window) == nil)
-		return;
+	if(PSGLOBAL(window) == nil) return;
 
 	lastCursorMode = GLFW_CURSOR_NORMAL;
 	glfwSetInputMode(PSGLOBAL(window), GLFW_CURSOR, lastCursorMode);
 }
 
 // Not "needs exclusive" on GLFW, but more like "needs to change mode"
-bool _InputMouseNeedsExclusive()
+bool
+_InputMouseNeedsExclusive()
 {
 	// That was the cause of infamous mouse bug on Win.
-	
+
 	RwVideoMode vm;
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
@@ -1323,7 +1236,8 @@ bool _InputMouseNeedsExclusive()
 	return !(vm.flags & rwVIDEOMODEEXCLUSIVE) || lastCursorMode == GLFW_CURSOR_HIDDEN;
 }
 
-void psPostRWinit(void)
+void
+psPostRWinit(void)
 {
 	RwVideoMode vm;
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
@@ -1347,9 +1261,7 @@ void psPostRWinit(void)
 #ifdef IMPROVED_VIDEOMODE
 	ApplyGLFWWindowMode(vm);
 #else
-	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) {
-		glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight);
-	}
+	if(!(vm.flags & rwVIDEOMODEEXCLUSIVE)) { glfwSetWindowSize(PSGLOBAL(window), RsGlobal.maximumWidth, RsGlobal.maximumHeight); }
 #endif
 
 	// Make sure all keys are released
@@ -1360,39 +1272,38 @@ void psPostRWinit(void)
 /*
  *****************************************************************************
  */
-RwBool _psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode)
+RwBool
+_psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode)
 {
 	RwInitialised = FALSE;
-	
+
 	RsEventHandler(rsRWTERMINATE, nil);
-	
+
 	GcurSel = subSystem;
 	GcurSelVM = videoMode;
-	
+
 	useDefault = TRUE;
-	
-	if ( RsEventHandler(rsRWINITIALIZE, &openParams) == rsEVENTERROR )
-		return FALSE;
+
+	if(RsEventHandler(rsRWINITIALIZE, &openParams) == rsEVENTERROR) return FALSE;
 
 	RwInitialised = TRUE;
 	useDefault = FALSE;
-	
+
 	RwRect r;
-	
+
 	r.x = 0;
 	r.y = 0;
 	r.w = RsGlobal.maximumWidth;
 	r.h = RsGlobal.maximumHeight;
 
 	RsEventHandler(rsCAMERASIZE, &r);
-	
+
 	psPostRWinit();
 	psRestoreFocusAfterPause();
 
 	return TRUE;
 }
- 
- 
+
 /*
  *****************************************************************************
  */
@@ -1406,35 +1317,27 @@ CommandLineToArgv(RwChar *cmdLine, RwInt32 *argCount)
 
 	len = strlen(cmdLine);
 
-	/* 
+	/*
 	 * Count the number of arguments...
 	 */
 	inString = FALSE;
 	inArg = FALSE;
 
-	for(i=0; i<=len; i++)
-	{
-		if( cmdLine[i] == '"' )
-		{
-			inString = !inString;
-		}
+	for(i = 0; i <= len; i++) {
+		if(cmdLine[i] == '"') { inString = !inString; }
 
-		if( (cmdLine[i] <= ' ' && !inString) || i == len )
-		{
-			if( inArg ) 
-			{
+		if((cmdLine[i] <= ' ' && !inString) || i == len) {
+			if(inArg) {
 				inArg = FALSE;
-				
+
 				numArgs++;
 			}
-		} 
-		else if( !inArg )
-		{
+		} else if(!inArg) {
 			inArg = TRUE;
 		}
 	}
 
-	/* 
+	/*
 	 * Allocate memory for result...
 	 */
 	res = (RwChar *)malloc(sizeof(RwChar *) * numArgs + len + 1);
@@ -1449,33 +1352,22 @@ CommandLineToArgv(RwChar *cmdLine, RwInt32 *argCount)
 	inArg = FALSE;
 	inString = FALSE;
 
-	for(i=0; i<=len; i++)
-	{
-		if( cmdLine[i] == '"' )
-		{
-			inString = !inString;
-		}
+	for(i = 0; i <= len; i++) {
+		if(cmdLine[i] == '"') { inString = !inString; }
 
-		if( (cmdLine[i] <= ' ' && !inString) || i == len )
-		{
-			if( inArg ) 
-			{
-				if( str[i-1] == '"' )
-				{
-					str[i-1] = '\0';
-				}
-				else
-				{
+		if((cmdLine[i] <= ' ' && !inString) || i == len) {
+			if(inArg) {
+				if(str[i - 1] == '"') {
+					str[i - 1] = '\0';
+				} else {
 					str[i] = '\0';
 				}
-				
+
 				inArg = FALSE;
 			}
-		} 
-		else if( !inArg && cmdLine[i] != '"' )
-		{
-			inArg = TRUE; 
-			
+		} else if(!inArg && cmdLine[i] != '"') {
+			inArg = TRUE;
+
 			*aptr++ = &str[i];
 		}
 	}
@@ -1488,129 +1380,109 @@ CommandLineToArgv(RwChar *cmdLine, RwInt32 *argCount)
 /*
  *****************************************************************************
  */
-void InitialiseLanguage()
+void
+InitialiseLanguage()
 {
 #ifndef _WIN32
 	// Mandatory for Linux(Unix? Posix?) to set lang. to environment lang.
-	setlocale(LC_ALL, "");	
+	setlocale(LC_ALL, "");
 
 	char *systemLang, *keyboardLang;
 
-	systemLang = setlocale (LC_ALL, NULL);
-	keyboardLang = setlocale (LC_CTYPE, NULL);
-	
-	short primUserLCID, primSystemLCID;
-	primUserLCID = primSystemLCID = !strncmp(systemLang, "fr_",3) ? LANG_FRENCH :
-					!strncmp(systemLang, "de_",3) ? LANG_GERMAN :
-					!strncmp(systemLang, "en_",3) ? LANG_ENGLISH :
-					!strncmp(systemLang, "it_",3) ? LANG_ITALIAN :
-					!strncmp(systemLang, "es_",3) ? LANG_SPANISH :
-					LANG_OTHER;
+	systemLang = setlocale(LC_ALL, NULL);
+	keyboardLang = setlocale(LC_CTYPE, NULL);
 
-	short primLayout = !strncmp(keyboardLang, "fr_",3) ? LANG_FRENCH : (!strncmp(keyboardLang, "de_",3) ? LANG_GERMAN : LANG_ENGLISH);
+	short primUserLCID, primSystemLCID;
+	primUserLCID = primSystemLCID = !strncmp(systemLang, "fr_", 3)   ? LANG_FRENCH
+	                                : !strncmp(systemLang, "de_", 3) ? LANG_GERMAN
+	                                : !strncmp(systemLang, "en_", 3) ? LANG_ENGLISH
+	                                : !strncmp(systemLang, "it_", 3) ? LANG_ITALIAN
+	                                : !strncmp(systemLang, "es_", 3) ? LANG_SPANISH
+	                                                                 : LANG_OTHER;
+
+	short primLayout = !strncmp(keyboardLang, "fr_", 3) ? LANG_FRENCH : (!strncmp(keyboardLang, "de_", 3) ? LANG_GERMAN : LANG_ENGLISH);
 
 	short subUserLCID, subSystemLCID;
-	subUserLCID = subSystemLCID = !strncmp(systemLang, "en_AU",5) ? SUBLANG_ENGLISH_AUS : SUBLANG_OTHER;
-	short subLayout = !strncmp(keyboardLang, "en_AU",5) ? SUBLANG_ENGLISH_AUS : SUBLANG_OTHER;
+	subUserLCID = subSystemLCID = !strncmp(systemLang, "en_AU", 5) ? SUBLANG_ENGLISH_AUS : SUBLANG_OTHER;
+	short subLayout = !strncmp(keyboardLang, "en_AU", 5) ? SUBLANG_ENGLISH_AUS : SUBLANG_OTHER;
 
 #else
-	WORD primUserLCID	= PRIMARYLANGID(GetSystemDefaultLCID());
+	WORD primUserLCID = PRIMARYLANGID(GetSystemDefaultLCID());
 	WORD primSystemLCID = PRIMARYLANGID(GetUserDefaultLCID());
-	WORD primLayout		= PRIMARYLANGID((DWORD)GetKeyboardLayout(0));
-	
-	WORD subUserLCID	= SUBLANGID(GetSystemDefaultLCID());
-	WORD subSystemLCID	= SUBLANGID(GetUserDefaultLCID());
-	WORD subLayout		= SUBLANGID((DWORD)GetKeyboardLayout(0));
+	WORD primLayout = PRIMARYLANGID((DWORD)GetKeyboardLayout(0));
+
+	WORD subUserLCID = SUBLANGID(GetSystemDefaultLCID());
+	WORD subSystemLCID = SUBLANGID(GetUserDefaultLCID());
+	WORD subLayout = SUBLANGID((DWORD)GetKeyboardLayout(0));
 #endif
-	if (   primUserLCID	  == LANG_GERMAN
-		|| primSystemLCID == LANG_GERMAN
-		|| primLayout	  == LANG_GERMAN )
-	{
+	if(primUserLCID == LANG_GERMAN || primSystemLCID == LANG_GERMAN || primLayout == LANG_GERMAN) {
 		CGame::nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
 		CGame::germanGame = true;
 	}
-	
-	if (   primUserLCID	  == LANG_FRENCH
-		|| primSystemLCID == LANG_FRENCH
-		|| primLayout	  == LANG_FRENCH )
-	{
+
+	if(primUserLCID == LANG_FRENCH || primSystemLCID == LANG_FRENCH || primLayout == LANG_FRENCH) {
 		CGame::nastyGame = false;
 		FrontEndMenuManager.m_PrefsAllowNastyGame = false;
 		CGame::frenchGame = true;
 	}
-	
-	if (   subUserLCID	 == SUBLANG_ENGLISH_AUS
-		|| subSystemLCID == SUBLANG_ENGLISH_AUS
-		|| subLayout	 == SUBLANG_ENGLISH_AUS )
-		CGame::noProstitutes = true;
+
+	if(subUserLCID == SUBLANG_ENGLISH_AUS || subSystemLCID == SUBLANG_ENGLISH_AUS || subLayout == SUBLANG_ENGLISH_AUS) CGame::noProstitutes = true;
 
 #ifdef NASTY_GAME
 	CGame::nastyGame = true;
 	FrontEndMenuManager.m_PrefsAllowNastyGame = true;
 	CGame::noProstitutes = false;
 #endif
-	
+
 	int32 lang;
-	
-	switch ( primSystemLCID )
-	{
-		case LANG_GERMAN:
-		{
-			lang = LANG_GERMAN;
-			break;
-		}
-		case LANG_FRENCH:
-		{
-			lang = LANG_FRENCH;
-			break;
-		}
-		case LANG_SPANISH:
-		{
-			lang = LANG_SPANISH;
-			break;
-		}
-		case LANG_ITALIAN:
-		{
-			lang = LANG_ITALIAN;
-			break;
-		}
-		default:
-		{
-			lang = ( subSystemLCID == SUBLANG_ENGLISH_AUS ) ? -99 : LANG_ENGLISH;
-			break;
-		}
+
+	switch(primSystemLCID) {
+	case LANG_GERMAN: {
+		lang = LANG_GERMAN;
+		break;
 	}
-	
+	case LANG_FRENCH: {
+		lang = LANG_FRENCH;
+		break;
+	}
+	case LANG_SPANISH: {
+		lang = LANG_SPANISH;
+		break;
+	}
+	case LANG_ITALIAN: {
+		lang = LANG_ITALIAN;
+		break;
+	}
+	default: {
+		lang = (subSystemLCID == SUBLANG_ENGLISH_AUS) ? -99 : LANG_ENGLISH;
+		break;
+	}
+	}
+
 	FrontEndMenuManager.OS_Language = primUserLCID;
 
-	switch ( lang )
-	{
-		case LANG_GERMAN:
-		{
-			FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_GERMAN;
-			break;
-		}
-		case LANG_SPANISH:
-		{
-			FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_SPANISH;
-			break;
-		}
-		case LANG_FRENCH:
-		{
-			FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_FRENCH;
-			break;
-		}
-		case LANG_ITALIAN:
-		{
-			FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_ITALIAN;
-			break;
-		}
-		default:
-		{
-			FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_AMERICAN;
-			break;
-		}
+	switch(lang) {
+	case LANG_GERMAN: {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_GERMAN;
+		break;
+	}
+	case LANG_SPANISH: {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_SPANISH;
+		break;
+	}
+	case LANG_FRENCH: {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_FRENCH;
+		break;
+	}
+	case LANG_ITALIAN: {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_ITALIAN;
+		break;
+	}
+	default: {
+		FrontEndMenuManager.m_PrefsLanguage = CMenuManager::LANGUAGE_AMERICAN;
+		break;
+	}
 	}
 
 #ifndef _WIN32
@@ -1628,18 +1500,15 @@ void InitialiseLanguage()
  *****************************************************************************
  */
 
-void HandleExit()
+void
+HandleExit()
 {
 #ifdef _WIN32
 	MSG message;
-	while ( PeekMessage(&message, nil, 0U, 0U, PM_REMOVE|PM_NOYIELD) )
-	{
-		if( message.message == WM_QUIT )
-		{
+	while(PeekMessage(&message, nil, 0U, 0U, PM_REMOVE | PM_NOYIELD)) {
+		if(message.message == WM_QUIT) {
 			RsGlobal.quit = TRUE;
-		}
-		else
-		{
+		} else {
 			TranslateMessage(&message);
 			DispatchMessage(&message);
 		}
@@ -1651,31 +1520,32 @@ void HandleExit()
 }
 
 #ifndef _WIN32
-void terminateHandler(int sig, siginfo_t *info, void *ucontext) {
-	RsGlobal.quit = TRUE;
-}
+void
+terminateHandler(int sig, siginfo_t *info, void *ucontext)
+{ RsGlobal.quit = TRUE; }
 
 #ifdef FLUSHABLE_STREAMING
-void dummyHandler(int sig){
+void
+dummyHandler(int sig)
+{
 	// Don't kill the app pls
 }
 #endif
 #endif
 
-void resizeCB(GLFWwindow* window, int width, int height) {
+void
+resizeCB(GLFWwindow *window, int width, int height)
+{
 	/*
-	* Handle event to ensure window contents are displayed during re-size
-	* as this can be disabled by the user, then if there is not enough
-	* memory things don't work.
-	*/
+	 * Handle event to ensure window contents are displayed during re-size
+	 * as this can be disabled by the user, then if there is not enough
+	 * memory things don't work.
+	 */
 	/* redraw window */
 
-	if (RwInitialised && gGameState == GS_PLAYING_GAME)
-	{
-		RsEventHandler(rsIDLE, (void *)TRUE);
-	}
+	if(RwInitialised && gGameState == GS_PLAYING_GAME) { RsEventHandler(rsIDLE, (void *)TRUE); }
 
-	if (RwInitialised && height > 0 && width > 0) {
+	if(RwInitialised && height > 0 && width > 0) {
 		RwRect r;
 
 		// TODO fix artifacts of resizing with mouse
@@ -1689,12 +1559,12 @@ void resizeCB(GLFWwindow* window, int width, int height) {
 
 		RsEventHandler(rsCAMERASIZE, &r);
 	}
-//	glfwSetWindowPos(window, 0, 0);
+	//	glfwSetWindowPos(window, 0, 0);
 }
 
-void scrollCB(GLFWwindow* window, double xoffset, double yoffset) {
-	PSGLOBAL(mouseWheel) = yoffset;
-}
+void
+scrollCB(GLFWwindow *window, double xoffset, double yoffset)
+{ PSGLOBAL(mouseWheel) = yoffset; }
 
 bool lshiftStatus = false;
 bool rshiftStatus = false;
@@ -1706,8 +1576,7 @@ static void
 initkeymap(void)
 {
 	int i;
-	for (i = 0; i < GLFW_KEY_LAST + 1; i++)
-		keymap[i] = rsNULL;
+	for(i = 0; i < GLFW_KEY_LAST + 1; i++) keymap[i] = rsNULL;
 
 	keymap[GLFW_KEY_SPACE] = ' ';
 	keymap[GLFW_KEY_APOSTROPHE] = '\'';
@@ -1831,19 +1700,19 @@ initkeymap(void)
 }
 
 void
-keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
+keypressCB(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
-	if (key >= 0 && key <= GLFW_KEY_LAST && action != GLFW_REPEAT) {
+	if(key >= 0 && key <= GLFW_KEY_LAST && action != GLFW_REPEAT) {
 		RsKeyCodes ks = (RsKeyCodes)keymap[key];
 
-		if (key == GLFW_KEY_LEFT_SHIFT)
-			lshiftStatus = action != GLFW_RELEASE;
+		if(key == GLFW_KEY_LEFT_SHIFT) lshiftStatus = action != GLFW_RELEASE;
 
-		if (key == GLFW_KEY_RIGHT_SHIFT)
-			rshiftStatus = action != GLFW_RELEASE;
+		if(key == GLFW_KEY_RIGHT_SHIFT) rshiftStatus = action != GLFW_RELEASE;
 
-		if (action == GLFW_RELEASE) RsKeyboardEventHandler(rsKEYUP, &ks);
-		else if (action == GLFW_PRESS) RsKeyboardEventHandler(rsKEYDOWN, &ks);
+		if(action == GLFW_RELEASE)
+			RsKeyboardEventHandler(rsKEYUP, &ks);
+		else if(action == GLFW_PRESS)
+			RsKeyboardEventHandler(rsKEYDOWN, &ks);
 	}
 }
 
@@ -1860,11 +1729,10 @@ initkeymap(void)
 	Display *display = glfwGetX11Display();
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(keymap); i++)
-		keymap[i] = rsNULL;
+	for(i = 0; i < ARRAY_SIZE(keymap); i++) keymap[i] = rsNULL;
 
-	// You can add new ASCII mappings to here freely (but beware that if right hand side of assignment isn't supported on CFont, it'll be blank/won't work on binding screen)
-	// Right hand side of assigments should always be uppercase counterpart of character
+	// You can add new ASCII mappings to here freely (but beware that if right hand side of assignment isn't supported on CFont, it'll be blank/won't work
+	// on binding screen) Right hand side of assigments should always be uppercase counterpart of character
 	keymap[XK_space] = ' ';
 	keymap[XK_apostrophe] = '\'';
 	keymap[XK_ampersand] = '&';
@@ -2034,29 +1902,27 @@ initkeymap(void)
 	int min_keycode, max_keycode, keysyms_per_keycode;
 	KeySym *keymap, *origkeymap;
 
-	char *keyboardLang = setlocale (LC_CTYPE, NULL);
+	char *keyboardLang = setlocale(LC_CTYPE, NULL);
 	setlocale(LC_CTYPE, "");
 
 	XDisplayKeycodes(display, &min_keycode, &max_keycode);
 	origkeymap = XGetKeyboardMapping(display, min_keycode, (max_keycode - min_keycode + 1), &keysyms_per_keycode);
 	keymap = origkeymap;
-	for (int i = min_keycode; i <= max_keycode; i++) {
-		int  j, lastKeysym;
+	for(int i = min_keycode; i <= max_keycode; i++) {
+		int j, lastKeysym;
 
 		lastKeysym = keysyms_per_keycode - 1;
-		while ((lastKeysym >= 0) && (keymap[lastKeysym] == NoSymbol))
-			lastKeysym--;
+		while((lastKeysym >= 0) && (keymap[lastKeysym] == NoSymbol)) lastKeysym--;
 
-		for (j = 0; j <= lastKeysym; j++) {
+		for(j = 0; j <= lastKeysym; j++) {
 			KeySym ks = keymap[j];
 
-			if (ks == NoSymbol)
-				continue;
+			if(ks == NoSymbol) continue;
 
-			if (ks < 256) {
+			if(ks < 256) {
 				keyCodeToKeymapIndex[i] = ks;
 				break;
-			} else if (ks >= 0xff00 && ks < 0xffff) {
+			} else if(ks >= 0xff00 && ks < 0xffff) {
 				keyCodeToKeymapIndex[i] = ks - KEY_MAP_OFFSET;
 				break;
 			}
@@ -2069,30 +1935,30 @@ initkeymap(void)
 }
 #undef KEY_MAP_OFFSET
 
-void checkKeyPresses()
+void
+checkKeyPresses()
 {
 	Display *display = glfwGetX11Display();
 	char keys[32];
 	XQueryKeymap(display, keys);
-	for (int i = 0; i < sizeof(keys); i++) {
-		for (int j = 0; j < 8; j++) {
+	for(int i = 0; i < sizeof(keys); i++) {
+		for(int j = 0; j < 8; j++) {
 			KeyCode keycode = 8 * i + j;
 			uint32 keymapIndex = keyCodeToKeymapIndex[keycode];
-			if (keymapIndex != 0) {
+			if(keymapIndex != 0) {
 				int rsCode = keymap[keymapIndex];
-				if (rsCode == rsNULL)
-					continue;
+				if(rsCode == rsNULL) continue;
 
 				bool pressed = WindowFocused && !!(keys[i] & (1 << j));
 
 				// idk why R* does that
-				if (rsCode == rsLSHIFT)
+				if(rsCode == rsLSHIFT)
 					lshiftStatus = pressed;
-				else if (rsCode == rsRSHIFT)
+				else if(rsCode == rsRSHIFT)
 					rshiftStatus = pressed;
 
-				if (keyStates[keymapIndex] != pressed) {
-					if (pressed) {
+				if(keyStates[keymapIndex] != pressed) {
+					if(pressed) {
 						RsKeyboardEventHandler(rsKEYDOWN, &rsCode);
 					} else {
 						RsKeyboardEventHandler(rsKEYUP, &rsCode);
@@ -2103,23 +1969,23 @@ void checkKeyPresses()
 			}
 		}
 	}
-
 }
 #endif
 
 // R* calls that in ControllerConfig, idk why
 void
-_InputTranslateShiftKeyUpDown(RsKeyCodes *rs) {
+_InputTranslateShiftKeyUpDown(RsKeyCodes *rs)
+{
 	RsKeyboardEventHandler(lshiftStatus ? rsKEYDOWN : rsKEYUP, &(*rs = rsLSHIFT));
 	RsKeyboardEventHandler(rshiftStatus ? rsKEYDOWN : rsKEYUP, &(*rs = rsRSHIFT));
 }
 
 // TODO this only works in frontend(and luckily only frontend use this). Fun fact: if I get pos manually in game, glfw reports that it's > 32000
 void
-cursorCB(GLFWwindow* window, double xpos, double ypos) {
-	if (!FrontEndMenuManager.m_bMenuActive)
-		return;
-	
+cursorCB(GLFWwindow *window, double xpos, double ypos)
+{
+	if(!FrontEndMenuManager.m_bMenuActive) return;
+
 	int winw, winh;
 	glfwGetWindowSize(PSGLOBAL(window), &winw, &winh);
 	FrontEndMenuManager.m_nMouseTempPosX = xpos * (RsGlobal.maximumWidth / winw);
@@ -2127,22 +1993,21 @@ cursorCB(GLFWwindow* window, double xpos, double ypos) {
 }
 
 void
-cursorEnterCB(GLFWwindow* window, int entered) {
-	PSGLOBAL(cursorIsInWindow) = !!entered;
-}
+cursorEnterCB(GLFWwindow *window, int entered)
+{ PSGLOBAL(cursorIsInWindow) = !!entered; }
 
 void
-windowFocusCB(GLFWwindow* window, int focused) {
+windowFocusCB(GLFWwindow *window, int focused)
+{
 	WindowFocused = !!focused;
-	if (!focused)
-		MarkWindowFocusLost();
+	if(!focused) MarkWindowFocusLost();
 }
 
 void
-windowIconifyCB(GLFWwindow* window, int iconified) {
+windowIconifyCB(GLFWwindow *window, int iconified)
+{
 	WindowIconified = !!iconified;
-	if (iconified)
-		MarkWindowFocusLost();
+	if(iconified) MarkWindowFocusLost();
 }
 
 /*
@@ -2153,10 +2018,8 @@ windowIconifyCB(GLFWwindow* window, int iconified) {
 static bool
 SkipMovieButtonJustDown()
 {
-	return CPad::GetPad(0)->GetCrossJustDown()
-	    || CPad::GetPad(0)->GetStartJustDown()
-	    || CPad::GetPad(0)->GetEnterJustDown()
-	    || CPad::GetPad(0)->GetLeftMouseJustDown();
+	return CPad::GetPad(0)->GetCrossJustDown() || CPad::GetPad(0)->GetStartJustDown() || CPad::GetPad(0)->GetEnterJustDown() ||
+	       CPad::GetPad(0)->GetLeftMouseJustDown();
 }
 
 #ifdef _WIN32
@@ -2166,24 +2029,19 @@ SetGameWorkingDirectory(void)
 {
 	wchar_t exeDir[4096];
 	DWORD n = GetModuleFileNameW(NULL, exeDir, sizeof(exeDir) / sizeof(exeDir[0]));
-	if (n == 0 || n >= sizeof(exeDir) / sizeof(exeDir[0]))
-		return;
+	if(n == 0 || n >= sizeof(exeDir) / sizeof(exeDir[0])) return;
 	exeDir[n] = L'\0';
 
 	wchar_t *lastSep = NULL;
-	for (wchar_t *p = exeDir; *p != L'\0'; p++)
-		if (*p == L'/' || *p == L'\\')
-			lastSep = p;
-	if (lastSep == NULL)
-		return;
+	for(wchar_t *p = exeDir; *p != L'\0'; p++)
+		if(*p == L'/' || *p == L'\\') lastSep = p;
+	if(lastSep == NULL) return;
 	*lastSep = L'\0';
 
 	wchar_t imgPath[4096 + 64];
-	swprintf(imgPath, sizeof(imgPath) / sizeof(imgPath[0]),
-		 L"%ls/models/gta3.img", exeDir);
+	swprintf(imgPath, sizeof(imgPath) / sizeof(imgPath[0]), L"%ls/models/gta3.img", exeDir);
 
-	if (GetFileAttributesW(imgPath) == INVALID_FILE_ATTRIBUTES)
-		return;
+	if(GetFileAttributesW(imgPath) == INVALID_FILE_ATTRIBUTES) return;
 	SetCurrentDirectoryW(exeDir);
 }
 
@@ -2195,26 +2053,22 @@ SetGameWorkingDirectory(void)
 	char exeDir[4096];
 #ifdef __APPLE__
 	uint32_t size = sizeof(exeDir);
-	if (_NSGetExecutablePath(exeDir, &size) != 0)
-		return;
+	if(_NSGetExecutablePath(exeDir, &size) != 0) return;
 #else
 	ssize_t n = readlink("/proc/self/exe", exeDir, sizeof(exeDir) - 1);
-	if (n <= 0)
-		return;
+	if(n <= 0) return;
 	exeDir[n] = '\0';
 #endif
 
 	char *lastSep = strrchr(exeDir, '/');
-	if (lastSep == NULL)
-		return;
+	if(lastSep == NULL) return;
 	*lastSep = '\0';
 
 	char imgPath[4096 + 64];
 	snprintf(imgPath, sizeof(imgPath), "%s/models/gta3.img", exeDir);
 
 	struct stat st;
-	if (stat(imgPath, &st) != 0)
-		return;
+	if(stat(imgPath, &st) != 0) return;
 	chdir(exeDir);
 }
 
@@ -2222,19 +2076,15 @@ SetGameWorkingDirectory(void)
 
 #ifdef _WIN32
 int PASCAL
-WinMain(HINSTANCE instance,
-	HINSTANCE prevInstance	__RWUNUSED__,
-	CMDSTR cmdLine,
-	int cmdShow)
+WinMain(HINSTANCE instance, HINSTANCE prevInstance __RWUNUSED__, CMDSTR cmdLine, int cmdShow)
 {
 	SetGameWorkingDirectory();
 	RwInt32 argc;
-	RwChar** argv;
+	RwChar **argv;
 	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, nil, SPIF_SENDCHANGE);
 
 #ifndef MASTER
-	if (strstr(cmdLine, "-console"))
-	{
+	if(strstr(cmdLine, "-console")) {
 		AllocConsole();
 		freopen("CONIN$", "r", stdin);
 		freopen("CONOUT$", "w", stdout);
@@ -2270,14 +2120,11 @@ main(int argc, char *argv[])
 #endif
 #endif
 
-	/* 
+	/*
 	 * Initialize the platform independent data.
 	 * This will in turn initialize the platform specific data...
 	 */
-	if( RsEventHandler(rsINITIALIZE, nil) == rsEVENTERROR )
-	{
-		return FALSE;
-	}
+	if(RsEventHandler(rsINITIALIZE, nil) == rsEVENTERROR) { return FALSE; }
 
 #ifdef _WIN32
 	/*
@@ -2291,16 +2138,12 @@ main(int argc, char *argv[])
 	 */
 	argv = CommandLineToArgv(cmdLine, &argc);
 
-
-	/* 
-	 * Parse command line parameters (except program name) one at 
+	/*
+	 * Parse command line parameters (except program name) one at
 	 * a time BEFORE RenderWare initialization...
 	 */
 #endif
-	for(i=1; i<argc; i++)
-	{
-		RsEventHandler(rsPREINITCOMMANDLINE, argv[i]);
-	}
+	for(i = 1; i < argc; i++) { RsEventHandler(rsPREINITCOMMANDLINE, argv[i]); }
 
 	/*
 	 * Parameters to be used in RwEngineOpen / rsRWINITIALISE event
@@ -2310,15 +2153,14 @@ main(int argc, char *argv[])
 	openParams.height = RsGlobal.maximumHeight;
 	openParams.windowtitle = RsGlobal.appName;
 	openParams.window = &PSGLOBAL(window);
-	
+
 	ControlsManager.MakeControllerActionsBlank();
 	ControlsManager.InitDefaultControlConfiguration();
 
-	/* 
+	/*
 	 * Initialize the 3D (RenderWare) components of the app...
 	 */
-	if( rsEVENTERROR == RsEventHandler(rsRWINITIALIZE, &openParams) )
-	{
+	if(rsEVENTERROR == RsEventHandler(rsRWINITIALIZE, &openParams)) {
 		RsEventHandler(rsTERMINATE, nil);
 
 		return 0;
@@ -2338,18 +2180,15 @@ main(int argc, char *argv[])
 
 	ControlsManager.InitDefaultControlConfigMouse(MousePointerStateHelper.GetMouseSetUp());
 
-//	glfwSetWindowPos(PSGLOBAL(window), 0, 0);
+	//	glfwSetWindowPos(PSGLOBAL(window), 0, 0);
 
-	/* 
-	 * Parse command line parameters (except program name) one at 
+	/*
+	 * Parse command line parameters (except program name) one at
 	 * a time AFTER RenderWare initialization...
 	 */
-	for(i=1; i<argc; i++)
-	{
-		RsEventHandler(rsCOMMANDLINE, argv[i]);
-	}
+	for(i = 1; i < argc; i++) { RsEventHandler(rsCOMMANDLINE, argv[i]); }
 
-	/* 
+	/*
 	 * Force a camera resize event...
 	 */
 	{
@@ -2365,23 +2204,22 @@ main(int argc, char *argv[])
 #ifdef _WIN32
 	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, FALSE, nil, SPIF_SENDCHANGE);
 	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-	
 
 	STICKYKEYS SavedStickyKeys;
 	SavedStickyKeys.cbSize = sizeof(STICKYKEYS);
-	
+
 	SystemParametersInfo(SPI_GETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
-	
+
 	STICKYKEYS NewStickyKeys;
 	NewStickyKeys.cbSize = sizeof(STICKYKEYS);
 	NewStickyKeys.dwFlags = SKF_TWOKEYSOFF;
-	
+
 	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &NewStickyKeys, SPIF_SENDCHANGE);
 #endif
 
 	{
 		CFileMgr::SetDirMyDocuments();
-		
+
 #ifdef LOAD_INI_SETTINGS
 		// At this point InitDefaultControlConfigJoyPad must have set all bindings to default and ms_padButtonsInited to number of detected buttons.
 		// We will load stored bindings below, but let's cache ms_padButtonsInited before LoadINIControllerSettings and LoadSettings clears it,
@@ -2390,66 +2228,63 @@ main(int argc, char *argv[])
 #endif
 
 		int32 gta3set = CFileMgr::OpenFile("gta_vc.set", "r");
-		
-		if ( gta3set )
-		{
+
+		if(gta3set) {
 			ControlsManager.LoadSettings(gta3set);
 			CFileMgr::CloseFile(gta3set);
 		}
-		
+
 		CFileMgr::SetDir("");
 
 #ifdef LOAD_INI_SETTINGS
 		LoadINIControllerSettings();
-		if (connectedPadButtons != 0)
-			ControlsManager.InitDefaultControlConfigJoyPad(connectedPadButtons); // add (connected-saved) amount of new button assignments on top of ours
+		if(connectedPadButtons != 0)
+			ControlsManager.InitDefaultControlConfigJoyPad(
+			    connectedPadButtons); // add (connected-saved) amount of new button assignments on top of ours
 
 		// these have 2 purposes: creating .ini at the start, and adding newly introduced settings to old .ini at the start
 		SaveINISettings();
 		SaveINIControllerSettings();
 #endif
 	}
-	
+
 #ifdef _WIN32
 	SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
 
 #ifdef PS2_MENU
 	int32 r = TheMemoryCard.CheckCardStateAtGameStartUp(CARD_ONE);
-	if (   r == CMemoryCard::ERR_DIRNOENTRY  || r == CMemoryCard::ERR_NOFORMAT
-		&& r != CMemoryCard::ERR_OPENNOENTRY && r != CMemoryCard::ERR_NONE )
-	{
+	if(r == CMemoryCard::ERR_DIRNOENTRY || r == CMemoryCard::ERR_NOFORMAT && r != CMemoryCard::ERR_OPENNOENTRY && r != CMemoryCard::ERR_NONE) {
 		LoadingScreen(nil, nil, "loadsc0");
-		
+
 		TheText.Unload();
 		TheText.Load();
-		
+
 		CFont::Initialise();
-		
+
 		FrontEndMenuManager.DrawMemoryCardStartUpMenus();
 	}
 #endif
-	
+
 	initkeymap();
 
-	while ( TRUE )
-	{
+	while(TRUE) {
 		RwInitialised = TRUE;
-		
-		/* 
-		* Set the initial mouse position...
-		*/
+
+		/*
+		 * Set the initial mouse position...
+		 */
 		pos.x = RsGlobal.maximumWidth * 0.5f;
 		pos.y = RsGlobal.maximumHeight * 0.5f;
 
 		RsMouseSetPos(&pos);
-		
+
 		/*
-		* Enter the message processing loop...
-		*/
+		 * Enter the message processing loop...
+		 */
 
 #ifndef MASTER
-		if (gbModelViewer) {
+		if(gbModelViewer) {
 			// This is TheModelViewer in LCS
 			LoadingScreen("Loading the ModelViewer", NULL, GetRandomSplashScreen());
 			CAnimViewer::Initialise();
@@ -2461,16 +2296,16 @@ main(int argc, char *argv[])
 #endif
 
 #ifdef PS2_MENU
-		if (TheMemoryCard.m_bWantToLoad)
-			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
-		
+		if(TheMemoryCard.m_bWantToLoad) LoadSplash(GetLevelSplashScreen(CGame::currLevel));
+
 		TheMemoryCard.m_bWantToLoad = false;
-		
+
 		CTimer::Update();
-		
-		while( !RsGlobal.quit && !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) && !glfwWindowShouldClose(PSGLOBAL(window)) )
+
+		while(!RsGlobal.quit && !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) &&
+		      !glfwWindowShouldClose(PSGLOBAL(window)))
 #else
-		while( !RsGlobal.quit && !FrontEndMenuManager.m_bWantToRestart && !glfwWindowShouldClose(PSGLOBAL(window)))
+		while(!RsGlobal.quit && !FrontEndMenuManager.m_bWantToRestart && !glfwWindowShouldClose(PSGLOBAL(window)))
 #endif
 		{
 			glfwPollEvents();
@@ -2481,250 +2316,217 @@ main(int argc, char *argv[])
 			checkKeyPresses();
 #endif
 #ifndef MASTER
-			if (gbModelViewer) {
+			if(gbModelViewer) {
 				// This is TheModelViewerCore in LCS
 				TheModelViewer();
 			} else
 #endif
-			if ( ForegroundApp )
-			{
-				switch ( gGameState )
-				{
-					case GS_START_UP:
-					{
+			    if(ForegroundApp) {
+				switch(gGameState) {
+				case GS_START_UP: {
 #ifdef NO_MOVIES
-						gGameState = gbNoMovies ? GS_INIT_ONCE : GS_INIT_LOGO_MPEG;
+					gGameState = gbNoMovies ? GS_INIT_ONCE : GS_INIT_LOGO_MPEG;
 #else
-						gGameState = GS_INIT_LOGO_MPEG;
+					gGameState = GS_INIT_LOGO_MPEG;
 #endif
-						TRACE("gGameState = GS_INIT_ONCE");
-						break;
+					TRACE("gGameState = GS_INIT_ONCE");
+					break;
+				}
+
+				case GS_INIT_LOGO_MPEG: {
+					MoviePlayer::Play("movies/Logo.mpg");
+					gGameState = GS_LOGO_MPEG;
+					TRACE("gGameState = GS_LOGO_MPEG;");
+					break;
+				}
+
+				case GS_LOGO_MPEG: {
+					CPad::UpdatePads();
+
+					if(MoviePlayer::IsActive()) {
+						MoviePlayer::Draw();
+						if(SkipMovieButtonJustDown()) MoviePlayer::Stop();
+					} else {
+						++gGameState;
 					}
 
-				    case GS_INIT_LOGO_MPEG:
-					{
-				    	    MoviePlayer::Play("movies/Logo.mpg");
-					    gGameState = GS_LOGO_MPEG;
-					    TRACE("gGameState = GS_LOGO_MPEG;");
-					    break;
-				    }
+					break;
+				}
 
-				    case GS_LOGO_MPEG:
-					{
-				    	CPad::UpdatePads();
+				case GS_INIT_INTRO_MPEG: {
+					if(FrontEndMenuManager.OS_Language == LANG_FRENCH || FrontEndMenuManager.OS_Language == LANG_GERMAN)
+						MoviePlayer::Play("movies/GTAtitlesGER.mpg");
+					else
+						MoviePlayer::Play("movies/GTAtitles.mpg");
 
-				    	if (MoviePlayer::IsActive()) {
-				    		MoviePlayer::Draw();
-				    		if (SkipMovieButtonJustDown())
-				    			MoviePlayer::Stop();
-				    	} else {
-				    		++gGameState;
-				    	}
+					gGameState = GS_INTRO_MPEG;
+					TRACE("gGameState = GS_INTRO_MPEG;");
+					break;
+				}
 
-					    break;
-				    }
+				case GS_INTRO_MPEG: {
+					CPad::UpdatePads();
 
-				    case GS_INIT_INTRO_MPEG:
-					{
-				    	if (FrontEndMenuManager.OS_Language == LANG_FRENCH || FrontEndMenuManager.OS_Language == LANG_GERMAN)
-				    		MoviePlayer::Play("movies/GTAtitlesGER.mpg");
-				    	else
-				    		MoviePlayer::Play("movies/GTAtitles.mpg");
-
-					    gGameState = GS_INTRO_MPEG;
-					    TRACE("gGameState = GS_INTRO_MPEG;");
-					    break;
-				    }
-
-				    case GS_INTRO_MPEG:
-					{
-				    	CPad::UpdatePads();
-
-				    	if (MoviePlayer::IsActive()) {
-				    		MoviePlayer::Draw();
-				    		if (SkipMovieButtonJustDown())
-				    			MoviePlayer::Stop();
-				    	} else {
-				    		++gGameState;
-				    	}
-
-					    break;
-				    }
-
-					case GS_INIT_ONCE:
-					{
-						//CoUninitialize();
-						
-#ifdef PS2_MENU
-						extern char version_name[64];
-						if ( CGame::frenchGame || CGame::germanGame )
-							LoadingScreen(NULL, version_name, "loadsc24");
-						else
-							LoadingScreen(NULL, version_name, "loadsc0");
-						
-						printf("Into TheGame!!!\n");
-#else				
-						LoadingScreen(nil, nil, "loadsc0");
-						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
-#endif
-						if (psRefreshAndGetWindowMinimizedPause())
-							break;
-						if ( !CGame::InitialiseOnceAfterRW() )
-							RsGlobal.quit = TRUE;
-						
-#ifdef PS2_MENU
-						gGameState = GS_INIT_PLAYING_GAME;
-#else
-						gGameState = GS_INIT_FRONTEND;
-						TRACE("gGameState = GS_INIT_FRONTEND;");
-#endif
-						break;
+					if(MoviePlayer::IsActive()) {
+						MoviePlayer::Draw();
+						if(SkipMovieButtonJustDown()) MoviePlayer::Stop();
+					} else {
+						++gGameState;
 					}
+
+					break;
+				}
+
+				case GS_INIT_ONCE: {
+					// CoUninitialize();
+
+#ifdef PS2_MENU
+					extern char version_name[64];
+					if(CGame::frenchGame || CGame::germanGame)
+						LoadingScreen(NULL, version_name, "loadsc24");
+					else
+						LoadingScreen(NULL, version_name, "loadsc0");
+
+					printf("Into TheGame!!!\n");
+#else
+					LoadingScreen(nil, nil, "loadsc0");
+					// LoadingScreen(nil, nil, "loadsc0"); // duplicate
+#endif
+					if(psRefreshAndGetWindowMinimizedPause()) break;
+					if(!CGame::InitialiseOnceAfterRW()) RsGlobal.quit = TRUE;
+
+#ifdef PS2_MENU
+					gGameState = GS_INIT_PLAYING_GAME;
+#else
+					gGameState = GS_INIT_FRONTEND;
+					TRACE("gGameState = GS_INIT_FRONTEND;");
+#endif
+					break;
+				}
 #ifndef PS2_MENU
-					case GS_INIT_FRONTEND:
-					{
-						LoadingScreen(nil, nil, "loadsc0");
-						// LoadingScreen(nil, nil, "loadsc0"); // duplicate
-						if (psRefreshAndGetWindowMinimizedPause())
-							break;
+				case GS_INIT_FRONTEND: {
+					LoadingScreen(nil, nil, "loadsc0");
+					// LoadingScreen(nil, nil, "loadsc0"); // duplicate
+					if(psRefreshAndGetWindowMinimizedPause()) break;
 
-						FrontEndMenuManager.m_bGameNotLoaded = true;
-						
-						FrontEndMenuManager.m_bStartUpFrontEndRequested = true;
-						
-						if ( defaultFullscreenRes )
-						{
-							defaultFullscreenRes = FALSE;
-							FrontEndMenuManager.m_nPrefsVideoMode = GcurSelVM;
-							FrontEndMenuManager.m_nDisplayVideoMode = GcurSelVM;
-						}
-						
-						gGameState = GS_FRONTEND;
-						TRACE("gGameState = GS_FRONTEND;");
-						break;
+					FrontEndMenuManager.m_bGameNotLoaded = true;
+
+					FrontEndMenuManager.m_bStartUpFrontEndRequested = true;
+
+					if(defaultFullscreenRes) {
+						defaultFullscreenRes = FALSE;
+						FrontEndMenuManager.m_nPrefsVideoMode = GcurSelVM;
+						FrontEndMenuManager.m_nDisplayVideoMode = GcurSelVM;
 					}
-					
-					case GS_FRONTEND:
+
+					gGameState = GS_FRONTEND;
+					TRACE("gGameState = GS_FRONTEND;");
+					break;
+				}
+
+				case GS_FRONTEND: {
+					if(!WindowIconified) RsEventHandler(rsFRONTENDIDLE, nil);
+
+#ifdef PS2_MENU
+					if(!FrontEndMenuManager.m_bMenuActive || TheMemoryCard.m_bWantToLoad)
+#else
+					if(!FrontEndMenuManager.m_bMenuActive || FrontEndMenuManager.m_bWantToLoad)
+#endif
 					{
-						if(!WindowIconified)
-							RsEventHandler(rsFRONTENDIDLE, nil);
-
-#ifdef PS2_MENU
-						if ( !FrontEndMenuManager.m_bMenuActive || TheMemoryCard.m_bWantToLoad )
-#else
-						if ( !FrontEndMenuManager.m_bMenuActive || FrontEndMenuManager.m_bWantToLoad )
-#endif
-						{
-							if (psRefreshAndGetWindowMinimizedPause())
-								break;
-							gGameState = GS_INIT_PLAYING_GAME;
-							TRACE("gGameState = GS_INIT_PLAYING_GAME;");
-						}
-
-#ifdef PS2_MENU
-						if (TheMemoryCard.m_bWantToLoad )
-#else
-						if ( FrontEndMenuManager.m_bWantToLoad )
-#endif
-						{
-							if (psRefreshAndGetWindowMinimizedPause())
-								break;
-							InitialiseGame();
-							FrontEndMenuManager.m_bGameNotLoaded = false;
-							gGameState = GS_PLAYING_GAME;
-							TRACE("gGameState = GS_PLAYING_GAME;");
-						}
-						break;
+						if(psRefreshAndGetWindowMinimizedPause()) break;
+						gGameState = GS_INIT_PLAYING_GAME;
+						TRACE("gGameState = GS_INIT_PLAYING_GAME;");
 					}
-#endif
-					
-					case GS_INIT_PLAYING_GAME:
-					{
-						if (psRefreshAndGetWindowMinimizedPause())
-							break;
+
 #ifdef PS2_MENU
-						CGame::Initialise("DATA\\GTA3.DAT");
-						
-						//LoadingScreen("Starting Game", NULL, GetRandomSplashScreen());
-					
-						if (   TheMemoryCard.CheckCardInserted(CARD_ONE) == CMemoryCard::NO_ERR_SUCCESS
-							&& TheMemoryCard.ChangeDirectory(CARD_ONE, TheMemoryCard.Cards[CARD_ONE].dir)
-							&& TheMemoryCard.FindMostRecentFileName(CARD_ONE, TheMemoryCard.MostRecentFile) == true
-							&& TheMemoryCard.CheckDataNotCorrupt(TheMemoryCard.MostRecentFile))
-						{
-							strcpy(TheMemoryCard.LoadFileName, TheMemoryCard.MostRecentFile);
-							TheMemoryCard.b_FoundRecentSavedGameWantToLoad = true;
-					
-							if (CMenuManager::m_PrefsLanguage != TheMemoryCard.GetLanguageToLoad())
-							{
-								CMenuManager::m_PrefsLanguage = TheMemoryCard.GetLanguageToLoad();
-								TheText.Unload();
-								TheText.Load();
-							}
-					
-							CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
-						}
+					if(TheMemoryCard.m_bWantToLoad)
 #else
+					if(FrontEndMenuManager.m_bWantToLoad)
+#endif
+					{
+						if(psRefreshAndGetWindowMinimizedPause()) break;
 						InitialiseGame();
-
 						FrontEndMenuManager.m_bGameNotLoaded = false;
-#endif
 						gGameState = GS_PLAYING_GAME;
 						TRACE("gGameState = GS_PLAYING_GAME;");
-						break;
 					}
-					
-					case GS_PLAYING_GAME:
-					{
-						float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
-						if ( RwInitialised )
-						{
-							if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
-								RsEventHandler(rsIDLE, (void *)TRUE);
-						}
-						break;
-					}
+					break;
 				}
-			}
-			else
-			{
+#endif
+
+				case GS_INIT_PLAYING_GAME: {
+					if(psRefreshAndGetWindowMinimizedPause()) break;
+#ifdef PS2_MENU
+					CGame::Initialise("DATA\\GTA3.DAT");
+
+					// LoadingScreen("Starting Game", NULL, GetRandomSplashScreen());
+
+					if(TheMemoryCard.CheckCardInserted(CARD_ONE) == CMemoryCard::NO_ERR_SUCCESS &&
+					   TheMemoryCard.ChangeDirectory(CARD_ONE, TheMemoryCard.Cards[CARD_ONE].dir) &&
+					   TheMemoryCard.FindMostRecentFileName(CARD_ONE, TheMemoryCard.MostRecentFile) == true &&
+					   TheMemoryCard.CheckDataNotCorrupt(TheMemoryCard.MostRecentFile)) {
+						strcpy(TheMemoryCard.LoadFileName, TheMemoryCard.MostRecentFile);
+						TheMemoryCard.b_FoundRecentSavedGameWantToLoad = true;
+
+						if(CMenuManager::m_PrefsLanguage != TheMemoryCard.GetLanguageToLoad()) {
+							CMenuManager::m_PrefsLanguage = TheMemoryCard.GetLanguageToLoad();
+							TheText.Unload();
+							TheText.Load();
+						}
+
+						CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
+					}
+#else
+					InitialiseGame();
+
+					FrontEndMenuManager.m_bGameNotLoaded = false;
+#endif
+					gGameState = GS_PLAYING_GAME;
+					TRACE("gGameState = GS_PLAYING_GAME;");
+					break;
+				}
+
+				case GS_PLAYING_GAME: {
+					float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+					if(RwInitialised) {
+						if(!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
+							RsEventHandler(rsIDLE, (void *)TRUE);
+					}
+					break;
+				}
+				}
+			} else {
 				psRefreshFocusAfterPause();
-				if (!IsWindowActuallyActive())
-					glfwWaitEventsTimeout(0.05);
+				if(!IsWindowActuallyActive()) glfwWaitEventsTimeout(0.05);
 			}
 		}
 
-		
-		/* 
-		* About to shut down - block resize events again...
-		*/
+		/*
+		 * About to shut down - block resize events again...
+		 */
 		RwInitialised = FALSE;
-		
+
 		FrontEndMenuManager.UnloadTextures();
-#ifdef PS2_MENU	
-		if ( !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad))
-			break;
+#ifdef PS2_MENU
+		if(!(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad)) break;
 #else
-		if ( !FrontEndMenuManager.m_bWantToRestart )
-			break;
+		if(!FrontEndMenuManager.m_bWantToRestart) break;
 #endif
-		
+
 		CPad::ResetCheats();
 		CPad::StopPadsShaking();
-		
+
 		DMAudio.ChangeMusicMode(MUSICMODE_DISABLE);
-		
+
 #ifdef PS2_MENU
 		CGame::ShutDownForRestart();
 #endif
-		
+
 		CTimer::Stop();
-		
+
 #ifdef PS2_MENU
-		if (FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad)
-		{
-			if (TheMemoryCard.b_FoundRecentSavedGameWantToLoad)
-			{
+		if(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) {
+			if(TheMemoryCard.b_FoundRecentSavedGameWantToLoad) {
 				FrontEndMenuManager.m_bWantToRestart = true;
 				TheMemoryCard.m_bWantToLoad = true;
 			}
@@ -2732,64 +2534,59 @@ main(int argc, char *argv[])
 			CGame::InitialiseWhenRestarting();
 			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
-			
+
 			continue;
 		}
-		
-		CGame::ShutDown();	
+
+		CGame::ShutDown();
 		CTimer::Stop();
-		
+
 		break;
 #else
-		if ( FrontEndMenuManager.m_bWantToLoad )
-		{
+		if(FrontEndMenuManager.m_bWantToLoad) {
 			CGame::ShutDownForRestart();
 			CGame::InitialiseWhenRestarting();
 			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
 			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
 			FrontEndMenuManager.m_bWantToLoad = false;
-		}
-		else
-		{
+		} else {
 #ifndef MASTER
-			if ( gbModelViewer )
+			if(gbModelViewer)
 				CAnimViewer::Shutdown();
 			else
 #endif
-			if ( gGameState == GS_PLAYING_GAME )
+			    if(gGameState == GS_PLAYING_GAME)
 				CGame::ShutDown();
-			
+
 			CTimer::Stop();
-			
-			if ( FrontEndMenuManager.m_bFirstTime == true )
-			{
+
+			if(FrontEndMenuManager.m_bFirstTime == true) {
 				gGameState = GS_INIT_FRONTEND;
 				TRACE("gGameState = GS_INIT_FRONTEND;");
-			}
-			else
-			{
+			} else {
 				gGameState = GS_INIT_PLAYING_GAME;
 				TRACE("gGameState = GS_INIT_PLAYING_GAME;");
 			}
 		}
-		
+
 		FrontEndMenuManager.m_bFirstTime = false;
 		FrontEndMenuManager.m_bWantToRestart = false;
 #endif
 	}
-	
+
 #ifndef MASTER
-	if ( gbModelViewer )
+	if(gbModelViewer)
 		CAnimViewer::Shutdown();
 	else
 #endif
-	if ( gGameState == GS_PLAYING_GAME )
+	    if(gGameState == GS_PLAYING_GAME)
 		CGame::ShutDown();
 
-	DMAudio.Terminate();
-	
-	_psFreeVideoModeList();
+	if(PSGLOBAL(window) != nil) glfwHideWindow(PSGLOBAL(window));
 
+	DMAudio.Terminate();
+
+	_psFreeVideoModeList();
 
 	/*
 	 * Tidy up the 3D (RenderWare) components of the application...
@@ -2802,11 +2599,11 @@ main(int argc, char *argv[])
 	RsEventHandler(rsTERMINATE, nil);
 
 #ifdef _WIN32
-	/* 
+	/*
 	 * Free the argv strings...
 	 */
 	free(argv);
-	
+
 	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
 	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, TRUE, nil, SPIF_SENDCHANGE);
 	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, TRUE, nil, SPIF_SENDCHANGE);
@@ -2823,53 +2620,52 @@ main(int argc, char *argv[])
 RwV2d leftStickPos;
 RwV2d rightStickPos;
 
-void CapturePad(RwInt32 padID)
+void
+CapturePad(RwInt32 padID)
 {
 	int8 glfwPad = -1;
 
-	if( padID == 0 )
+	if(padID == 0)
 		glfwPad = PSGLOBAL(joy1id);
-	else if( padID == 1)
+	else if(padID == 1)
 		glfwPad = PSGLOBAL(joy2id);
 	else
 		assert("invalid padID");
-	
-	if ( glfwPad == -1 )
-		return;
-	
+
+	if(glfwPad == -1) return;
+
 	int numButtons, numAxes;
 	const uint8 *buttons = glfwGetJoystickButtons(glfwPad, &numButtons);
 	const float *axes = glfwGetJoystickAxes(glfwPad, &numAxes);
 	GLFWgamepadstate gamepadState;
 
-	if (ControlsManager.m_bFirstCapture == false) {
+	if(ControlsManager.m_bFirstCapture == false) {
 		memcpy(&ControlsManager.m_OldState, &ControlsManager.m_NewState, sizeof(ControlsManager.m_NewState));
 	} else {
 		// In case connected gamepad doesn't have L-R trigger axes.
 		ControlsManager.m_NewState.mappedButtons[15] = ControlsManager.m_NewState.mappedButtons[16] = 0;
 	}
 
-	ControlsManager.m_NewState.buttons = (uint8*)buttons;
+	ControlsManager.m_NewState.buttons = (uint8 *)buttons;
 	ControlsManager.m_NewState.numButtons = numButtons;
 	ControlsManager.m_NewState.id = glfwPad;
 	ControlsManager.m_NewState.isGamepad = glfwGetGamepadState(glfwPad, &gamepadState);
-	if (ControlsManager.m_NewState.isGamepad) {
+	if(ControlsManager.m_NewState.isGamepad) {
 		memcpy(&ControlsManager.m_NewState.mappedButtons, gamepadState.buttons, sizeof(gamepadState.buttons));
 		float lt = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER], rt = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
 
 		// glfw returns 0.0 for non-existent axises(which is bullocks) so we treat it as deadzone, and keep value of previous frame.
 		// otherwise if this axis is present, -1 = released, 1 = pressed
-		if (lt != 0.0f)
-			ControlsManager.m_NewState.mappedButtons[15] = lt > -0.8f;
+		if(lt != 0.0f) ControlsManager.m_NewState.mappedButtons[15] = lt > -0.8f;
 
-		if (rt != 0.0f)
-			ControlsManager.m_NewState.mappedButtons[16] = rt > -0.8f;
+		if(rt != 0.0f) ControlsManager.m_NewState.mappedButtons[16] = rt > -0.8f;
 	}
-	// TODO? L2-R2 axes(not buttons-that's fine) on joysticks that don't have SDL gamepad mapping AREN'T handled, and I think it's impossible to do without mapping.
+	// TODO? L2-R2 axes(not buttons-that's fine) on joysticks that don't have SDL gamepad mapping AREN'T handled, and I think it's impossible to do without
+	// mapping.
 
-	if (ControlsManager.m_bFirstCapture == true) {
+	if(ControlsManager.m_bFirstCapture == true) {
 		memcpy(&ControlsManager.m_OldState, &ControlsManager.m_NewState, sizeof(ControlsManager.m_NewState));
-		
+
 		ControlsManager.m_bFirstCapture = false;
 	}
 
@@ -2877,42 +2673,36 @@ void CapturePad(RwInt32 padID)
 	bs.padID = padID;
 
 	RsPadEventHandler(rsPADBUTTONUP, (void *)&bs);
-	
+
 	// Gamepad axes are guaranteed to return 0.0f if that particular gamepad doesn't have that axis.
 	// And that's really good for sticks, because gamepads return 0.0 for them when sticks are in released state.
-	if ( glfwPad != -1 ) {
+	if(glfwPad != -1) {
 		leftStickPos.x = ControlsManager.m_NewState.isGamepad ? gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X] : numAxes >= 1 ? axes[0] : 0.0f;
 		leftStickPos.y = ControlsManager.m_NewState.isGamepad ? gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] : numAxes >= 2 ? axes[1] : 0.0f;
 
 		rightStickPos.x = ControlsManager.m_NewState.isGamepad ? gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] : numAxes >= 3 ? axes[2] : 0.0f;
 		rightStickPos.y = ControlsManager.m_NewState.isGamepad ? gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] : numAxes >= 4 ? axes[3] : 0.0f;
 	}
-	
+
 	{
-		if (CPad::m_bMapPadOneToPadTwo)
-			bs.padID = 1;
-		
-		RsPadEventHandler(rsPADBUTTONUP,   (void *)&bs);
+		if(CPad::m_bMapPadOneToPadTwo) bs.padID = 1;
+
+		RsPadEventHandler(rsPADBUTTONUP, (void *)&bs);
 		RsPadEventHandler(rsPADBUTTONDOWN, (void *)&bs);
 	}
-	
+
 	{
-		if (CPad::m_bMapPadOneToPadTwo)
-			bs.padID = 1;
-		
+		if(CPad::m_bMapPadOneToPadTwo) bs.padID = 1;
+
 		CPad *pad = CPad::GetPad(bs.padID);
 
-		if ( Abs(leftStickPos.x)  > 0.3f )
-			pad->PCTempJoyState.LeftStickX	= (int32)(leftStickPos.x  * 128.0f);
-		
-		if ( Abs(leftStickPos.y)  > 0.3f )
-			pad->PCTempJoyState.LeftStickY	= (int32)(leftStickPos.y  * 128.0f);
-		
-		if ( Abs(rightStickPos.x) > 0.3f )
-			pad->PCTempJoyState.RightStickX = (int32)(rightStickPos.x * 128.0f);
+		if(Abs(leftStickPos.x) > 0.3f) pad->PCTempJoyState.LeftStickX = (int32)(leftStickPos.x * 128.0f);
 
-		if ( Abs(rightStickPos.y) > 0.3f )
-			pad->PCTempJoyState.RightStickY = (int32)(rightStickPos.y * 128.0f);
+		if(Abs(leftStickPos.y) > 0.3f) pad->PCTempJoyState.LeftStickY = (int32)(leftStickPos.y * 128.0f);
+
+		if(Abs(rightStickPos.x) > 0.3f) pad->PCTempJoyState.RightStickX = (int32)(rightStickPos.x * 128.0f);
+
+		if(Abs(rightStickPos.y) > 0.3f) pad->PCTempJoyState.RightStickY = (int32)(rightStickPos.y * 128.0f);
 	}
 
 	_psHandleVibration();
@@ -2920,10 +2710,11 @@ void CapturePad(RwInt32 padID)
 	return;
 }
 
-void joysChangeCB(int jid, int event)
+void
+joysChangeCB(int jid, int event)
 {
-	if (event == GLFW_CONNECTED && !IsThisJoystickBlacklisted(jid)) {
-		if (PSGLOBAL(joy1id) == -1) {
+	if(event == GLFW_CONNECTED && !IsThisJoystickBlacklisted(jid)) {
+		if(PSGLOBAL(joy1id) == -1) {
 			PSGLOBAL(joy1id) = jid;
 #ifdef DETECT_JOYSTICK_MENU
 			strcpy(gSelectedJoystickName, glfwGetJoystickName(jid));
@@ -2934,25 +2725,23 @@ void joysChangeCB(int jid, int event)
 			glfwGetJoystickButtons(PSGLOBAL(joy1id), &count);
 			ControlsManager.InitDefaultControlConfigJoyPad(count);
 #endif
-		} else if (PSGLOBAL(joy2id) == -1)
+		} else if(PSGLOBAL(joy2id) == -1)
 			PSGLOBAL(joy2id) = jid;
 
-	} else if (event == GLFW_DISCONNECTED) {
-		if (PSGLOBAL(joy1id) == jid) {
+	} else if(event == GLFW_DISCONNECTED) {
+		if(PSGLOBAL(joy1id) == jid) {
 			PSGLOBAL(joy1id) = -1;
-		} else if (PSGLOBAL(joy2id) == jid)
+		} else if(PSGLOBAL(joy2id) == jid)
 			PSGLOBAL(joy2id) = -1;
 	}
 }
 
 #if (defined(_MSC_VER))
-int strcasecmp(const char* str1, const char* str2)
-{
-	return _strcmpi(str1, str2);
-}
-int strncasecmp(const char *str1, const char *str2, size_t len)
-{
-	return _strnicmp(str1, str2, len);
-}
+int
+strcasecmp(const char *str1, const char *str2)
+{ return _strcmpi(str1, str2); }
+int
+strncasecmp(const char *str1, const char *str2, size_t len)
+{ return _strnicmp(str1, str2, len); }
 #endif
 #endif

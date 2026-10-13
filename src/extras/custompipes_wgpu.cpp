@@ -1,17 +1,17 @@
 #include "common.h"
 
 #ifdef RW_WGPU
-#include "main.h"
-#include "RwHelper.h"
-#include "Lights.h"
-#include "Timecycle.h"
-#include "FileMgr.h"
 #include "Clock.h"
-#include "Weather.h"
-#include "TxdStore.h"
+#include "FileMgr.h"
+#include "Lights.h"
 #include "Renderer.h"
+#include "RwHelper.h"
+#include "Timecycle.h"
+#include "TxdStore.h"
+#include "Weather.h"
 #include "World.h"
 #include "custompipes.h"
+#include "main.h"
 
 #ifdef EXTENDED_PIPELINES
 
@@ -30,7 +30,8 @@
  * uploads textures and renders camera textures with a top-left origin.
  */
 
-namespace CustomPipes {
+namespace CustomPipes
+{
 
 /*
  * Neo Vehicle pipe
@@ -130,8 +131,7 @@ uploadSpecLights(void)
 {
 	memset(vehParams.specDir, 0, sizeof(vehParams.specDir));
 	memset(vehParams.specColor, 0, sizeof(vehParams.specColor));
-	for(int i = 0; i < 1+NUMEXTRADIRECTIONALS; i++)
-		vehParams.specDir[i][3] = 1.0f;	// power
+	for(int i = 0; i < 1 + NUMEXTRADIRECTIONALS; i++) vehParams.specDir[i][3] = 1.0f; // power
 	float power = Power.Get();
 	Color speccol = SpecColor.Get();
 	vehParams.specColor[0][0] = speccol.r;
@@ -142,16 +142,16 @@ uploadSpecLights(void)
 	vehParams.specDir[0][1] = dir.y;
 	vehParams.specDir[0][2] = dir.z;
 	vehParams.specDir[0][3] = power;
-	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++){
-		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS){
-			vehParams.specColor[1+i][0] = pExtraDirectionals[i]->color.red;
-			vehParams.specColor[1+i][1] = pExtraDirectionals[i]->color.green;
-			vehParams.specColor[1+i][2] = pExtraDirectionals[i]->color.blue;
+	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++) {
+		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS) {
+			vehParams.specColor[1 + i][0] = pExtraDirectionals[i]->color.red;
+			vehParams.specColor[1 + i][1] = pExtraDirectionals[i]->color.green;
+			vehParams.specColor[1 + i][2] = pExtraDirectionals[i]->color.blue;
 			dir = pExtraDirectionals[i]->getFrame()->getLTM()->at;
-			vehParams.specDir[1+i][0] = dir.x;
-			vehParams.specDir[1+i][1] = dir.y;
-			vehParams.specDir[1+i][2] = dir.z;
-			vehParams.specDir[1+i][3] = power*2.0f;
+			vehParams.specDir[1 + i][0] = dir.x;
+			vehParams.specDir[1 + i][1] = dir.y;
+			vehParams.specDir[1 + i][2] = dir.z;
+			vehParams.specDir[1 + i][3] = power * 2.0f;
 		}
 	}
 }
@@ -169,7 +169,7 @@ static void
 vehicleRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 {
 	// TODO: make this less of a kludge (same as GL)
-	if(VehiclePipeSwitch == VEHICLEPIPE_MATFX){
+	if(VehiclePipeSwitch == VEHICLEPIPE_MATFX) {
 		rw::matFXGlobals.pipelines[rw::platform]->render(atomic);
 		return;
 	}
@@ -183,7 +183,7 @@ vehicleRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 	vehParams.reflProps[1] = SpecColor.Get().a;
 	uploadSpecLights();
 
-	rw::wgpu::setObjTexture2(EnvMapTex);
+	rw::wgpu::setObjTexture2(bRenderingEnvMap ? nil : EnvMapTex);
 	rw::SetRenderState(rw::SRCBLEND, rw::BLENDONE);
 
 	rw::wgpu::objShaderRender(neoVehicleShader, atomic, vehicleMeshCB, nil, 0);
@@ -197,8 +197,8 @@ CreateVehiclePipe(void)
 {
 	if(CFileMgr::LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/carTweakingTable.dat'\n");
-	else{
-		char *fp = (char*)work_buff;
+	else {
+		char *fp = (char *)work_buff;
 		fp = ReadTweakValueTable(fp, Fresnel);
 		fp = ReadTweakValueTable(fp, Power);
 		fp = ReadTweakValueTable(fp, DiffColor);
@@ -221,11 +221,9 @@ DestroyVehiclePipe(void)
 	rw::wgpu::destroyObjShader(neoVehicleShader);
 	neoVehicleShader = nil;
 
-	((rw::ObjPipeline*)vehiclePipe)->destroy();
+	((rw::ObjPipeline *)vehiclePipe)->destroy();
 	vehiclePipe = nil;
 }
-
-
 
 /*
  * Neo World pipe
@@ -300,13 +298,12 @@ worldMeshCB(rw::wgpu::ObjShader *sh, rw::Atomic *atomic, rw::Material *m, void *
 
 	float blend = 0.0f;
 	Texture *dualtex = nil;
-	if(MatFX::getEffects(m) == MatFX::DUAL){
+	if(MatFX::getEffects(m) == MatFX::DUAL) {
 		MatFX *matfx = MatFX::get(m);
 		dualtex = matfx->getDualTexture();
-		if(dualtex)
-			blend = WorldLightmapBlend.Get()*LightmapMult;
+		if(dualtex) blend = WorldLightmapBlend.Get() * LightmapMult;
 	}
-	rw::wgpu::setObjTexture2(dualtex);	// nil -> white (no lightmap)
+	rw::wgpu::setObjTexture2(dualtex); // nil -> white (no lightmap)
 	worldParams.lightMap[0] = worldParams.lightMap[1] = worldParams.lightMap[2] = blend;
 	worldParams.lightMap[3] = 0.0f;
 	rw::wgpu::setObjShaderParams(sh, &worldParams, sizeof(worldParams));
@@ -316,7 +313,7 @@ worldMeshCB(rw::wgpu::ObjShader *sh, rw::Atomic *atomic, rw::Material *m, void *
 static void
 worldRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 {
-	if(!LightmapEnable){
+	if(!LightmapEnable) {
 		rw::wgpu::objDefaultRender(pipe, atomic);
 		return;
 	}
@@ -330,7 +327,7 @@ CreateWorldPipe(void)
 	if(CFileMgr::LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/worldTweakingTable.dat'\n");
 	else
-		ReadTweakValueTable((char*)work_buff, WorldLightmapBlend);
+		ReadTweakValueTable((char *)work_buff, WorldLightmapBlend);
 
 	neoWorldShader = rw::wgpu::createObjShader(neoWorld_wgsl);
 	assert(neoWorldShader);
@@ -348,12 +345,9 @@ DestroyWorldPipe(void)
 	rw::wgpu::destroyObjShader(neoWorldShader);
 	neoWorldShader = nil;
 
-	((rw::ObjPipeline*)worldPipe)->destroy();
+	((rw::ObjPipeline *)worldPipe)->destroy();
 	worldPipe = nil;
 }
-
-
-
 
 /*
  * Neo Gloss pipe
@@ -413,11 +407,9 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
 static bool
 glossMeshCB(rw::wgpu::ObjShader *sh, rw::Atomic *atomic, rw::Material *m, void *user)
 {
-	if(m->texture == nil)
-		return false;
+	if(m->texture == nil) return false;
 	rw::Texture *tex = GetGlossTex(m);
-	if(tex == nil)
-		return false;
+	if(tex == nil) return false;
 	rw::wgpu::setObjTexture0(tex);
 	return true;
 }
@@ -428,8 +420,7 @@ glossRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 	using namespace rw;
 
 	worldRender(pipe, atomic);
-	if(!GlossEnable)
-		return;
+	if(!GlossEnable) return;
 
 	rw::V3d eyePos = rw::engine->currentCamera->getFrame()->getLTM()->pos;
 	glossParams.eye[0] = eyePos.x;
@@ -447,8 +438,7 @@ glossRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 	SetRenderState(ZWRITEENABLE, FALSE);
 	SetRenderState(ALPHATESTFUNC, ALPHAALWAYS);
 
-	rw::wgpu::objShaderRender(neoGlossShader, atomic, glossMeshCB, nil,
-	                          rw::wgpu::OBJRENDER_FORCEBLEND);
+	rw::wgpu::objShaderRender(neoGlossShader, atomic, glossMeshCB, nil, rw::wgpu::OBJRENDER_FORCEBLEND);
 
 	SetRenderState(ZWRITEENABLE, TRUE);
 	SetRenderState(ALPHATESTFUNC, ALPHAGREATEREQUAL);
@@ -475,11 +465,9 @@ DestroyGlossPipe(void)
 	rw::wgpu::destroyObjShader(neoGlossShader);
 	neoGlossShader = nil;
 
-	((rw::ObjPipeline*)glossPipe)->destroy();
+	((rw::ObjPipeline *)glossPipe)->destroy();
 	glossPipe = nil;
 }
-
-
 
 /*
  * Neo Rim pipes
@@ -500,24 +488,24 @@ static RimParams rimParams;
 
 // shared vertex-stage rim logic; the skinned variant differs only in the
 // skinning prologue
-#define RIM_VS_BODY \
-	"	var col = inColor;\n" \
-	"	col = vec4<f32>(col.rgb\n" \
-	"	                + uniforms.ambLight.rgb * uniforms.surfProps.x\n" \
-	"	                + DoDynamicLight(Vertex.xyz, Normal) * uniforms.surfProps.z,\n" \
-	"	                col.a);\n" \
-	"	// rim light\n" \
-	"	let rf = u_params.p[1].x - u_params.p[1].y * dot(Normal, u_params.p[0].xyz);\n" \
-	"	let rimlight = clamp(mix(u_params.p[3], u_params.p[2], rf) * u_params.p[1].z,\n" \
-	"	                     vec4<f32>(0.0), vec4<f32>(1.0));\n" \
-	"	col = vec4<f32>(col.rgb + rimlight.rgb, col.a);\n" \
-	"	col = clamp(col, vec4<f32>(0.0), vec4<f32>(1.0));\n" \
-	"	out.color = col * uniforms.matColor;\n" \
-	"	out.uv = inUV;\n" \
+#define RIM_VS_BODY                                                                                                                                            \
+	"	var col = inColor;\n"                                                                                                                                \
+	"	col = vec4<f32>(col.rgb\n"                                                                                                                           \
+	"	                + uniforms.ambLight.rgb * uniforms.surfProps.x\n"                                                                                    \
+	"	                + DoDynamicLight(Vertex.xyz, Normal) * uniforms.surfProps.z,\n"                                                                      \
+	"	                col.a);\n"                                                                                                                           \
+	"	// rim light\n"                                                                                                                                      \
+	"	let rf = u_params.p[1].x - u_params.p[1].y * dot(Normal, u_params.p[0].xyz);\n"                                                                      \
+	"	let rimlight = clamp(mix(u_params.p[3], u_params.p[2], rf) * u_params.p[1].z,\n"                                                                     \
+	"	                     vec4<f32>(0.0), vec4<f32>(1.0));\n"                                                                                             \
+	"	col = vec4<f32>(col.rgb + rimlight.rgb, col.a);\n"                                                                                                   \
+	"	col = clamp(col, vec4<f32>(0.0), vec4<f32>(1.0));\n"                                                                                                 \
+	"	out.color = col * uniforms.matColor;\n"                                                                                                              \
+	"	out.uv = inUV;\n"                                                                                                                                    \
 	"	out.fog = DoFog(out.position.w);\n"
 
 static const char *neoRim_wgsl =
-R"(
+    R"(
 struct VsIn {
 	@location(0) pos    : vec3<f32>,
 	@location(1) normal : vec3<f32>,
@@ -541,9 +529,8 @@ fn vs_main(v : VsIn) -> VsOut {
 	let Normal = wm3 * v.normal;
 	let inColor = v.color;
 	let inUV = v.uv;
-)"
-RIM_VS_BODY
-R"(
+)" RIM_VS_BODY
+    R"(
 	return out;
 }
 
@@ -557,7 +544,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
 )";
 
 static const char *neoRimSkin_wgsl =
-R"(
+    R"(
 struct VsIn {
 	@location(0) pos     : vec3<f32>,
 	@location(1) normal  : vec3<f32>,
@@ -593,9 +580,8 @@ fn vs_main(v : VsIn) -> VsOut {
 	let Normal = wm3 * skinNorm;
 	let inColor = v.color;
 	let inUV = v.uv;
-)"
-RIM_VS_BODY
-R"(
+)" RIM_VS_BODY
+    R"(
 	return out;
 }
 
@@ -619,7 +605,7 @@ uploadRimData(rw::wgpu::ObjShader *sh, bool enable)
 	rimParams.rimData[0] = Offset.Get();
 	rimParams.rimData[1] = Scale.Get();
 	if(enable)
-		rimParams.rimData[2] = Scaling.Get()*RimlightMult;
+		rimParams.rimData[2] = Scaling.Get() * RimlightMult;
 	else
 		rimParams.rimData[2] = 0.0f;
 	rimParams.rimData[3] = 0.0f;
@@ -633,7 +619,7 @@ uploadRimData(rw::wgpu::ObjShader *sh, bool enable)
 static void
 rimRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 {
-	if(!RimlightEnable){
+	if(!RimlightEnable) {
 		rw::wgpu::objDefaultRender(pipe, atomic);
 		return;
 	}
@@ -644,7 +630,7 @@ rimRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 static void
 rimSkinRender(rw::ObjPipeline *pipe, rw::Atomic *atomic)
 {
-	if(!RimlightEnable){
+	if(!RimlightEnable) {
 		rw::skinGlobals.pipelines[rw::platform]->render(atomic);
 		return;
 	}
@@ -657,8 +643,8 @@ CreateRimLightPipes(void)
 {
 	if(CFileMgr::LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/rimTweakingTable.dat'\n");
-	else{
-		char *fp = (char*)work_buff;
+	else {
+		char *fp = (char *)work_buff;
 		fp = ReadTweakValueTable(fp, RampStart);
 		fp = ReadTweakValueTable(fp, RampEnd);
 		fp = ReadTweakValueTable(fp, Offset);
@@ -693,14 +679,14 @@ DestroyRimLightPipes(void)
 	rw::wgpu::destroyObjShader(neoRimSkinShader);
 	neoRimSkinShader = nil;
 
-	((rw::ObjPipeline*)rimPipe)->destroy();
+	((rw::ObjPipeline *)rimPipe)->destroy();
 	rimPipe = nil;
 
-	((rw::ObjPipeline*)rimSkinPipe)->destroy();
+	((rw::ObjPipeline *)rimSkinPipe)->destroy();
 	rimSkinPipe = nil;
 }
 
-}
+} // namespace CustomPipes
 
 #endif
 
@@ -719,16 +705,17 @@ namespace WorldRender
  * store the atomic + its capture-time matrix and the blend-mesh mask.
  */
 
-struct BuildingInst
-{
+struct BuildingInst {
 	rw::Matrix matrix;
 	rw::Atomic *atomic;
-	uint32 blendMask;	// meshes needing blending (deferred)
+	uint32 blendMask; // meshes needing blending (deferred)
 	uint8 fadeAlpha;
 	bool lighting;
 };
 static BuildingInst blendInsts[3][2000];
 int numBlendInsts[3];
+
+#define BLEND_INSTS_MAX 2000
 
 static rw::RGBAf black;
 
@@ -739,34 +726,38 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 {
 	using namespace rw;
 
-	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
-
 	uint32 blendMask = rw::wgpu::objMeshesNeedingBlend(atomic);
-	building->atomic = atomic;
-	building->blendMask = blendMask;
-	building->fadeAlpha = 255;
-	building->lighting = !!(atomic->geometry->flags & rw::Geometry::LIGHT);
-	building->matrix = *atomic->getFrame()->getLTM();
+	bool lighting = !!(atomic->geometry->flags & rw::Geometry::LIGHT);
+	const RGBAf *amb = lighting ? &pAmbient->color : &black;
+	rw::Matrix matrix = *atomic->getFrame()->getLTM();
+	rw::wgpu::objRenderMeshes(atomic, &matrix, ~blendMask, 255, amb);
 
-	const RGBAf *amb = building->lighting ? &pAmbient->color : &black;
-	rw::wgpu::objRenderMeshes(atomic, &building->matrix, ~blendMask, 255, amb);
-
-	if(blendMask)
+	if(blendMask && numBlendInsts[pass] < BLEND_INSTS_MAX) {
+		BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
+		building->atomic = atomic;
+		building->blendMask = blendMask;
+		building->fadeAlpha = 255;
+		building->lighting = lighting;
+		building->matrix = matrix;
 		numBlendInsts[pass]++;
+	}
 }
 
 void
 AtomicFullyTransparent(RpAtomic *atomic, int pass, int fadeAlpha)
 {
-	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
 
-	rw::wgpu::objMeshesNeedingBlend(atomic);	// just instance
-	building->atomic = atomic;
-	building->blendMask = 0xFFFFFFFFu;
-	building->fadeAlpha = fadeAlpha;
-	building->lighting = !!(atomic->geometry->flags & rw::Geometry::LIGHT);
-	building->matrix = *atomic->getFrame()->getLTM();
-	numBlendInsts[pass]++;
+	rw::wgpu::objMeshesNeedingBlend(atomic);  // just instance
+	if(numBlendInsts[pass] < BLEND_INSTS_MAX) // (P3-19) clamp, don't overflow
+	{
+		BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
+		building->atomic = atomic;
+		building->blendMask = 0xFFFFFFFFu;
+		building->fadeAlpha = fadeAlpha;
+		building->lighting = !!(atomic->geometry->flags & rw::Geometry::LIGHT);
+		building->matrix = *atomic->getFrame()->getLTM();
+		numBlendInsts[pass]++;
+	}
 }
 
 void
@@ -775,7 +766,7 @@ RenderBlendPass(int pass)
 	using namespace rw;
 
 	int i;
-	for(i = 0; i < numBlendInsts[pass]; i++){
+	for(i = 0; i < numBlendInsts[pass]; i++) {
 		BuildingInst *building = &blendInsts[pass][i];
 
 		const RGBAf *amb = building->lighting ? &pAmbient->color : &black;
@@ -783,11 +774,10 @@ RenderBlendPass(int pass)
 		// at full alpha, but the fade needs them blended); otherwise only
 		// the deferred blend meshes
 		uint32 mask = building->fadeAlpha != 255 ? 0xFFFFFFFFu : building->blendMask;
-		rw::wgpu::objRenderMeshes(building->atomic, &building->matrix, mask,
-		                          building->fadeAlpha, amb);
+		rw::wgpu::objRenderMeshes(building->atomic, &building->matrix, mask, building->fadeAlpha, amb);
 	}
 }
-}
+} // namespace WorldRender
 #endif
 
 #endif
