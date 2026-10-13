@@ -14447,6 +14447,12 @@ NINTENDO SWITCH CONTROLLER
 [SKIP]
 Натисніть ~h~~k~~VEHICLE_ENTER_EXIT~~w~ щоб пропустити дзвінок.
 
+[FEA_HRT]
+HRTF
+
+[FEA_HAU]
+Авто
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

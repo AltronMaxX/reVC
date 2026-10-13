@@ -522,6 +522,7 @@ bool LoadINISettings()
 #ifdef EXTERNAL_3D_SOUND
 	ReadIniIfExists("Audio", "SpeakerType", &FrontEndMenuManager.m_PrefsSpeakers);
 	ReadIniIfExists("Audio", "Provider", &FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+	ReadIniIfExists("Audio", "HRTF", &FrontEndMenuManager.m_PrefsHRTF);
 #endif
 	ReadIniIfExists("Audio", "DynamicAcoustics", &FrontEndMenuManager.m_PrefsDMA);
 	ReadIniIfExists("Display", "Brightness", &FrontEndMenuManager.m_PrefsBrightness);
@@ -637,6 +638,7 @@ void SaveINISettings()
 #ifdef EXTERNAL_3D_SOUND
 	StoreIni("Audio", "SpeakerType", FrontEndMenuManager.m_PrefsSpeakers);
 	StoreIni("Audio", "Provider", FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+	StoreIni("Audio", "HRTF", FrontEndMenuManager.m_PrefsHRTF);
 #endif
 	StoreIni("Audio", "DynamicAcoustics", FrontEndMenuManager.m_PrefsDMA);
 	StoreIni("Display", "Brightness", FrontEndMenuManager.m_PrefsBrightness);
