@@ -303,6 +303,7 @@ enum eMenuAction
 	MENUACTION_SCREENRES,
 	MENUACTION_AUDIOHW,
 	MENUACTION_SPEAKERCONF,
+	MENUACTION_HRTF,
 	MENUACTION_PLAYERSETUP,
 	MENUACTION_RESTOREDEF,
 	MENUACTION_CTRLMETHOD,
@@ -623,6 +624,7 @@ public:
 	int8 m_PrefsFrameLimiter;
 	int8 m_nPrefsAudio3DProviderIndex;
 	int8 m_PrefsSpeakers;
+	int8 m_PrefsHRTF; // 0=Auto, 1=On, 2=Off (OpenAL-soft ALC_HRTF_SOFT)
 	int8 m_PrefsDMA;
 	int8 m_PrefsSfxVolume;
 	int8 m_PrefsMusicVolume;
