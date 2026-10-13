@@ -14286,6 +14286,9 @@ $~1~
 [FEL_RUS]
 РУССКИЙ
 
+[FEL_UKR]
+УКРАИНСКИЙ
+
 { new display menus }
 [FET_GFX]
 Настройки графики

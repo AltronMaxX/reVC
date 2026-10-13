@@ -1410,6 +1410,16 @@ CGame::ResumeWindowPauseMenuAfterFocusRestore(void)
 		return;
 
 	bWindowPauseMenuPending = false;
+	if (bWindowPauseMenuWasAlreadyActive) {
+		// The user opened the pause menu before focus was lost. Return control
+		// to that regular menu without ending its user pause; otherwise Escape
+		// keeps being rejected as input for the automatic window pause.
+		bWindowPauseMenuActive = false;
+		bWindowPauseMenuWasAlreadyActive = false;
+		DMAudio.SetStreamsPausedForWindowPause(CTimer::GetWindowMinimizedPause());
+		DMAudio.Service();
+		return;
+	}
 	CTimer::StartUserPause();
 	DMAudio.SetStreamsPausedForWindowPause(true);
 	DMAudio.Service();

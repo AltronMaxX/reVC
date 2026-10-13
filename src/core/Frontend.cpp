@@ -3777,7 +3777,8 @@ static bool
 StatsExportUsesUtf8()
 {
 #ifdef MORE_LANGUAGES
-	return FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_RUSSIAN;
+	return FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_RUSSIAN ||
+		FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_UKRAINIAN;
 #else
 	return false;
 #endif
@@ -3786,7 +3787,7 @@ StatsExportUsesUtf8()
 static uint32
 StatsExportRussianCodepoint(wchar c)
 {
-	// Reverse of utils/gxt/russian/tables/vc_table_rus_1c.txt.
+	// Reverse of utils/gxt/rus_ukr/tables/vc_table_rus_1c.txt.
 	// Russian glyphs reuse several visually identical ASCII slots.
 	static const wchar russianGameCharacters[] = {
 		0x41, 0x80, 0x81, 0x82, 0x83, 0x45, 0x84, 0x85,
@@ -3804,6 +3805,30 @@ StatsExportRussianCodepoint(wchar c)
 			return 0x0410 + i;
 
 	return c < 128 ? c : 0xFFFD;
+}
+
+static uint32
+StatsExportCodepoint(wchar c)
+{
+#ifdef MORE_LANGUAGES
+	if (FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_UKRAINIAN) {
+		// The Ukrainian table mostly shares the Russian glyph slots, with these
+		// language-specific replacements and a separate slot for Latin 't'.
+		switch (c) {
+		case 0x49: return 0x0406; // І
+		case 0x69: return 0x0456; // і
+		case 0x74: return 0x0442; // т
+		case 0x79: return 0x0074; // Latin t
+		case 0x94: return 0x0404; // Є
+		case 0x96: return 0x0407; // Ї
+		case 0xAB: return 0x0454; // є
+		case 0xAF: return 0x0457; // ї
+		default: break;
+		}
+	}
+#endif
+
+	return StatsExportRussianCodepoint(c);
 }
 
 static void
@@ -3857,7 +3882,7 @@ StatsExportString(wchar *src, bool html = false, bool replaceDegree = false)
 
 	out.reserve(UnicodeStrlen(src) * 2);
 	for (; *src != '\0'; src++) {
-		const uint32 codepoint = replaceDegree && *src == '_' ? 0x00B0 : StatsExportRussianCodepoint(*src);
+		const uint32 codepoint = replaceDegree && *src == '_' ? 0x00B0 : StatsExportCodepoint(*src);
 		if (html) {
 			switch (codepoint) {
 			case '&': out += "&amp;"; continue;
