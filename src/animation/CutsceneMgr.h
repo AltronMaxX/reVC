@@ -27,7 +27,6 @@ class CCutsceneMgr
 	static bool ms_useCutsceneShadows;
 	static bool ms_waitingForAudioAfterWindowPause;
 	static bool ms_cutsceneAudioResumeRequested;
-	static bool ms_cutsceneAudioSyncUnavailable;
 	static uint8 ms_cutsceneAudioResumeFrames;
 public:
 	static CDirectory *ms_pCutsceneDir;

@@ -14586,6 +14586,9 @@ POLACCO
 [FEL_RUS]
 RUSSO
 
+[FEL_UKR]
+UCRAINO
+
 { new display menus }
 [FET_GFX]
 GRAPHICS SETUP
