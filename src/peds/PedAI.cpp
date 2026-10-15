@@ -2227,8 +2227,15 @@ CPed::ReactToAttack(CEntity *attacker)
 {
 	if (IsPlayer() && attacker->IsPed()) {
 		InformMyGangOfAttack(attacker);
+#ifdef FIRST_PERSON
+		if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_REAL_1ST_PERSON) {
+			SetLookFlag(attacker, true);
+			SetLookTimer(700);
+		}
+#else
 		SetLookFlag(attacker, true);
 		SetLookTimer(700);
+#endif
 		return;
 	}
 	
@@ -5604,8 +5611,10 @@ CPed::DuckAndCover(void)
 	bool justDucked = false;
 	CVehicle *foundVeh = nil;
 	float maxDist = 225.0f;
+#ifndef CROUCH // AI crouch
 	if (bIsDucking)
 		ClearDuck(true);
+#endif
 
 	bCrouchWhenShooting = false;
 	bool duckingWithoutVeh = false;
@@ -5702,6 +5711,13 @@ CPed::DuckAndCover(void)
 				duckPos = duckAtRightSide;
 
 			if (CWorld::TestSphereAgainstWorld(duckPos, 0.5f, nil, true, true, true, false, false, false)) {
+#ifdef CROUCH // AI crouch
+				if (!bIsDucking) {
+					bCrouchWhenShooting = true;
+					SetDuck(10000, true);
+				}
+#endif
+
 				SetSeek(duckPos, 1.0f);
 				m_headingRate = 15.0f;
 				bIsRunning = true;
@@ -5900,6 +5916,16 @@ CPed::SetDuck(uint32 time, bool sth)
 	if (bIsSwimming)
 		return;
 #endif
+
+#ifdef CROUCH
+	if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_IDLE))
+		return;
+#endif
+
+#ifdef CLIMBING
+	if (bIsClimbing)
+		return;
+#endif
 	if (bIsDucking || CTimer::GetTimeInMilliseconds() <= m_duckTimer && !sth) {
 		if (sth && CTimer::GetTimeInMilliseconds() + time > m_duckTimer)
 			m_duckTimer = CTimer::GetTimeInMilliseconds() + time;
@@ -5908,7 +5934,11 @@ CPed::SetDuck(uint32 time, bool sth)
 
 	CAnimBlendAssociation *duckAssoc;
 	if (bCrouchWhenShooting) {
+#ifdef CROUCH
+		duckAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CROUCH_IDLE, 4.0f);
+#else
 		duckAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_DUCK_WEAPON, 4.0f);
+#endif
 		duckAssoc->flags &= ~ASSOC_FADEOUTWHENDONE;
 		bIsDucking = true;
 		m_duckTimer = CTimer::GetTimeInMilliseconds() + time;
@@ -5920,6 +5950,11 @@ CPed::SetDuck(uint32 time, bool sth)
 			m_duckTimer = CTimer::GetTimeInMilliseconds() + time;
 		}
 	}
+
+#ifdef CROUCH
+	if (IsPlayer())
+		TheCamera.Cams[TheCamera.ActiveCam].m_fTargetCameraPosZ = 0.6f;
+#endif
 }
 
 void
@@ -5929,7 +5964,16 @@ CPed::Duck(void)
 		ClearDuck();
 	else if (bIsDucking && bCrouchWhenShooting) {
 		CWeaponInfo *weapon = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
-		CAnimBlendAssociation *crouchAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#ifdef CROUCH
+		CAnimBlendAssociation* crouchAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_IDLE);
+		CAnimBlendAssociation* crouchForwardAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_FORWARD);
+		CAnimBlendAssociation* curCrouchBackwardAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_BACKWARD);
+		CAnimBlendAssociation* curCrouchRollLeftAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_ROLL_L);
+		CAnimBlendAssociation* curCrouchRollRightAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_ROLL_R);
+		bool bIsCrouchAnims = crouchAnim || crouchForwardAnim || curCrouchBackwardAssoc || curCrouchRollLeftAssoc || curCrouchRollRightAssoc;
+#else
+		CAnimBlendAssociation* crouchAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#endif
 		if (!crouchAnim) {
 			if(GetCrouchFireAnim(weapon))
 				crouchAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetCrouchFireAnim(weapon));
@@ -5938,7 +5982,11 @@ CPed::Duck(void)
 			if(GetCrouchReloadAnim(weapon))
 				crouchAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetCrouchReloadAnim(weapon));
 		}
+#ifdef CROUCH
+		if (!bIsCrouchAnims && m_nPedState != PED_ROLL) {
+#else
 		if (!crouchAnim) {
+#endif
 			bIsDucking = false;
 #if defined FIX_BUGS || defined FREE_CAM
 			if (IsPlayer())
@@ -5951,23 +5999,50 @@ CPed::Duck(void)
 void
 CPed::ClearDuck(bool clearTimer)
 {
+#ifdef CROUCH
+	if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_IDLE))
+		return;
+
+	CAnimBlendAssociation* crouchForwardAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_FORWARD);
+	CAnimBlendAssociation* curCrouchBackwardAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_BACKWARD);
+#endif
 	CAnimBlendAssociation *animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_DOWN);
 	if (!animAssoc) {
 		animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_LOW);
 	}
 	if (!animAssoc) {
+#ifdef CROUCH
+		animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_IDLE);
+#else
 		animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#endif
 	}
 
 	if (animAssoc) {
 		animAssoc->flags |= ASSOC_DELETEFADEDOUT;
 		animAssoc->blendDelta = -4.0f;
 	}
+#ifdef CROUCH
+	if (crouchForwardAssoc) {
+		crouchForwardAssoc->flags |= ASSOC_DELETEFADEDOUT;
+		crouchForwardAssoc->blendDelta = -5.0f;
+	}
+
+	if (curCrouchBackwardAssoc) {
+		curCrouchBackwardAssoc->flags |= ASSOC_DELETEFADEDOUT;
+		curCrouchBackwardAssoc->blendDelta = -5.0f;
+	}
+#endif
 	bIsDucking = false;
 
 	if (clearTimer) {
 		m_duckTimer = 0;
 	}
+
+#ifdef CROUCH
+	if (IsPlayer())
+		TheCamera.Cams[TheCamera.ActiveCam].m_fTargetCameraPosZ = 0.0f;
+#endif
 }
 
 void
@@ -6615,7 +6690,11 @@ CPed::KillCharOnFootArmed(CVector &ourPos, CVector &targetPos, CVector &distWith
 			if (!duckAnim)
 				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_LOW);
 			if (!duckAnim)
-				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#ifdef CROUCH
+				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_IDLE);
+#else
+					duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#endif
 
 			if (duckAnim) {
 				duckAnim->flags |= ASSOC_DELETEFADEDOUT;
@@ -6902,7 +6981,11 @@ CPed::KillCharOnFootMelee(CVector &ourPos, CVector &targetPos, CVector &distWith
 			if (!duckAnim)
 				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_LOW);
 			if (!duckAnim)
-				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#ifdef CROUCH
+				duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CROUCH_IDLE);
+#else
+					duckAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_DUCK_WEAPON);
+#endif
 
 			if (duckAnim) {
 				duckAnim->flags |= ASSOC_DELETEFADEDOUT;

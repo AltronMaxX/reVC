@@ -28,7 +28,11 @@ CSprite::CalcScreenCoors(const RwV3d &in, RwV3d *out, float *outw, float *outh, 
 {
 	CVector viewvec = TheCamera.m_viewMatrix * in;
 	*out = viewvec;
+#ifdef FIRST_PERSON // Near clip plane of sprites reduced during first person
+	if(TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_REAL_1ST_PERSON && (out->z <= CDraw::GetNearClipZ() + 1.0f)) return false;
+#else
 	if(out->z <= CDraw::GetNearClipZ() + 1.0f) return false;
+#endif
 	if(out->z >= CDraw::GetFarClipZ() && farclip) return false;
 	float recip = 1.0f/out->z;
 	out->x *= SCREEN_WIDTH * recip;
