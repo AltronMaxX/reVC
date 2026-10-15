@@ -79,6 +79,9 @@ extern bool gbNoMovies;
 #ifdef CUSTOM_SWIMMING
 extern bool bEnableSwimming;
 #endif
+#ifdef CLIMBING
+extern bool bEnableClimbing;
+#endif
 #endif
 
 #endif // __GTA_MAIN_H__

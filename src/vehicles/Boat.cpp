@@ -1418,8 +1418,20 @@ CBoat::DoDriveByShootings(void)
 		return;
 
 	CWeapon *weapon = pDriver->GetWeapon();
-	if(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != 5)
+#ifdef FIRING_AND_AIMING
+	if (CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_SUBMACHINEGUN &&
+		CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_HANDGUN)
+#else
+	if (CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != 5)
+#endif
 		return;
+
+#ifdef FIRING_AND_AIMING // turn on/off driveby
+	if (CPad::GetPad(0)->GetTarget() && !FindPlayerPed()->bIsPlayerAiming && FindPlayerPed()->CanUseDriveBy())
+		FindPlayerPed()->SetPointGunAt(nil);
+	else if (!CPad::GetPad(0)->GetTarget() && FindPlayerPed()->bIsPlayerAiming || !FindPlayerPed()->CanUseDriveBy())
+		FindPlayerPed()->ClearWeaponTarget();
+#endif
 
 	weapon->Update(pDriver->m_audioEntityId, nil);
 
@@ -1437,6 +1449,22 @@ CBoat::DoDriveByShootings(void)
 		if(TheCamera.Cams[TheCamera.ActiveCam].LookingRight)
 			lookingRight = true;
 	}
+
+#ifdef FIRING_AND_AIMING // hide/show weapon in vehicle
+	if (!FindPlayerPed()->m_pWeaponModel && (FindPlayerPed()->bIsPlayerAiming || (lookingLeft || lookingRight)))
+		pDriver->AddWeaponModel(weapon->GetInfo()->m_nModelId);
+	else if (FindPlayerPed()->m_pWeaponModel && !FindPlayerPed()->bIsPlayerAiming && !lookingLeft && !lookingRight)
+		pDriver->RemoveWeaponModel(weapon->GetInfo()->m_nModelId);
+#endif
+
+#if defined FIRING_AND_AIMING && defined FIRST_PERSON // reloading weapon during driveby/first person/use pistol
+	if (FindPlayerPed()->bIsPlayerAiming || TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_REAL_1ST_PERSON ||
+		(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot == WEAPONSLOT_HANDGUN && !FindPlayerPed()->bIsPlayerAiming)) {
+
+		weapon->Reload();
+		return;
+		}
+#endif
 
 	if(lookingLeft || lookingRight){
 		if(lookingLeft){

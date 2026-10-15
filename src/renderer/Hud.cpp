@@ -243,9 +243,17 @@ void CHud::Draw()
 			&& playerPed && !playerPed->GetWeapon()->IsTypeMelee())
 			DrawCrossHair = true;
 
+#ifdef FIRING_AND_AIMING
+		if (playerPed->bIsPlayerAiming && (Mode == CCam::MODE_M16_1STPERSON_RUNABOUT || Mode == CCam::MODE_ROCKETLAUNCHER_RUNABOUT || Mode == CCam::MODE_SNIPER_RUNABOUT))
+#else
 		if (Mode == CCam::MODE_M16_1STPERSON_RUNABOUT || Mode == CCam::MODE_ROCKETLAUNCHER_RUNABOUT || Mode == CCam::MODE_SNIPER_RUNABOUT)
+#endif
 			DrawCrossHairPC = true;
+#if defined FIRING_AND_AIMING && defined IMPROVED_MENU_AND_INPUT
+		if (playerPed->bIsPlayerAiming && !playerPed->bIsAutoAiming
+#else
 		if (TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam() && (!CPad::GetPad(0)->GetLookBehindForPed() || TheCamera.m_bPlayerIsInGarage)
+#endif
 			|| Mode == CCam::MODE_1STPERSON_RUNABOUT) {
 			if (playerPed) {
 				if (playerPed->m_nPedState != PED_ENTER_CAR && playerPed->m_nPedState != PED_CARJACK) {
@@ -269,7 +277,11 @@ void CHud::Draw()
 			float fStep = Sin((CTimer::GetTimeInMilliseconds() & 1023)/1024.0f * 6.28f);
 			float fMultBright = SpriteBrightness * 0.03f * (0.25f * fStep + 0.75f);
 			CRect rect;
-			if (DrawCrossHairPC && TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam()) {
+#ifdef IMPROVED_MENU_AND_INPUT
+if (DrawCrossHairPC && !playerPed->bIsAutoAiming) {
+#else
+if (DrawCrossHairPC && TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam()) {
+#endif
 				float f3rdX = SCREEN_WIDTH * TheCamera.m_f3rdPersonCHairMultX;
 				float f3rdY = SCREEN_HEIGHT * TheCamera.m_f3rdPersonCHairMultY;
 #ifdef ASPECT_RATIO_SCALE
@@ -1134,6 +1146,11 @@ void CHud::Draw()
 				else
 					CFont::SetPropOff();
 
+#ifdef IMPROVED_MENU_AND_INPUT // DrawScriptText: Always place a black drop shadow
+				CFont::SetDropShadowPosition(2);
+				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
+#endif
+
 				CFont::SetFontStyle(FONT_LOCALE(CTheScripts::IntroTextLines[i].m_nFont));
 				CFont::PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - CTheScripts::IntroTextLines[i].m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - CTheScripts::IntroTextLines[i].m_fAtY), CTheScripts::IntroTextLines[i].m_Text);
 			}
@@ -1478,6 +1495,11 @@ void CHud::DrawAfterFade()
 				CFont::SetPropOn();
 			else
 				CFont::SetPropOff();
+
+#ifdef IMPROVED_MENU_AND_INPUT // DrawScriptText: Always place a black drop shadow
+			CFont::SetDropShadowPosition(2);
+			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
+#endif
 
 			CFont::SetFontStyle(line.m_nFont);
 			CFont::PrintString(SCREEN_WIDTH - SCALE_AND_CENTER_X(DEFAULT_SCREEN_WIDTH - line.m_fAtX), SCREEN_HEIGHT - SCREEN_SCALE_Y(DEFAULT_SCREEN_HEIGHT - line.m_fAtY), line.m_Text);
