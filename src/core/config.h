@@ -385,6 +385,23 @@ enum Config {
 #		define MULTISAMPLING		// adds MSAA option
 #		define INVERT_LOOK_FOR_PAD // enable the hidden option
 #		define PED_CAR_DENSITY_SLIDERS
+// When defined (default), the graphics options that normally trigger a render-device
+// reset (Screen Resolution, Screen Format / Windowed, Anti-Aliasing / MSAA) remain
+// editable from the in-game pause menu too, not only from the main frontend.
+//
+// The apply path is split:
+//   * Screen Resolution / Screen Format (Windowed<->Fullscreen, resize): applied LIVE
+//     via psApplyWindowModeLive() — just calls GLFW on the existing window without
+//     tearing down the rw engine. Safe mid-game.
+//   * Anti-Aliasing (MSAA): requires GL context recreation, which would destroy all
+//     loaded RwTextures and crash at exit() via the static CRadar::WaypointSprite.
+//     The user's choice is therefore persisted to the settings file and applied on
+//     the next launch; the in-memory state is reverted and "ORIGINAL SETTING RESTORED"
+//     is shown.
+//
+// Comment out (or #undef) UNLOCK_MENU_OPTIONS_INGAME to restore the original
+// locked-during-gameplay behavior.
+#		define UNLOCK_MENU_OPTIONS_INGAME
 #	endif
 #endif
 

@@ -401,7 +401,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = cullMode;
             rpDesc.depthStencil = &depthStencil;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
 
@@ -426,7 +426,8 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                 | ((srcBlend & 0xF) << 2)
                 | ((destBlend & 0xF) << 6)
                 | ((cullMode & 0x3) << 10)
-                | ((uint32)zTest << 12);
+                | ((uint32)zTest << 12)
+                | (currentSampleCount() << 28);
         }
 
         static WGPURenderPipeline
@@ -444,7 +445,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             return pipe;
         }
 
-        static void
+        void
         flushSkinCache(void)
         {
             imPipeCacheRelease(&s_skinPipeCache);

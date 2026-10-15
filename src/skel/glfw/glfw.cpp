@@ -893,6 +893,55 @@ ApplyGLFWWindowMode(const RwVideoMode &vm)
 		PSGLOBAL(fullScreen) = FALSE;
 	}
 }
+
+// Live (in-place) window-mode / resolution change without tearing down the rw engine.
+// Safe to call from gameplay; uses ApplyGLFWWindowMode on the existing GLFW window
+// and lets resizeCB propagate the new framebuffer size via rsCAMERASIZE.
+// Returns false when the GLFW window isn't initialised yet; callers should then
+// fall back to the destructive _psSelectScreenVM path (only safe in main menu).
+bool psApplyWindowModeLive()
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	if (window == nil)
+		return false;
+
+	// Sync GcurSelVM with the user's current preference. The SCREENRES Select
+	// handler updates m_nPrefsVideoMode before calling us; the ScreenMode toggle
+	// handler leaves it unchanged. Either way, m_nPrefsVideoMode is the source
+	// of truth for the desired rw engine video mode.
+	if (FrontEndMenuManager.m_nPrefsVideoMode >= 0 &&
+	    FrontEndMenuManager.m_nPrefsVideoMode < RwEngineGetNumVideoModes()) {
+		GcurSelVM = FrontEndMenuManager.m_nPrefsVideoMode;
+	}
+
+	// Sync GcurSelVM with the user's current preference. The SCREENRES Select
+	// handler updates m_nPrefsVideoMode before calling us; the ScreenMode toggle
+	// handler leaves it unchanged. Either way, m_nPrefsVideoMode is the source
+	// of truth for the desired rw engine video mode.
+	if (FrontEndMenuManager.m_nPrefsVideoMode >= 0 &&
+	    FrontEndMenuManager.m_nPrefsVideoMode < RwEngineGetNumVideoModes()) {
+		GcurSelVM = FrontEndMenuManager.m_nPrefsVideoMode;
+	}
+
+	// Build a RwVideoMode describing the desired size.
+	RwVideoMode vm;
+	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
+	// For windowed modes the actual framebuffer size is the user-selected
+	// m_nPrefsWidth / m_nPrefsHeight, not the fullscreen video mode.
+	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN) {
+		vm.width  = FrontEndMenuManager.m_nPrefsWidth;
+		vm.height = FrontEndMenuManager.m_nPrefsHeight;
+	}
+
+	ApplyGLFWWindowMode(vm);
+	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+
+	if (!CGame::ShouldPreserveWindowPauseMusicMode())
+		DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+	DMAudio.Service();
+	FrontEndMenuManager.SaveSettings();
+	return true;
+}
 #endif
 
 /*

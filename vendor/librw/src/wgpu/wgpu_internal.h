@@ -429,6 +429,24 @@ fn DoDynamicLight(V: vec3<f32>, N: vec3<f32>) -> vec3<f32> {
         void openIm3D(void);
         void closeIm3D(void);
 
+        // Pipeline-only flush functions for real-time MSAA change.
+        // Cheaper than close* — releases the cached render pipelines but
+        // leaves shaders, BGLs, samplers, uniform buffers intact. Pipelines
+        // are sample-count-specific in wgpu, so they must be released when
+        // wgpuGlobals.numSamples changes; the next draw will lazily recreate
+        // them via the existing getOrCreate* path with the new sample count.
+        void flushIm2DPipelines(void);
+        void flushIm2DTextPipelines(void);
+        void flushIm3DPipelines(void);
+        void flushMatfxPipelines(void);
+        void flushSkinCache(void);   // defined in wgpuskin.cpp
+        void flushPipelineCache(void); // defined in wgpupipe.cpp
+
+        // Current render-target sample count: returns wgpuGlobals.numSamples
+        // when rendering to the main backbuffer (MSAA), 1 for offscreen rasters.
+        // Pipeline cache keys include this so MSAA and non-MSAA variants coexist.
+        uint32 currentSampleCount(void);
+
         // ========================================================================
         // Custom im2d shaders (defined in wgpucustom.cpp; public API in rwwgpu.h)
         // ========================================================================

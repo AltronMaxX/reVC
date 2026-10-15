@@ -50,13 +50,17 @@ namespace rw
         } s_swap = {};
 
         // Depth attachment for the main framebuffer. Persistent (recreated only on
-        // window resize) so that depth contents survive a mid-frame offscreen
-        // interruption — draws after the resume still test against the scene's depth.
+        // window resize OR MSAA change) so that depth contents survive a mid-frame
+        // offscreen interruption — draws after the resume still test against the
+        // scene's depth. sampleCount mirrors s_backbuffer.sampleCount: the depth
+        // attachment must match the colour attachment's sample count, and we have
+        // no public wgpu-native API to query a texture's sample count at runtime.
         static struct
         {
             WGPUTexture texture;
             WGPUTextureView view;
             uint32 width, height;
+            uint32 sampleCount = 1;
         } s_mainDepth = {};
 
         int32 wgpuRasterOffset = 0;
@@ -306,15 +310,32 @@ namespace rw
         // backend; depth/MSAA are untouched (1 sample, no depth attachment).
         static struct
         {
-            WGPUTexture texture;
+            WGPUTexture texture;       // MSAA color attachment (or 1-sample if MSAA off)
             WGPUTextureView view;
+            WGPUTexture resolveTexture; // non-MSAA resolve target (only when numSamples > 1)
+            WGPUTextureView resolveView;
             uint32 width, height;
+            // Sample count the current textures were created with. Tracked here
+            // because wgpu-native has no public API to query a texture's sample
+            // count at runtime, and ensureBackbuffer() must recreate the backbuffer
+            // if numSamples changed even when the size didn't (e.g. user toggled
+            // 2x↔4x MSAA at the same window size). applyPendingMsaaChange() is the
+            // primary trigger for recreation, but this is the safety net for any
+            // path that bumps wgpuGlobals.numSamples without going through
+            // applyPendingMsaaChange (or in case the call ordering regresses).
+            uint32 sampleCount = 1;
         } s_backbuffer = {};
 
         static WGPURenderPipeline s_presentBlitPipe = nullptr;
         static WGPUPipelineLayout s_presentBlitPL = nullptr;
         static WGPUBindGroupLayout s_presentBlitBGL = nullptr;
         static WGPUSampler s_presentSampler = nullptr;
+        // (P2-15) Sub-rect camera Z-clear pipeline. Declared here (near the other
+        // static pipelines) so applyPendingMsaaChange can release it on MSAA change;
+        // defined lazily in ensureDepthClearPipe (see ~line 972). The pipeline's
+        // multisample.count must match the depth attachment's sample count, so it
+        // must be released + recreated when wgpuGlobals.numSamples changes.
+        static WGPURenderPipeline s_depthClearPipe = nullptr;
         static const char* k_presentBlitWGSL = R"(
 @group(0) @binding(0) var samp : sampler;
 @group(0) @binding(1) var tex  : texture_2d<f32>;
@@ -410,10 +431,21 @@ struct VSOut {
             uint32 w = (uint32)wgpuGlobals.winWidth;
             uint32 h = (uint32)wgpuGlobals.winHeight;
             if (w == 0 || h == 0) return;
-            if (s_backbuffer.texture && s_backbuffer.width == w && s_backbuffer.height == h)
+            // Recreate when size OR sample count changed. The sample-count check is
+            // the safety net for paths that bump wgpuGlobals.numSamples without
+            // going through applyPendingMsaaChange (which already releases the
+            // backbuffer). Without it, toggling 2x↔4x MSAA at the same window
+            // size would silently reuse the old-sample-count backbuffer and crash
+            // on the next set_pipeline ("Incompatible sample count").
+            if (s_backbuffer.texture && s_backbuffer.width == w && s_backbuffer.height == h &&
+                s_backbuffer.sampleCount == wgpuGlobals.numSamples)
                 return;
             if (s_backbuffer.view) wgpuTextureViewRelease(s_backbuffer.view);
             if (s_backbuffer.texture) wgpuTextureRelease(s_backbuffer.texture);
+            if (s_backbuffer.resolveView) wgpuTextureViewRelease(s_backbuffer.resolveView);
+            if (s_backbuffer.resolveTexture) wgpuTextureRelease(s_backbuffer.resolveTexture);
+            s_backbuffer.resolveView = nullptr;
+            s_backbuffer.resolveTexture = nullptr;
 
             WGPUTextureDescriptor d = {};
             d.label = WGPU_STR("wgpu backbuffer");
@@ -424,7 +456,7 @@ struct VSOut {
                 | WGPUTextureUsage_TextureBinding;
             d.dimension = WGPUTextureDimension_2D;
             d.mipLevelCount = 1;
-            d.sampleCount = 1;
+            d.sampleCount = wgpuGlobals.numSamples;
             s_backbuffer.texture = wgpuDeviceCreateTexture(wgpuGlobals.device, &d);
 
             WGPUTextureViewDescriptor v = {};
@@ -436,8 +468,46 @@ struct VSOut {
             v.baseArrayLayer = 0;
             v.arrayLayerCount = 1;
             s_backbuffer.view = wgpuTextureCreateView(s_backbuffer.texture, &v);
+
+            // When MSAA is on, also create a non-MSAA resolve target.
+            // The render pass writes MSAA color into `texture` and the
+            // resolved average into `resolveTexture` (storeOp=Resolve).
+            // The present blit then samples from resolveTexture.
+            //
+            // Usage flags:
+            //   * RenderAttachment — the render pass resolves into this texture.
+            //   * TextureBinding   — the present blit samples it via @binding(1).
+            //   * CopySrc           — RwRasterRenderFast (motion-blur / front-buffer
+            //     snapshot) copies from this texture into a CAMERATEXTURE
+            //     destination; wgpuCommandEncoderCopyTextureToTexture requires the
+            //     source to carry COPY_SRC. Without it, loading a save with MSAA on
+            //     crashes: "Usage flags ... do not contain required usage flags
+            //     TextureUsages(COPY_SRC)" at wgpuQueueSubmit.
+            if (wgpuGlobals.numSamples > 1) {
+                WGPUTextureDescriptor rd = {};
+                rd.label = WGPU_STR("wgpu backbuffer resolve");
+                rd.size = {w, h, 1};
+                rd.format = wgpuGlobals.surfaceFormat;
+                rd.usage = WGPUTextureUsage_RenderAttachment
+                    | WGPUTextureUsage_TextureBinding
+                    | WGPUTextureUsage_CopySrc;
+                rd.dimension = WGPUTextureDimension_2D;
+                rd.mipLevelCount = 1;
+                rd.sampleCount = 1;
+                s_backbuffer.resolveTexture = wgpuDeviceCreateTexture(wgpuGlobals.device, &rd);
+                WGPUTextureViewDescriptor rv = {};
+                rv.format = wgpuGlobals.surfaceFormat;
+                rv.dimension = WGPUTextureViewDimension_2D;
+                rv.aspect = WGPUTextureAspect_All;
+                rv.baseMipLevel = 0;
+                rv.mipLevelCount = 1;
+                rv.baseArrayLayer = 0;
+                rv.arrayLayerCount = 1;
+                s_backbuffer.resolveView = wgpuTextureCreateView(s_backbuffer.resolveTexture, &rv);
+            }
             s_backbuffer.width = w;
             s_backbuffer.height = h;
+            s_backbuffer.sampleCount = wgpuGlobals.numSamples;
         }
 
         // Fullscreen blit backbuffer -> swapchain texture (alpha forced to 1), encoded
@@ -448,11 +518,17 @@ struct VSOut {
             ensurePresentBlitPipe();
 
             // Bind group rebuilt per frame: the backbuffer view changes on resize.
+            // When MSAA is on, the present blit samples from the resolved
+            // non-MSAA texture (sampling from a multisample texture isn't
+            // allowed in wgpu — you can only resolve via render pass).
+            WGPUTextureView srcView = wgpuGlobals.numSamples > 1
+                ? s_backbuffer.resolveView
+                : s_backbuffer.view;
             WGPUBindGroupEntry bgEntries[2] = {};
             bgEntries[0].binding = 0;
             bgEntries[0].sampler = s_presentSampler;
             bgEntries[1].binding = 1;
-            bgEntries[1].textureView = s_backbuffer.view;
+            bgEntries[1].textureView = srcView;
             WGPUBindGroupDescriptor bgDesc = {};
             bgDesc.label = WGPU_STR("present blit bg");
             bgDesc.layout = s_presentBlitBGL;
@@ -504,10 +580,14 @@ struct VSOut {
             wgpuSurfaceConfigure(wgpuGlobals.surface, &wgpuGlobals.surfaceConfig);
         }
 
-        // (Re)create the persistent main-framebuffer depth attachment on size change.
+        // (Re)create the persistent main-framebuffer depth attachment on size OR
+        // sample-count change. The depth attachment's sample count must match the
+        // colour attachment's, so any MSAA toggle forces a recreate even at the
+        // same window size.
         static void ensureMainDepth(uint32 fbw, uint32 fbh)
         {
-            if (s_mainDepth.texture && s_mainDepth.width == fbw && s_mainDepth.height == fbh)
+            if (s_mainDepth.texture && s_mainDepth.width == fbw && s_mainDepth.height == fbh &&
+                s_mainDepth.sampleCount == wgpuGlobals.numSamples)
                 return;
             if (s_mainDepth.view) wgpuTextureViewRelease(s_mainDepth.view);
             if (s_mainDepth.texture) wgpuTextureRelease(s_mainDepth.texture);
@@ -519,7 +599,7 @@ struct VSOut {
             depthDesc.usage = WGPUTextureUsage_RenderAttachment;
             depthDesc.dimension = WGPUTextureDimension_2D;
             depthDesc.mipLevelCount = 1;
-            depthDesc.sampleCount = 1;
+            depthDesc.sampleCount = wgpuGlobals.numSamples;
             s_mainDepth.texture = wgpuDeviceCreateTexture(wgpuGlobals.device, &depthDesc);
 
             WGPUTextureViewDescriptor dvd = {};
@@ -533,6 +613,7 @@ struct VSOut {
             s_mainDepth.view = wgpuTextureCreateView(s_mainDepth.texture, &dvd);
             s_mainDepth.width = fbw;
             s_mainDepth.height = fbh;
+            s_mainDepth.sampleCount = wgpuGlobals.numSamples;
         }
 
         bool acquireFrame()
@@ -769,8 +850,89 @@ struct VSOut {
         // Функции рендеринга Camera
         // ========================================================================
 
+        // Current render-target sample count. Returns wgpuGlobals.numSamples when
+        // rendering to the main backbuffer (MSAA), 1 for offscreen rasters.
+        // Called by every pipeline cache lookup so MSAA and non-MSAA variants
+        // get separate cache entries (key bit 28+).
+        uint32 currentSampleCount(void)
+        {
+            return s_frame.isOffscreen ? 1u : wgpuGlobals.numSamples;
+        }
+
+        // Apply a pending MSAA change (set via DEVICESETMULTISAMPLINGLEVELS).
+        // Called at the start of beginUpdate — at this point the previous
+        // frame's encoder has been submitted (in endUpdate) and no encoder
+        // is in flight for this frame yet. We:
+        //   1. Process pending instance events to drain any in-flight work.
+        //   2. Release the backbuffer / depth / resolve-target textures.
+        //      They'll be recreated by ensureBackbuffer / ensureMainDepth on
+        //      the next render pass with the new sampleCount.
+        //   3. Flush every subsystem's render-pipeline cache. Pipelines are
+        //      sample-count-specific in wgpu (the WGPURenderPipelineDescriptor
+        //      has a multisample.count that must match the attachment). The
+        //      next draw will lazily recreate them via the existing
+        //      getOrCreate* path.
+        // Cost: ~10-50ms freeze (pipeline recompilation). Acceptable in the
+        // pause menu where the user is changing settings; would be jarring
+        // mid-game.
+        static void applyPendingMsaaChange(void)
+        {
+            if (!wgpuGlobals.msaaDirty) return;
+            wgpuGlobals.msaaDirty = false;
+
+            // Apply the pending sample count. This is where numSamples actually
+            // changes — NOT in DEVICESETMULTISAMPLINGLEVELS. By deferring the
+            // swap to here (start of beginUpdate, before any draw calls), we
+            // ensure that during the frame where the user changed MSAA:
+            //   * currentSampleCount() still returns the OLD numSamples
+            //   * pipelines still match the OLD backbuffer
+            //   * no sample-count mismatch crash
+            // The new numSamples takes effect for THIS frame's backbuffer
+            // recreation + pipeline cache flush.
+            wgpuGlobals.numSamples = wgpuGlobals.pendingNumSamples;
+            // 1. Drain pending GPU work. wgpuInstanceProcessEvents pumps the
+            //    event loop so any pending callbacks / surface releases land
+            //    before we tear down textures. (wgpu-native has no per-device
+            //    "tick" — instance-level processing is the documented way.)
+            for (int i = 0; i < 4; i++) wgpuInstanceProcessEvents(wgpuGlobals.instance);
+
+            // 2. Release backbuffer + resolve target + main depth. Setting
+            //    width/height to 0 forces ensureBackbuffer / ensureMainDepth
+            //    to recreate on next use with the new sample count.
+            if (s_backbuffer.view)            { wgpuTextureViewRelease(s_backbuffer.view);            s_backbuffer.view = nullptr; }
+            if (s_backbuffer.texture)         { wgpuTextureRelease(s_backbuffer.texture);            s_backbuffer.texture = nullptr; }
+            if (s_backbuffer.resolveView)     { wgpuTextureViewRelease(s_backbuffer.resolveView);    s_backbuffer.resolveView = nullptr; }
+            if (s_backbuffer.resolveTexture) { wgpuTextureRelease(s_backbuffer.resolveTexture);    s_backbuffer.resolveTexture = nullptr; }
+            s_backbuffer.width = 0;
+            s_backbuffer.height = 0;
+            s_backbuffer.sampleCount = 0; // forces ensureBackbuffer to recreate
+
+            if (s_mainDepth.view)    { wgpuTextureViewRelease(s_mainDepth.view);    s_mainDepth.view = nullptr; }
+            if (s_mainDepth.texture) { wgpuTextureRelease(s_mainDepth.texture);    s_mainDepth.texture = nullptr; }
+            s_mainDepth.width = 0;
+            s_mainDepth.height = 0;
+            s_mainDepth.sampleCount = 0; // forces ensureMainDepth to recreate
+
+            // 3. Flush all render-pipeline caches.
+            flushIm2DPipelines();
+            flushIm2DTextPipelines();
+            flushIm3DPipelines();
+            flushMatfxPipelines();
+            flushSkinCache();
+            flushPipelineCache();
+
+            // 4. Release the depth-clear pipe (uses numSamples). The present
+            //    blit pipe stays — it renders into the swapchain (1-sample).
+            if (s_depthClearPipe) { wgpuRenderPipelineRelease(s_depthClearPipe); s_depthClearPipe = nullptr; }
+        }
+
         static void beginUpdate(Camera* cam)
         {
+            // Apply any pending MSAA change BEFORE this frame's rendering starts.
+            // The recreation is safe here: the previous frame's encoder was
+            // submitted in endUpdate and no encoder is in flight yet.
+            applyPendingMsaaChange();
+
             // Строим матрицы из камеры — как делает GL3 backend.
             // Матрицы сохраняем в cam->devView и cam->devProj
             // (они используются im3DTransform при каждом вызове).
@@ -869,7 +1031,8 @@ struct VSOut {
         // depth is LOADED and a depth-only quad (no fragment stage) writes z=1
         // inside the sub-rect's viewport+scissor — the WebGPU equivalent of
         // glClear(GL_DEPTH_BUFFER_BIT) under a scissor test.
-        static WGPURenderPipeline s_depthClearPipe = nullptr;
+        // s_depthClearPipe is declared above (near s_presentBlitPipe) so that
+        // applyPendingMsaaChange can release it on MSAA change.
         static const char* k_depthClearWGSL = R"(
 @vertex fn vs(@builtin(vertex_index) i : u32) -> @builtin(position) vec4<f32> {
     var p = array<vec2<f32>,3>(vec2<f32>(-1.0,-1.0), vec2<f32>(3.0,-1.0), vec2<f32>(-1.0,3.0));
@@ -914,7 +1077,7 @@ struct VSOut {
             pd.primitive.frontFace = WGPUFrontFace_CCW;
             pd.primitive.cullMode = WGPUCullMode_None;
             pd.depthStencil = &ds;
-            pd.multisample.count = 1;
+            pd.multisample.count = currentSampleCount();
             pd.multisample.mask = 0xFFFFFFFFu;
             // no fragment state — depth-only pipeline
             s_depthClearPipe = wgpuDeviceCreateRenderPipeline(dev, &pd);
@@ -925,6 +1088,21 @@ struct VSOut {
 
         static void clearCamera(Camera* cam, RGBA* col, uint32 mode)
         {
+            // Apply any pending MSAA change BEFORE acquiring the frame and opening
+            // the render pass. RwCameraClear is called BEFORE RsCameraBeginUpdate in
+            // reVC's main loop (FrontendIdle / Idle both do RwCameraClear then
+            // RsCameraBeginUpdate), so the render pass is opened HERE, not in
+            // beginUpdate. If we don't apply the pending sample count first, the
+            // backbuffer / depth / resolve-target textures are still at the OLD
+            // sample count when the render pass is created; then beginUpdate's
+            // applyPendingMsaaChange swaps numSamples, flushes the pipeline caches,
+            // and subsequent im2d draws use pipelines with the NEW sample count on
+            // a render pass with the OLD sample count — instant "Incompatible
+            // sample count" validation error at wgpuQueueSubmit. Calling it here
+            // (and again in beginUpdate, which is a no-op once msaaDirty=false)
+            // keeps everything in lockstep.
+            applyPendingMsaaChange();
+
             // Determine the render target for this camera
             Raster* fb = cam->frameBuffer;
             Raster* parent = (fb && fb->parent) ? fb->parent : fb;
@@ -969,11 +1147,25 @@ struct VSOut {
             WGPURenderPassColorAttachment colorAtt = {};
             colorAtt.view = s_frame.view;
             colorAtt.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-            colorAtt.resolveTarget = nullptr;
+            // MSAA: write the resolved color into the non-MSAA resolve target.
+            // In WebGPU, the resolve happens automatically when resolveTarget is
+            // set — storeOp only controls what happens to the MSAA texture itself
+            // (Store = keep the multisample content, Discard = throw it away).
+            // We use Store here because it's universally available; the multisample
+            // texture is never read directly (the present blit samples resolveView).
+            // MSAA resolve only for the main backbuffer — offscreen rasters
+            // are non-MSAA (sampleCount=1) and must not set resolveTarget.
+            bool isMsaaPass = !s_frame.isOffscreen && wgpuGlobals.numSamples > 1;
+            if (isMsaaPass) {
+                colorAtt.resolveTarget = s_backbuffer.resolveView;
+                colorAtt.storeOp = WGPUStoreOp_Store;
+            } else {
+                colorAtt.resolveTarget = nullptr;
+                colorAtt.storeOp = WGPUStoreOp_Store;
+            }
             // Sub-rect cameras preserve the parent's colour (WGPU clears whole
             // attachments, so a Clear here would wipe everything outside the sub-rect).
             colorAtt.loadOp = (clearColor && !subRect) ? WGPULoadOp_Clear : WGPULoadOp_Load;
-            colorAtt.storeOp = WGPUStoreOp_Store;
             if (col)
             {
                 colorAtt.clearValue = {
@@ -1034,6 +1226,20 @@ struct VSOut {
             colorAtt.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
             colorAtt.loadOp = WGPULoadOp_Load;
             colorAtt.storeOp = WGPUStoreOp_Store;
+            // Mirror clearCamera's MSAA-resolve wiring: when the main backbuffer
+            // is MSAA, the load pass also needs a resolveTarget so the resolve
+            // texture stays current with the MSAA colour attachment. Without
+            // this, a mid-frame endRenderPassIfOpen() (e.g. rasterRenderFast's
+            // texture copy) would NOT trigger a resolve, and the next
+            // rasterRenderFast would copy STALE resolve data into the snapshot
+            // destination — visible as a one-frame-behind motion-blur trail.
+            // Offscreen frames stay sample count 1 (no resolveTarget).
+            bool isMsaaPass = !s_frame.isOffscreen && wgpuGlobals.numSamples > 1;
+            if (isMsaaPass) {
+                colorAtt.resolveTarget = s_backbuffer.resolveView;
+                // storeOp=Store keeps the MSAA content (we don't read it directly
+                // — the present blit samples resolveView — but Store is universal).
+            }
 
             WGPURenderPassDepthStencilAttachment depthAtt = {};
             depthAtt.view = s_frame.depthView;
@@ -1075,7 +1281,36 @@ struct VSOut {
             // framebuffer has none (the offscreen backbuffer lives in s_frame and,
             // unlike the swapchain texture, carries COPY_SRC on every backend).
             WGPURaster* natsrc = GETWGPURASTEREXT(raster);
-            WGPUTexture srcTex = (natsrc && natsrc->texture) ? natsrc->texture : s_frame.texture;
+            WGPUTexture srcTex;
+            int srcBranch = 0; // 1=natsrc->texture, 2=resolveTexture, 3=s_frame.texture
+            if (natsrc && natsrc->texture) {
+                // Offscreen source raster — always 1-sample, matches dst.
+                srcTex = natsrc->texture;
+                srcBranch = 1;
+            } else if (!s_frame.isOffscreen && wgpuGlobals.numSamples > 1 &&
+                       s_backbuffer.resolveTexture) {
+                // Main camera framebuffer + MSAA on: s_frame.texture is the MSAA
+                // colour attachment (numSamples samples). Copying it into a 1-sample
+                // CAMERATEXTURE destination is a wgpu validation error
+                // ("Source sample count (N) and destination sample count (1) are not
+                // equal"). Use the resolve target instead — endRenderPassIfOpen()
+                // below triggers the MSAA resolve, so the resolve texture holds the
+                // averaged 1-sample image by the time the copy runs.
+                srcTex = s_backbuffer.resolveTexture;
+                srcBranch = 2;
+            } else if (!s_frame.isOffscreen && wgpuGlobals.numSamples > 1 &&
+                       !s_backbuffer.resolveTexture) {
+                // MSAA is on but the resolve texture is null — this should never
+                // happen (ensureBackbuffer creates it whenever numSamples > 1), but
+                // if it does (e.g. mid-frame MSAA change race with no backbuffer
+                // recreation yet), bail out instead of falling through to the
+                // 2-sample s_frame.texture and crashing the queue submit.
+                return 0;
+            } else {
+                // Non-MSAA main backbuffer (sample count 1) — direct copy is safe.
+                srcTex = s_frame.texture;
+                srcBranch = 3;
+            }
             if (!srcTex) return 0;
 
             uint32 w = raster->width > 0 ? (uint32)raster->width : s_frame.fbWidth;
@@ -1343,6 +1578,109 @@ struct VSOut {
         // wgpu-native v29 не поддерживает TimedWaitAny — используем
         // WGPUCallbackMode_AllowSpontaneous + wgpuInstanceProcessEvents в цикле.
         // Колбэк вызывается на первом же ProcessEvents после готовности GPU.
+
+        // Probe whether the device actually supports a given sample count for a
+        // given texture format. The WebGPU spec only GUARANTEES sample counts 1
+        // and 4 for color attachments on byte unorm formats; 2, 8 and 16 are
+        // optional and depend on the GPU/driver (e.g. AMD Vega iGPU supports up
+        // to 8 on Vulkan, but some Intel iGPUs only support 1 and 4). The
+        // previous code hardcoded 8 (if TextureAdapterSpecificFormatFeatures
+        // feature was enabled) or 4 — both wrong on real hardware: a device
+        // that "has the feature" doesn't necessarily support 8x MSAA on the
+        // surface format we actually picked, and a device without the feature
+        // might still support 2x.
+        //
+        // This probe actually creates a tiny 1x1 texture with the requested
+        // sample count, captures any validation error via an error scope, and
+        // returns true if creation succeeded without a validation error.
+        //
+        // Cheap (creates + releases a 1x1 texture per call) — only called at
+        // device init, so the cost is negligible (~1 ms total).
+        static bool probeSampleCountSupported(WGPUDevice dev, WGPUTextureFormat fmt, uint32 sampleCount)
+        {
+            if (!dev) return false;
+            struct UD {
+                std::atomic<bool> hadError{false};
+                std::atomic<bool> done{false};
+            };
+            UD ud;
+            auto cb = [](WGPUPopErrorScopeStatus status, WGPUErrorType type,
+                         WGPUStringView message, void* u1, void* u2)
+            {
+                (void)message; (void)u2;
+                UD& d = *(UD*)u1;
+                // status=Success means the scope popped cleanly (no error captured).
+                // Any non-NoError type means there WAS a validation error during the
+                // operations inside the scope.
+                if (status != WGPUPopErrorScopeStatus_Success || type != WGPUErrorType_NoError) {
+                    d.hadError.store(true, std::memory_order_release);
+                }
+                d.done.store(true, std::memory_order_release);
+            };
+            // Push a validation error scope so any error from wgpuDeviceCreateTexture
+            // is captured here instead of going to the global uncaptured-error handler.
+            wgpuDevicePushErrorScope(dev, WGPUErrorFilter_Validation);
+            WGPUTextureDescriptor td = {};
+            td.label = WGPU_STR("MSAA probe");
+            td.size = {1, 1, 1};
+            td.format = fmt;
+            td.usage = WGPUTextureUsage_RenderAttachment;
+            td.dimension = WGPUTextureDimension_2D;
+            td.mipLevelCount = 1;
+            td.sampleCount = sampleCount;
+            WGPUTexture testTex = wgpuDeviceCreateTexture(dev, &td);
+            WGPUPopErrorScopeCallbackInfo ci = {};
+            ci.mode = WGPUCallbackMode_AllowSpontaneous;
+            ci.callback = cb;
+            ci.userdata1 = &ud;
+            wgpuDevicePopErrorScope(dev, ci);
+            // Pump events so the pop callback fires (usually 1 iteration).
+            auto t0 = std::chrono::steady_clock::now();
+            while (!ud.done.load(std::memory_order_acquire)) {
+                wgpuInstanceProcessEvents(wgpuGlobals.instance);
+                if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
+                    fprintf(stderr, "[wgpu] MSAA probe (format=%d, sc=%u): timeout — assuming not supported\n",
+                            (int)fmt, sampleCount);
+                    if (testTex) wgpuTextureRelease(testTex);
+                    return false;
+                }
+            }
+            // Release the probe texture (safe even if creation triggered a validation error —
+            // the handle is still valid to release, the underlying resource is just not allocated).
+            if (testTex) wgpuTextureRelease(testTex);
+            return !ud.hadError.load(std::memory_order_acquire);
+        }
+
+        // Determine the device's actual max supported sample count for MSAA on the
+        // surface color format + the depth format we use (Depth32Float). Returns
+        // the highest sample count in {1, 2, 4, 8, 16} supported by BOTH formats,
+        // since the render pass needs MSAA on the colour attachment AND the depth
+        // attachment to use the same sample count.
+        //
+        // WebGPU spec: 1 is always supported. Returns at least 1 even on devices
+        // that for some reason don't expose 4 (rare/buggy driver — falls back to
+        // no MSAA).
+        static uint32 probeMaxSupportedSamples(WGPUDevice dev, WGPUTextureFormat colorFmt)
+        {
+            if (!dev) return 1;
+            // Highest first — once we find one that's supported on BOTH formats,
+            // that's our answer.
+            static const uint32 candidates[] = { 16, 8, 4, 2 };
+            for (uint32 sc : candidates) {
+                bool colorOk = probeSampleCountSupported(dev, colorFmt, sc);
+                bool depthOk = probeSampleCountSupported(dev, WGPUTextureFormat_Depth32Float, sc);
+                if (colorOk && depthOk) {
+                    fprintf(stderr, "[wgpu] MSAA probe: sample count %u supported on color (fmt=%d) + depth\n",
+                            sc, (int)colorFmt);
+                    return sc;
+                }
+                fprintf(stderr, "[wgpu] MSAA probe: sample count %u NOT supported (color=%d depth=%d) — trying lower\n",
+                        sc, (int)colorOk, (int)depthOk);
+            }
+            // Per WebGPU spec, sample count 1 is always supported (no MSAA).
+            fprintf(stderr, "[wgpu] MSAA probe: no MSAA level above 1 supported — using no MSAA\n");
+            return 1;
+        }
 
         static WGPUAdapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const* options)
         {
@@ -1657,26 +1995,65 @@ struct VSOut {
             }
 
             // Device
+            // Check if the adapter exposes the native
+            // TextureAdapterSpecificFormatFeatures feature. With it, the
+            // device supports MSAA sample counts [1, 2, 4, 8] for Rgba8Unorm
+            // / Depth32Float; without it the WebGPU spec only guarantees
+            // [1, 4]. We request the feature when available so users can
+            // pick 2x / 8x MSAA in addition to 1x / 4x.
+            bool hasMsaaFeature = false;
+            if (wgpuGlobals.adapter) {
+                hasMsaaFeature = wgpuAdapterHasFeature(
+                    wgpuGlobals.adapter,
+                    (WGPUFeatureName)WGPUNativeFeature_TextureAdapterSpecificFormatFeatures);
+            }
+            WGPUFeatureName requiredFeature = (WGPUFeatureName)WGPUNativeFeature_TextureAdapterSpecificFormatFeatures;
             WGPUDeviceDescriptor devDesc = {};
             devDesc.label = WGPU_STR("librw Device");
             devDesc.deviceLostCallbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
             devDesc.deviceLostCallbackInfo.callback = onDeviceLost;
             devDesc.uncapturedErrorCallbackInfo.callback = onUncapturedError;
+            if (hasMsaaFeature) {
+                devDesc.requiredFeatureCount = 1;
+                devDesc.requiredFeatures = &requiredFeature;
+            }
+            // NOTE: We no longer hardcode maxSupportedSamples here — it's set
+            // AFTER device creation via probeMaxSupportedSamples(), which actually
+            // attempts to create 1x1 textures with each candidate sample count
+            // (16/8/4/2) and captures validation errors via error scopes. This
+            // returns the device's REAL maximum supported MSAA level, which can
+            // be 4 (spec-guaranteed minimum), 8 (common on AMD iGPUs), or in
+            // rare cases only 1 or 2 — and the menu will dynamically filter
+            // options accordingly. Initial conservative default of 4 covers
+            // the brief window between device creation and the probe call.
+            wgpuGlobals.maxSupportedSamples = 4;
             wgpuGlobals.device = requestDeviceSync(wgpuGlobals.instance, wgpuGlobals.adapter, &devDesc);
             if (!wgpuGlobals.device)
             {
-                RWERROR((ERR_GENERAL, "WebGPU device creation failed"));
-                wgpuSurfaceRelease(wgpuGlobals.surface);
-                wgpuGlobals.surface = nullptr;
-                wgpuAdapterRelease(wgpuGlobals.adapter);
-                wgpuGlobals.adapter = nullptr;
-                wgpuInstanceRelease(wgpuGlobals.instance);
-                wgpuGlobals.instance = nullptr;
-                return 0;
+                // If requesting the feature failed (e.g. driver glitch), retry
+                // without it. The probe below will figure out the actual max.
+                if (hasMsaaFeature) {
+                    fprintf(stderr, "[wgpu] device request with TextureAdapterSpecificFormatFeatures failed, retrying without\n");
+                    devDesc.requiredFeatureCount = 0;
+                    devDesc.requiredFeatures = nullptr;
+                    wgpuGlobals.device = requestDeviceSync(wgpuGlobals.instance, wgpuGlobals.adapter, &devDesc);
+                }
+                if (!wgpuGlobals.device) {
+                    RWERROR((ERR_GENERAL, "WebGPU device creation failed"));
+                    wgpuSurfaceRelease(wgpuGlobals.surface);
+                    wgpuGlobals.surface = nullptr;
+                    wgpuAdapterRelease(wgpuGlobals.adapter);
+                    wgpuGlobals.adapter = nullptr;
+                    wgpuInstanceRelease(wgpuGlobals.instance);
+                    wgpuGlobals.instance = nullptr;
+                    return 0;
+                }
             }
             wgpuGlobals.queue = wgpuDeviceGetQueue(wgpuGlobals.device);
 
-            // Surface caps & format
+            // Surface caps & format — moved up from below so we know the surface
+            // format BEFORE probing for MSAA support (the probe creates 1x1
+            // textures with the surface's actual color format).
             WGPUSurfaceCapabilities caps = {};
             wgpuSurfaceGetCapabilities(wgpuGlobals.surface, wgpuGlobals.adapter, &caps);
             if (!caps.formats || caps.formatCount == 0)
@@ -1701,6 +2078,30 @@ struct VSOut {
                     break;
                 }
             }
+
+            // Probe the device's actual max supported MSAA sample count for the
+            // surface color format + Depth32Float (our depth attachment format).
+            // This replaces the old "8 if hasMsaaFeature else 4" hardcoded guess,
+            // which was wrong on real hardware (e.g. AMD Vega iGPU supports 8x on
+            // Vulkan but the feature flag alone doesn't prove 8x works on our
+            // format). Probe is cheap (~1 ms total) and runs once at device init.
+            wgpuGlobals.maxSupportedSamples = probeMaxSupportedSamples(wgpuGlobals.device, wgpuGlobals.surfaceFormat);
+            fprintf(stderr, "[wgpu] maxSupportedSamples = %u (probed for format %d)\n",
+                    wgpuGlobals.maxSupportedSamples, (int)wgpuGlobals.surfaceFormat);
+
+            // Clamp any pendingNumSamples set earlier (by reVC's psSelectDevice
+            // calling RwD3D8EngineSetMultiSamplingLevels before DEVICEINIT) to
+            // what the device actually supports. We clamp pendingNumSamples
+            // (not numSamples) because DEVICESETMULTISAMPLINGLEVELS writes to
+            // pendingNumSamples — the actual swap happens in applyPendingMsaaChange.
+            if (wgpuGlobals.pendingNumSamples > wgpuGlobals.maxSupportedSamples) {
+                fprintf(stderr, "[wgpu] clamping MSAA %ux -> %ux (device max)\n",
+                        wgpuGlobals.pendingNumSamples, wgpuGlobals.maxSupportedSamples);
+                wgpuGlobals.pendingNumSamples = wgpuGlobals.maxSupportedSamples;
+            }
+            // Also apply it immediately for the first frame so that openIm2D etc.
+            // create pipelines with the correct sample count.
+            wgpuGlobals.numSamples = wgpuGlobals.pendingNumSamples;
 
             // Present mode. Fifo (strict vsync) quantizes to divisors of the refresh
             // rate: the moment a frame takes over 1/60s the rate hard-drops to 30.
@@ -1829,6 +2230,16 @@ struct VSOut {
             {
                 wgpuTextureRelease(s_backbuffer.texture);
                 s_backbuffer.texture = nullptr;
+            }
+            if (s_backbuffer.resolveView)
+            {
+                wgpuTextureViewRelease(s_backbuffer.resolveView);
+                s_backbuffer.resolveView = nullptr;
+            }
+            if (s_backbuffer.resolveTexture)
+            {
+                wgpuTextureRelease(s_backbuffer.resolveTexture);
+                s_backbuffer.resolveTexture = nullptr;
             }
             s_backbuffer = {};
             if (s_swap.texture) { wgpuTextureRelease(s_swap.texture); }
@@ -1969,6 +2380,56 @@ struct VSOut {
                     VideoMode* rwmode = (VideoMode*)arg;
                     int idx = (n < 0 || n >= s_numVideoModes) ? 0 : n;
                     *rwmode = s_videoModes[idx];
+                    return 1;
+                }
+            // MSAA support — real-time (Option B). The caller sets the
+            // desired sample count via RwD3D8EngineSetMultiSamplingLevels;
+            // we just record it and mark dirty. The actual recreation
+            // (textures + all pipelines) happens at the next frame boundary
+            // in applyPendingMsaaChange() called from beginUpdate.
+            case DEVICEGETMAXMULTISAMPLINGLEVELS:
+                // Returns the maximum sample count this device supports for the
+                // render-target / depth formats we use. Set during device init
+                // based on whether WGPUNativeFeature_TextureAdapterSpecificFormatFeatures
+                // was requested. Reported to reVC via RwD3D8EngineGetMaxMultiSamplingLevels
+                // so the menu's L/R adjust knows how many levels to cycle through.
+                return wgpuGlobals.maxSupportedSamples;
+            case DEVICEGETMULTISAMPLINGLEVELS:
+                return wgpuGlobals.numSamples ? wgpuGlobals.numSamples : 1;
+            case DEVICESETMULTISAMPLINGLEVELS:
+                {
+                    uint32 newSamples = (uint32)n;
+                    // Must be a power of two in 1..16.
+                    if (newSamples < 1 || newSamples > 16 ||
+                        (newSamples & (newSamples - 1)) != 0)
+                        newSamples = 1;
+                    // Clamp to device-supported max — but ONLY after the device has
+                    // been created (i.e. after probeMaxSupportedSamples has actually
+                    // probed the device in startWGPU). Before DEVICEINIT, the device
+                    // is null and maxSupportedSamples is the conservative spec-
+                    // guaranteed default of 4; clamping here would silently drop
+                    // a user-saved 8X setting to 4X even on hardware that supports
+                    // 8X, and the later clamp in startWGPU (after probe) wouldn't
+                    // un-clamp it back up. So we let pre-DEVICEINIT calls store the
+                    // full requested sample count and let startWGPU's probe + clamp
+                    // reduce it if (and only if) the device really doesn't support it.
+                    if (wgpuGlobals.device &&
+                        newSamples > wgpuGlobals.maxSupportedSamples)
+                        newSamples = wgpuGlobals.maxSupportedSamples;
+                    // For pre-DEVICEINIT calls (device null), the comparison against
+                    // numSamples is meaningless (numSamples is also uninitialised) —
+                    // just record pendingNumSamples and let the next beginUpdate/
+                    // clearCamera apply it.
+                    if (wgpuGlobals.device && newSamples == wgpuGlobals.numSamples)
+                        return 1;
+                    // Don't change numSamples here — write to pendingNumSamples
+                    // instead. applyPendingMsaaChange() (at the next beginUpdate)
+                    // will swap numSamples = pendingNumSamples and recreate
+                    // textures + flush pipeline caches. This prevents a mid-frame
+                    // mismatch where currentSampleCount() would return the new
+                    // value but the backbuffer still has the old sample count.
+                    wgpuGlobals.pendingNumSamples = newSamples;
+                    wgpuGlobals.msaaDirty = true;
                     return 1;
                 }
             default: return 1;

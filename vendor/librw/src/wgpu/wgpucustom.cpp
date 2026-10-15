@@ -301,7 +301,8 @@ fn vs_main(v : VsIn) -> VsOut {
             bool zwrite = s_renderState.zWrite != 0;
             bool isLine = (topology == WGPUPrimitiveTopology_LineList);
             uint32 key = ((uint32)sf << 8) | (uint32)df | (ztest ? (1u << 20) : 0u)
-                | (isLine ? (1u << 21) : 0u) | (zwrite ? (1u << 22) : 0u);
+                | (isLine ? (1u << 21) : 0u) | (zwrite ? (1u << 22) : 0u)
+                | (currentSampleCount() << 28);
             WGPURenderPipeline cached = imPipeCacheFind(pc, key);
             if (cached) return cached;
 
@@ -364,7 +365,7 @@ fn vs_main(v : VsIn) -> VsOut {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None;
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             WGPURenderPipeline pipe = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -866,7 +867,8 @@ fn DoFog(w : f32) -> f32 {
                 | ((sf & 0xF) << 2)
                 | ((df & 0xF) << 6)
                 | ((cull & 0x3) << 10)
-                | ((uint32)ztest << 12);
+                | ((uint32)ztest << 12)
+                | (currentSampleCount() << 28);
             WGPURenderPipeline cached = imPipeCacheFind(&sh->pc, key);
             if (cached) return cached;
 
@@ -942,7 +944,7 @@ fn DoFog(w : f32) -> f32 {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = objToWGPUCullMode(cull);
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             WGPURenderPipeline pipe = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);

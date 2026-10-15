@@ -39,97 +39,105 @@
 #ifdef CUSTOM_FRONTEND_OPTIONS
 
 #if defined(IMPROVED_VIDEOMODE) && !defined(GTA_HANDHELD)
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
 #define VIDEOMODE_SELECTOR                                                                                                                                     \
-	MENUACTION_CFO_SELECT, "FEM_SCF",                                                                                                                      \
-	    {new CCFOSelect((int8 *)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, ARRAY_SIZE(screenModes), true,                \
-	                    ScreenModeAfterChange, true)},                                                                                                     \
-	    0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEM_SCF",                                                                                                                      \
+            {new CCFOSelect((int8 *)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, ARRAY_SIZE(screenModes), true,                \
+                            ScreenModeAfterChange, false)},                                                                                                    \
+            0, 0, MENUALIGN_LEFT,
+#else
+#define VIDEOMODE_SELECTOR                                                                                                                                     \
+        MENUACTION_CFO_SELECT, "FEM_SCF",                                                                                                                      \
+            {new CCFOSelect((int8 *)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, ARRAY_SIZE(screenModes), true,                \
+                            ScreenModeAfterChange, true)},                                                                                                     \
+            0, 0, MENUALIGN_LEFT,
+#endif
 #else
 #define VIDEOMODE_SELECTOR
 #endif
 
 #ifdef MULTISAMPLING
 #define MULTISAMPLING_SELECTOR                                                                                                                                 \
-	MENUACTION_CFO_DYNAMIC, "FED_AAS",                                                                                                                     \
-	    {new CCFODynamic((int8 *)&FrontEndMenuManager.m_nPrefsMSAALevel, "Graphics", "MultiSampling", MultiSamplingDraw, MultiSamplingButtonPress)}, 0, 0, \
-	    MENUALIGN_LEFT,
+        MENUACTION_CFO_DYNAMIC, "FED_AAS",                                                                                                                     \
+            {new CCFODynamic((int8 *)&FrontEndMenuManager.m_nPrefsMSAALevel, "Graphics", "MultiSampling", MultiSamplingDraw, MultiSamplingButtonPress)}, 0, 0, \
+            MENUALIGN_LEFT,
 #else
 #define MULTISAMPLING_SELECTOR
 #endif
 
 #ifdef CUTSCENE_BORDERS_SWITCH
 #define CUTSCENE_BORDERS_TOGGLE                                                                                                                                \
-	MENUACTION_CFO_SELECT, "FEM_CSB",                                                                                                                      \
-	    {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsCutsceneBorders, "Display", "CutsceneBorders", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEM_CSB",                                                                                                                      \
+            {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsCutsceneBorders, "Display", "CutsceneBorders", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
 #else
 #define CUTSCENE_BORDERS_TOGGLE
 #endif
 
 #ifdef FREE_CAM
 #define FREE_CAM_TOGGLE                                                                                                                                        \
-	MENUACTION_CFO_SELECT, "FEC_FRC", {new CCFOSelect((int8 *)&TheCamera.bFreeCam, "Display", "FreeCam", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEC_FRC", {new CCFOSelect((int8 *)&TheCamera.bFreeCam, "Display", "FreeCam", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
 #else
 #define FREE_CAM_TOGGLE
 #endif
 
 #ifdef PS2_ALPHA_TEST
 #define DUALPASS_SELECTOR                                                                                                                                      \
-	MENUACTION_CFO_SELECT, "FEM_2PR", {new CCFOSelect((int8 *)&gPS2alphaTest, "Graphics", "PS2AlphaTest", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEM_2PR", {new CCFOSelect((int8 *)&gPS2alphaTest, "Graphics", "PS2AlphaTest", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
 #else
-	#define DUALPASS_SELECTOR
+        #define DUALPASS_SELECTOR
 #endif
 
 #ifdef RW_WGPU
-	// Saved to the INI (Graphics/WgpuBackend) and applied at the next startup
-	// (glfw.cpp reads it before RwEngineOpen) — switching backend needs a restart.
-	#define WGPU_BACKEND_SELECTOR MENUACTION_CFO_SELECT, "FEM_GBK", { new CCFOSelect((int8*)&FrontEndMenuManager.m_PrefsWgpuBackend, "Graphics", "WgpuBackend", wgpuBackends, ARRAY_SIZE(wgpuBackends), false) }, 0, 0, MENUALIGN_LEFT,
+        // Saved to the INI (Graphics/WgpuBackend) and applied at the next startup
+        // (glfw.cpp reads it before RwEngineOpen) — switching backend needs a restart.
+        #define WGPU_BACKEND_SELECTOR MENUACTION_CFO_SELECT, "FEM_GBK", { new CCFOSelect((int8*)&FrontEndMenuManager.m_PrefsWgpuBackend, "Graphics", "WgpuBackend", wgpuBackends, ARRAY_SIZE(wgpuBackends), false) }, 0, 0, MENUALIGN_LEFT,
 #else
-	#define WGPU_BACKEND_SELECTOR
+        #define WGPU_BACKEND_SELECTOR
 #endif
 
 #ifdef PED_CAR_DENSITY_SLIDERS
 // 0.2f - 3.4f makes it possible to have 1.0f somewhere inbetween
 #define DENSITY_SLIDERS                                                                                                                                        \
-	MENUACTION_CFO_SLIDER, "FEM_PED", {new CCFOSlider(&CIniFile::PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange)}, 0, 0,       \
-	    MENUALIGN_LEFT, MENUACTION_CFO_SLIDER, "FEM_CAR",                                                                                                  \
-	    {new CCFOSlider(&CIniFile::CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange)}, 0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SLIDER, "FEM_PED", {new CCFOSlider(&CIniFile::PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange)}, 0, 0,       \
+            MENUALIGN_LEFT, MENUACTION_CFO_SLIDER, "FEM_CAR",                                                                                                  \
+            {new CCFOSlider(&CIniFile::CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange)}, 0, 0, MENUALIGN_LEFT,
 #else
 #define DENSITY_SLIDERS
 #endif
 
 #ifdef NO_ISLAND_LOADING
 #define ISLAND_LOADING_SELECTOR                                                                                                                                \
-	MENUACTION_CFO_SELECT, "FEM_ISL",                                                                                                                      \
-	    {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsIslandLoading, "Graphics", "IslandLoading", islandLoadingOpts, ARRAY_SIZE(islandLoadingOpts),  \
-	                    true, IslandLoadingAfterChange)},                                                                                                  \
-	    0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEM_ISL",                                                                                                                      \
+            {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsIslandLoading, "Graphics", "IslandLoading", islandLoadingOpts, ARRAY_SIZE(islandLoadingOpts),  \
+                            true, IslandLoadingAfterChange)},                                                                                                  \
+            0, 0, MENUALIGN_LEFT,
 #else
 #define ISLAND_LOADING_SELECTOR
 #endif
 
 #ifdef EXTENDED_COLOURFILTER
 #define POSTFX_SELECTORS                                                                                                                                       \
-	MENUACTION_CFO_SELECT, "FED_CLF",                                                                                                                      \
-	    {new CCFOSelect((int8 *)&CPostFX::EffectSwitch, "Graphics", "ColourFilter", filterNames, ARRAY_SIZE(filterNames), false)}, 0, 0, MENUALIGN_LEFT,   \
-	    MENUACTION_CFO_SELECT, "FED_MBL", {new CCFOSelect((int8 *)&CPostFX::MotionBlurOn, "Graphics", "MotionBlur", off_on, 2, false)}, 0, 0,              \
-	    MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FED_CLF",                                                                                                                      \
+            {new CCFOSelect((int8 *)&CPostFX::EffectSwitch, "Graphics", "ColourFilter", filterNames, ARRAY_SIZE(filterNames), false)}, 0, 0, MENUALIGN_LEFT,   \
+            MENUACTION_CFO_SELECT, "FED_MBL", {new CCFOSelect((int8 *)&CPostFX::MotionBlurOn, "Graphics", "MotionBlur", off_on, 2, false)}, 0, 0,              \
+            MENUALIGN_LEFT,
 #else
 #define POSTFX_SELECTORS
 #endif
 
 #ifdef INVERT_LOOK_FOR_PAD
 #define INVERT_PAD_SELECTOR                                                                                                                                    \
-	MENUACTION_CFO_SELECT, "FEC_ILU", {new CCFOSelect((int8 *)&CPad::bInvertLook4Pad, "Controller", "InvertPad", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEC_ILU", {new CCFOSelect((int8 *)&CPad::bInvertLook4Pad, "Controller", "InvertPad", off_on, 2, false)}, 0, 0, MENUALIGN_LEFT,
 #else
 #define INVERT_PAD_SELECTOR
 #endif
 
 #ifdef GAMEPAD_MENU
 #define SELECT_CONTROLLER_TYPE                                                                                                                                 \
-	MENUACTION_CFO_SELECT, "FEC_TYP",                                                                                                                      \
-	    {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsControllerType, "Controller", "Type", controllerTypes, ARRAY_SIZE(controllerTypes), false,     \
-	                    ControllerTypeAfterChange)},                                                                                                       \
-	    0, 0, MENUALIGN_LEFT,
+        MENUACTION_CFO_SELECT, "FEC_TYP",                                                                                                                      \
+            {new CCFOSelect((int8 *)&FrontEndMenuManager.m_PrefsControllerType, "Controller", "Type", controllerTypes, ARRAY_SIZE(controllerTypes), false,     \
+                            ControllerTypeAfterChange)},                                                                                                       \
+            0, 0, MENUALIGN_LEFT,
 #else
 #define SELECT_CONTROLLER_TYPE
 #endif
@@ -149,60 +157,60 @@ const char *wgpuBackends[] = { "FEM_GAU", "FEM_GVK", "FEM_GGL" };  // Auto, Vulk
 void
 RestoreDefGraphics(int8 action)
 {
-	if(action != FEOPTION_ACTION_SELECT) return;
+        if(action != FEOPTION_ACTION_SELECT) return;
 
 #ifdef PS2_ALPHA_TEST
-	gPS2alphaTest = false;
+        gPS2alphaTest = false;
 #endif
 #ifdef MULTISAMPLING
-	FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel = 0;
+        FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel = 0;
 #endif
 #ifdef NO_ISLAND_LOADING
-	if(!FrontEndMenuManager.m_bGameNotLoaded) {
-		FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
-		CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
-		CStreaming::RemoveUnusedBuildings(CGame::currLevel);
-		CStreaming::RequestIslands(CGame::currLevel);
-		CStreaming::LoadAllRequestedModels(true);
-	} else
-		FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
+        if(!FrontEndMenuManager.m_bGameNotLoaded) {
+                FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
+                CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
+                CStreaming::RemoveUnusedBuildings(CGame::currLevel);
+                CStreaming::RequestIslands(CGame::currLevel);
+                CStreaming::LoadAllRequestedModels(true);
+        } else
+                FrontEndMenuManager.m_PrefsIslandLoading = FrontEndMenuManager.ISLAND_LOADING_LOW;
 #endif
 #ifdef GRAPHICS_MENU_OPTIONS // otherwise Frontend will handle those
-	FrontEndMenuManager.m_PrefsFrameLimiter = true;
-	FrontEndMenuManager.m_PrefsVsyncDisp = true;
+        FrontEndMenuManager.m_PrefsFrameLimiter = true;
+        FrontEndMenuManager.m_PrefsVsyncDisp = true;
 #ifdef LEGACY_MENU_OPTIONS
-	FrontEndMenuManager.m_PrefsVsync = true;
+        FrontEndMenuManager.m_PrefsVsync = true;
 #endif
-	FrontEndMenuManager.m_PrefsUseWideScreen = false;
-	FrontEndMenuManager.m_nDisplayVideoMode = FrontEndMenuManager.m_nPrefsVideoMode;
-	CMBlur::BlurOn = false;
-	FrontEndMenuManager.SaveSettings();
+        FrontEndMenuManager.m_PrefsUseWideScreen = false;
+        FrontEndMenuManager.m_nDisplayVideoMode = FrontEndMenuManager.m_nPrefsVideoMode;
+        CMBlur::BlurOn = false;
+        FrontEndMenuManager.SaveSettings();
 #endif
 }
 
 void
 RestoreDefDisplay(int8 action)
 {
-	if(action != FEOPTION_ACTION_SELECT) return;
+        if(action != FEOPTION_ACTION_SELECT) return;
 
 #ifdef CUTSCENE_BORDERS_SWITCH
-	FrontEndMenuManager.m_PrefsCutsceneBorders = true;
+        FrontEndMenuManager.m_PrefsCutsceneBorders = true;
 #endif
 #ifdef FREE_CAM
-	TheCamera.bFreeCam = false;
+        TheCamera.bFreeCam = false;
 #endif
 #ifdef PED_CAR_DENSITY_SLIDERS
-	CIniFile::LoadIniFile();
+        CIniFile::LoadIniFile();
 #endif
 #ifdef GRAPHICS_MENU_OPTIONS // otherwise Frontend will handle those
-	FrontEndMenuManager.m_PrefsBrightness = 256;
-	FrontEndMenuManager.m_PrefsLOD = 1.2f;
-	CRenderer::ms_lodDistScale = 1.2f;
-	FrontEndMenuManager.m_PrefsShowSubtitles = false;
-	FrontEndMenuManager.m_PrefsShowLegends = true;
-	FrontEndMenuManager.m_PrefsRadarMode = 0;
-	FrontEndMenuManager.m_PrefsShowHud = true;
-	FrontEndMenuManager.SaveSettings();
+        FrontEndMenuManager.m_PrefsBrightness = 256;
+        FrontEndMenuManager.m_PrefsLOD = 1.2f;
+        CRenderer::ms_lodDistScale = 1.2f;
+        FrontEndMenuManager.m_PrefsShowSubtitles = false;
+        FrontEndMenuManager.m_PrefsShowLegends = true;
+        FrontEndMenuManager.m_PrefsRadarMode = 0;
+        FrontEndMenuManager.m_PrefsShowHud = true;
+        FrontEndMenuManager.SaveSettings();
 #endif
 }
 
@@ -211,34 +219,34 @@ const char *islandLoadingOpts[] = {"FEM_LOW", "FEM_MED", "FEM_HIG"};
 void
 IslandLoadingAfterChange(int8 before, int8 after)
 {
-	if(!FrontEndMenuManager.m_bGameNotLoaded) {
-		if(after > FrontEndMenuManager.ISLAND_LOADING_LOW) {
-			FrontEndMenuManager.m_PrefsIslandLoading = before; // calls below needs previous mode :shrug:
+        if(!FrontEndMenuManager.m_bGameNotLoaded) {
+                if(after > FrontEndMenuManager.ISLAND_LOADING_LOW) {
+                        FrontEndMenuManager.m_PrefsIslandLoading = before; // calls below needs previous mode :shrug:
 
-			if(after == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
-				CStreaming::RemoveIslandsNotUsed(LEVEL_BEACH);
-				CStreaming::RemoveIslandsNotUsed(LEVEL_MAINLAND);
-			}
-			if(before == FrontEndMenuManager.ISLAND_LOADING_LOW) {
-				FrontEndMenuManager.m_PrefsIslandLoading = after;
-				CStreaming::RequestBigBuildings(CGame::currLevel);
+                        if(after == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
+                                CStreaming::RemoveIslandsNotUsed(LEVEL_BEACH);
+                                CStreaming::RemoveIslandsNotUsed(LEVEL_MAINLAND);
+                        }
+                        if(before == FrontEndMenuManager.ISLAND_LOADING_LOW) {
+                                FrontEndMenuManager.m_PrefsIslandLoading = after;
+                                CStreaming::RequestBigBuildings(CGame::currLevel);
 
-			} else if(before == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
-				FrontEndMenuManager.m_PrefsIslandLoading = after;
-				CStreaming::RequestIslands(CGame::currLevel);
-			} else
-				FrontEndMenuManager.m_PrefsIslandLoading = after;
+                        } else if(before == FrontEndMenuManager.ISLAND_LOADING_HIGH) {
+                                FrontEndMenuManager.m_PrefsIslandLoading = after;
+                                CStreaming::RequestIslands(CGame::currLevel);
+                        } else
+                                FrontEndMenuManager.m_PrefsIslandLoading = after;
 
-		} else { // low
-			CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
-			CStreaming::RemoveUnusedBuildings(CGame::currLevel);
-			CStreaming::RequestIslands(CGame::currLevel);
-		}
+                } else { // low
+                        CStreaming::RemoveUnusedBigBuildings(CGame::currLevel);
+                        CStreaming::RemoveUnusedBuildings(CGame::currLevel);
+                        CStreaming::RequestIslands(CGame::currLevel);
+                }
 
-		CStreaming::LoadAllRequestedModels(true);
-	}
+                CStreaming::LoadAllRequestedModels(true);
+        }
 
-	FrontEndMenuManager.SetHelperText(0);
+        FrontEndMenuManager.SetHelperText(0);
 }
 #endif
 
@@ -246,8 +254,8 @@ IslandLoadingAfterChange(int8 before, int8 after)
 void
 PedDensityChange(float before, float after)
 {
-	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * after;
-	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * after;
+        CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * after;
+        CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * after;
 }
 
 void
@@ -268,65 +276,144 @@ GraphicsGoBack()
 void
 MultiSamplingButtonPress(int8 action)
 {
-	if(action == FEOPTION_ACTION_SELECT) {
-		if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
-			FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel;
-			_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
-			if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-			DMAudio.Service();
-			FrontEndMenuManager.SetHelperText(0);
-			FrontEndMenuManager.SaveSettings();
-		}
-	} else if(action == FEOPTION_ACTION_LEFT || action == FEOPTION_ACTION_RIGHT) {
-		if(FrontEndMenuManager.m_bGameNotLoaded) {
-			FrontEndMenuManager.m_nDisplayMSAALevel += (action == FEOPTION_ACTION_RIGHT ? 1 : -1);
+        if(action == FEOPTION_ACTION_SELECT) {
+                if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
+                        int8 newLevel = FrontEndMenuManager.m_nDisplayMSAALevel;
+                        int8 oldLevel = FrontEndMenuManager.m_nPrefsMSAALevel;
+#if defined(RW_WGPU) && defined(UNLOCK_MENU_OPTIONS_INGAME)
+                        // wgpu backend: real-time MSAA apply in BOTH main menu and pause menu.
+                        // RwD3D8EngineSetMultiSamplingLevels sets wgpuGlobals.msaaDirty=true;
+                        // applyPendingMsaaChange() in beginUpdate recreates textures + pipelines.
+                        // No _psSelectScreenVM call - that would tear down the rw engine and
+                        // crash via libdecor on Wayland.
+                        (void)oldLevel;
+                        FrontEndMenuManager.m_nPrefsMSAALevel = newLevel;
+                        RwD3D8EngineSetMultiSamplingLevels(1 << newLevel);
+                        FrontEndMenuManager.SetHelperText(0);
+                        FrontEndMenuManager.SaveSettings();
+#elif defined(UNLOCK_MENU_OPTIONS_INGAME)
+                        if(!FrontEndMenuManager.m_bGameNotLoaded) {
+                                // GL3/D3D backends, pause menu: MSAA can't be changed live (requires
+                                // context recreation, which would tear down every loaded RwTexture and
+                                // crash at exit() via the static CRadar::WaypointSprite's atexit
+                                // destructor). Persist the user's choice to the settings file (applies
+                                // on next launch) and revert the in-memory state.
+                                FrontEndMenuManager.m_nPrefsMSAALevel = newLevel;
+                                FrontEndMenuManager.SaveSettings();          // writes newLevel to disk
+                                FrontEndMenuManager.m_nPrefsMSAALevel = oldLevel;     // revert in-memory
+                                FrontEndMenuManager.m_nDisplayMSAALevel = oldLevel;  // revert displayed
+                                FrontEndMenuManager.SetHelperText(3);        // "ORIGINAL SETTING RESTORED"
+                        } else {
+                                // GL3/D3D backends, main menu: destructive apply is safe (no game
+                                // textures loaded yet).
+                                FrontEndMenuManager.m_nPrefsMSAALevel = newLevel;
+                                _psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
+                                if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+                                DMAudio.Service();
+                                FrontEndMenuManager.SetHelperText(0);
+                                FrontEndMenuManager.SaveSettings();
+                        }
+#else
+                        // Original destructive path (UNLOCK not defined).
+                        FrontEndMenuManager.m_nPrefsMSAALevel = newLevel;
+                        _psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
+                        if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+                        DMAudio.Service();
+                        FrontEndMenuManager.SetHelperText(0);
+                        FrontEndMenuManager.SaveSettings();
+#endif
+                }
+        } else if(action == FEOPTION_ACTION_LEFT || action == FEOPTION_ACTION_RIGHT) {
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+                FrontEndMenuManager.m_nDisplayMSAALevel += (action == FEOPTION_ACTION_RIGHT ? 1 : -1);
 
-			int i = 0;
-			int maxAA = RwD3D8EngineGetMaxMultiSamplingLevels();
-			while(maxAA != 1) {
-				i++;
-				maxAA >>= 1;
-			}
+                int i = 0;
+                int maxAA = RwD3D8EngineGetMaxMultiSamplingLevels();
+                while(maxAA != 1) {
+                        i++;
+                        maxAA >>= 1;
+                }
+                // Some GL drivers / software renderers report glGetIntegerv(GL_MAX_SAMPLES) = 0
+                // (which librw maps to maxAA=1), even when MSAA is technically supported by
+                // the hardware. Without this fallback, the L/R above would clamp displayed to 0
+                // (OFF) and the user could never select any MSAA level. With the fallback, the
+                // user can pick 1=2X, 2=4X, 3=8X; the actual MSAA is applied on next launch when
+                // the rw engine creates the GL context with the requested sample count.
+                //
+                // EXCLUDED for RW_WGPU: the wgpu backend's probeMaxSupportedSamples() in
+                // wgpudevice.cpp actually attempts to create 1x1 textures with each sample
+                // count and captures validation errors, so RwD3D8EngineGetMaxMultiSamplingLevels()
+                // returns the device's REAL max supported MSAA level (1, 2, 4, 8 or 16).
+                // If it returns 1, the device genuinely has no MSAA — show only "Off".
+                // The fallback here would override that to 8X and let the user pick a level
+                // the device can't honour, then crash at apply time.
+#if !defined(RW_WGPU)
+                if(i == 0) i = 3; // assume up to 8x MSAA on modern hardware
+#endif
 
-			if(FrontEndMenuManager.m_nDisplayMSAALevel < 0)
-				FrontEndMenuManager.m_nDisplayMSAALevel = i;
-			else if(FrontEndMenuManager.m_nDisplayMSAALevel > i)
-				FrontEndMenuManager.m_nDisplayMSAALevel = 0;
-		}
-	} else if(action == FEOPTION_ACTION_FOCUSLOSS) {
-		if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
-			FrontEndMenuManager.m_nDisplayMSAALevel = FrontEndMenuManager.m_nPrefsMSAALevel;
-			FrontEndMenuManager.SetHelperText(3);
-		}
-	}
+                if(FrontEndMenuManager.m_nDisplayMSAALevel < 0)
+                        FrontEndMenuManager.m_nDisplayMSAALevel = i;
+                else if(FrontEndMenuManager.m_nDisplayMSAALevel > i)
+                        FrontEndMenuManager.m_nDisplayMSAALevel = 0;
+#else
+                if(FrontEndMenuManager.m_bGameNotLoaded) {
+                        FrontEndMenuManager.m_nDisplayMSAALevel += (action == FEOPTION_ACTION_RIGHT ? 1 : -1);
+
+                        int i = 0;
+                        int maxAA = RwD3D8EngineGetMaxMultiSamplingLevels();
+                        while(maxAA != 1) {
+                                i++;
+                                maxAA >>= 1;
+                        }
+#if !defined(RW_WGPU)
+                        if(i == 0) i = 3; // fallback: assume up to 8x MSAA on modern hardware
+#endif
+
+                        if(FrontEndMenuManager.m_nDisplayMSAALevel < 0)
+                                FrontEndMenuManager.m_nDisplayMSAALevel = i;
+                        else if(FrontEndMenuManager.m_nDisplayMSAALevel > i)
+                                FrontEndMenuManager.m_nDisplayMSAALevel = 0;
+                }
+#endif
+        } else if(action == FEOPTION_ACTION_FOCUSLOSS) {
+                if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
+                        FrontEndMenuManager.m_nDisplayMSAALevel = FrontEndMenuManager.m_nPrefsMSAALevel;
+                        FrontEndMenuManager.SetHelperText(3);
+                }
+        }
 }
 
 wchar *
 MultiSamplingDraw(bool *disabled, bool userHovering)
 {
-	static wchar unicodeTemp[64];
-	if(userHovering) {
-		if(FrontEndMenuManager.m_nDisplayMSAALevel == FrontEndMenuManager.m_nPrefsMSAALevel) {
-			if(FrontEndMenuManager.m_nHelperTextMsgId == 1) // Press enter to apply
-				FrontEndMenuManager.ResetHelperText();
-		} else {
-			FrontEndMenuManager.SetHelperText(1);
-		}
-	} else {
-		if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
-			FrontEndMenuManager.m_nDisplayMSAALevel = FrontEndMenuManager.m_nPrefsMSAALevel;
-		}
-	}
+        static wchar unicodeTemp[64];
+        if(userHovering) {
+                if(FrontEndMenuManager.m_nDisplayMSAALevel == FrontEndMenuManager.m_nPrefsMSAALevel) {
+                        if(FrontEndMenuManager.m_nHelperTextMsgId == 1) // Press enter to apply
+                                FrontEndMenuManager.ResetHelperText();
+                } else {
+                        FrontEndMenuManager.SetHelperText(1);
+                }
+        } else {
+                if(FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
+                        FrontEndMenuManager.m_nDisplayMSAALevel = FrontEndMenuManager.m_nPrefsMSAALevel;
+                }
+        }
 
-	if(!FrontEndMenuManager.m_bGameNotLoaded) *disabled = true;
+        if(!FrontEndMenuManager.m_bGameNotLoaded)
+#ifndef UNLOCK_MENU_OPTIONS_INGAME
+                *disabled = true;
+#else
+                ; // editable from pause menu; the SELECT apply is real-time on wgpu, deferred on GL
+#endif
 
-	switch(FrontEndMenuManager.m_nDisplayMSAALevel) {
-	case 0: return TheText.Get("FEM_OFF");
-	default:
-		sprintf(gString, "%iX", 1 << (FrontEndMenuManager.m_nDisplayMSAALevel));
-		AsciiToUnicode(gString, unicodeTemp);
-		return unicodeTemp;
-	}
+        switch(FrontEndMenuManager.m_nDisplayMSAALevel) {
+        case 0: return TheText.Get("FEM_OFF");
+        default:
+                sprintf(gString, "%iX", 1 << (FrontEndMenuManager.m_nDisplayMSAALevel));
+                AsciiToUnicode(gString, unicodeTemp);
+                return unicodeTemp;
+        }
 }
 #endif
 
@@ -335,28 +422,36 @@ const char *screenModes[] = {"FED_FLS", "FED_WND", "FED_BDL"};
 void
 ScreenModeAfterChange(int8 before, int8 after)
 {
-	const int32 currOption = FrontEndMenuManager.m_nCurrOption;
-	const bool showMouse = FrontEndMenuManager.m_bShowMouse;
+        const int32 currOption = FrontEndMenuManager.m_nCurrOption;
+        const bool showMouse = FrontEndMenuManager.m_bShowMouse;
 
-	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+        // Always use the live apply path — the destructive _psSelectScreenVM would
+        // tear down the rw engine and crash via CRadar::WaypointSprite's atexit
+        // destructor after the rw texture world is destroyed (even in main menu,
+        // once the user has at least once started a game and loaded textures).
+        psApplyWindowModeLive();
+#else
+        _psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
+#endif
 
-	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
-	FrontEndMenuManager.m_nCurrOption = currOption;
-	FrontEndMenuManager.CentreMousePointer();
-	const int32 mouseCentreX = SCREEN_WIDTH / 2;
-	const int32 mouseCentreY = SCREEN_HEIGHT / 2;
-	FrontEndMenuManager.m_nMouseTempPosX = mouseCentreX;
-	FrontEndMenuManager.m_nMouseTempPosY = mouseCentreY;
-	FrontEndMenuManager.m_nMousePosX = mouseCentreX;
-	FrontEndMenuManager.m_nMousePosY = mouseCentreY;
-	FrontEndMenuManager.m_nMouseOldPosX = mouseCentreX;
-	FrontEndMenuManager.m_nMouseOldPosY = mouseCentreY;
-	FrontEndMenuManager.m_bShowMouse = showMouse;
+        FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+        FrontEndMenuManager.m_nCurrOption = currOption;
+        FrontEndMenuManager.CentreMousePointer();
+        const int32 mouseCentreX = SCREEN_WIDTH / 2;
+        const int32 mouseCentreY = SCREEN_HEIGHT / 2;
+        FrontEndMenuManager.m_nMouseTempPosX = mouseCentreX;
+        FrontEndMenuManager.m_nMouseTempPosY = mouseCentreY;
+        FrontEndMenuManager.m_nMousePosX = mouseCentreX;
+        FrontEndMenuManager.m_nMousePosY = mouseCentreY;
+        FrontEndMenuManager.m_nMouseOldPosX = mouseCentreX;
+        FrontEndMenuManager.m_nMouseOldPosY = mouseCentreY;
+        FrontEndMenuManager.m_bShowMouse = showMouse;
 
-	if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-	DMAudio.Service();
-	FrontEndMenuManager.SetHelperText(0);
-	FrontEndMenuManager.SaveSettings();
+        if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
+        DMAudio.Service();
+        FrontEndMenuManager.SetHelperText(0);
+        FrontEndMenuManager.SaveSettings();
 }
 
 #endif
@@ -370,85 +465,85 @@ DetectJoystickDraw(bool *disabled, bool userHovering)
 {
 
 #if (defined RW_GL3 || defined RW_WGPU) && !defined LIBRW_SDL2
-	int numButtons;
-	int found = -1;
-	const char *joyname;
-	if(userHovering) {
-		for(int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
-			if((joyname = glfwGetJoystickName(i))) {
-				const uint8 *buttons = glfwGetJoystickButtons(i, &numButtons);
-				for(int j = 0; j < numButtons; j++) {
-					if(buttons[j]) {
-						found = i;
-						break;
-					}
-				}
-				if(found != -1) break;
-			}
-		}
+        int numButtons;
+        int found = -1;
+        const char *joyname;
+        if(userHovering) {
+                for(int i = 0; i <= GLFW_JOYSTICK_LAST; i++) {
+                        if((joyname = glfwGetJoystickName(i))) {
+                                const uint8 *buttons = glfwGetJoystickButtons(i, &numButtons);
+                                for(int j = 0; j < numButtons; j++) {
+                                        if(buttons[j]) {
+                                                found = i;
+                                                break;
+                                        }
+                                }
+                                if(found != -1) break;
+                        }
+                }
 
-		if(found != -1 && PSGLOBAL(joy1id) != found) {
-			if(PSGLOBAL(joy1id) != -1 && PSGLOBAL(joy1id) != found)
-				PSGLOBAL(joy2id) = PSGLOBAL(joy1id);
-			else
-				PSGLOBAL(joy2id) = -1;
+                if(found != -1 && PSGLOBAL(joy1id) != found) {
+                        if(PSGLOBAL(joy1id) != -1 && PSGLOBAL(joy1id) != found)
+                                PSGLOBAL(joy2id) = PSGLOBAL(joy1id);
+                        else
+                                PSGLOBAL(joy2id) = -1;
 
-			strcpy(gSelectedJoystickName, joyname);
-			PSGLOBAL(joy1id) = found;
-			cachedButtonNum = numButtons;
-		}
-	}
-	if(PSGLOBAL(joy1id) == -1)
+                        strcpy(gSelectedJoystickName, joyname);
+                        PSGLOBAL(joy1id) = found;
+                        cachedButtonNum = numButtons;
+                }
+        }
+        if(PSGLOBAL(joy1id) == -1)
 #elif defined XINPUT
-	int found = -1;
-	XINPUT_STATE xstate;
-	memset(&xstate, 0, sizeof(XINPUT_STATE));
-	if(userHovering) {
-		for(int i = 0; i <= 3; i++) {
-			if(XInputGetState(i, &xstate) == ERROR_SUCCESS) {
-				if(xstate.Gamepad.bLeftTrigger || xstate.Gamepad.bRightTrigger) {
-					found = i;
-					break;
-				}
-				for(int j = XINPUT_GAMEPAD_DPAD_UP; j != XINPUT_GAMEPAD_Y << 1; j = (j << 1)) {
-					if(xstate.Gamepad.wButtons & j) {
-						found = i;
-						break;
-					}
-				}
-				if(found != -1) break;
-			}
-		}
-		if(found != -1 && CPad::XInputJoy1 != found) {
-			// We should never leave pads -1, so we can process them when they're connected and kinda support hotplug.
-			CPad::XInputJoy2 = (CPad::XInputJoy1 == -1 ? (found + 1) % 4 : CPad::XInputJoy1);
-			CPad::XInputJoy1 = found;
-			cachedButtonNum = 0; // fake too, because xinput bypass CControllerConfig
-		}
-	}
-	sprintf(gSelectedJoystickName, "%d",
-	        CPad::XInputJoy1); // fake, on xinput we only store gamepad ids(thanks MS) so this is a temp variable to be used below
-	if(CPad::XInputJoy1 == -1)
+        int found = -1;
+        XINPUT_STATE xstate;
+        memset(&xstate, 0, sizeof(XINPUT_STATE));
+        if(userHovering) {
+                for(int i = 0; i <= 3; i++) {
+                        if(XInputGetState(i, &xstate) == ERROR_SUCCESS) {
+                                if(xstate.Gamepad.bLeftTrigger || xstate.Gamepad.bRightTrigger) {
+                                        found = i;
+                                        break;
+                                }
+                                for(int j = XINPUT_GAMEPAD_DPAD_UP; j != XINPUT_GAMEPAD_Y << 1; j = (j << 1)) {
+                                        if(xstate.Gamepad.wButtons & j) {
+                                                found = i;
+                                                break;
+                                        }
+                                }
+                                if(found != -1) break;
+                        }
+                }
+                if(found != -1 && CPad::XInputJoy1 != found) {
+                        // We should never leave pads -1, so we can process them when they're connected and kinda support hotplug.
+                        CPad::XInputJoy2 = (CPad::XInputJoy1 == -1 ? (found + 1) % 4 : CPad::XInputJoy1);
+                        CPad::XInputJoy1 = found;
+                        cachedButtonNum = 0; // fake too, because xinput bypass CControllerConfig
+                }
+        }
+        sprintf(gSelectedJoystickName, "%d",
+                CPad::XInputJoy1); // fake, on xinput we only store gamepad ids(thanks MS) so this is a temp variable to be used below
+        if(CPad::XInputJoy1 == -1)
 #endif
-		AsciiToUnicode("Not found", selectedJoystickUnicode);
-	else
-		AsciiToUnicode(gSelectedJoystickName, selectedJoystickUnicode);
+                AsciiToUnicode("Not found", selectedJoystickUnicode);
+        else
+                AsciiToUnicode(gSelectedJoystickName, selectedJoystickUnicode);
 
-	return selectedJoystickUnicode;
+        return selectedJoystickUnicode;
 }
 
 void
 DetectJoystickGoBack()
 {
-	if(cachedButtonNum != -1) {
+        if(cachedButtonNum != -1) {
 #ifdef LOAD_INI_SETTINGS
-		ControlsManager.InitDefaultControlConfigJoyPad(cachedButtonNum);
-		SaveINIControllerSettings();
+                ControlsManager.InitDefaultControlConfigJoyPad(cachedButtonNum);
+                SaveINIControllerSettings();
 #else
-		// Otherwise no way to save gSelectedJoystickName or ms_padButtonsInited anyway :shrug: Why do you even use this config.??
+                // Otherwise no way to save gSelectedJoystickName or ms_padButtonsInited anyway :shrug: Why do you even use this config.??
 #endif
-		cachedButtonNum = -1;
-	}
+                cachedButtonNum = -1;
+        }
 }
 #endif
 
@@ -1514,7 +1609,7 @@ CMenuScreenCustom aScreens[] = {
         320,
         0,
         MENUALIGN_CENTER,
-        // MENUACTION_GOBACK,		"FEDS_TB",	{nil, SAVESLOT_NONE, 0}, 320, 260, MENUALIGN_CENTER, // original y
+        // MENUACTION_GOBACK,           "FEDS_TB",      {nil, SAVESLOT_NONE, 0}, 320, 260, MENUALIGN_CENTER, // original y
     },
 
     // MENUPAGE_PAUSE_MENU = 32
@@ -1855,7 +1950,7 @@ CMenuScreenCustom aScreens[] = {
         0,
         MENUALIGN_LEFT,
         MULTISAMPLING_SELECTOR ISLAND_LOADING_SELECTOR DUALPASS_SELECTOR
-		WGPU_BACKEND_SELECTOR
+                WGPU_BACKEND_SELECTOR
 #ifdef EXTENDED_COLOURFILTER
             POSTFX_SELECTORS
 #elif defined LEGACY_MENU_OPTIONS

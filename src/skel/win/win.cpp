@@ -1046,6 +1046,14 @@ void _psSelectScreenVM(RwInt32 videoMode)
 		FrontEndMenuManager.LoadAllTextures();
 }
 
+// Live window-mode apply is not implemented on the Windows/D3D backend; tell the
+// caller to fall back to the destructive _psSelectScreenVM path (only safe when
+// no game is loaded, i.e. in main frontend).
+bool psApplyWindowModeLive()
+{
+	return false;
+}
+
 /*
  *****************************************************************************
  */

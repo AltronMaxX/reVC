@@ -47,6 +47,12 @@ extern void HandleExit();
 
 extern void _psSelectScreenVM(RwInt32 videoMode);
 
+// Live (in-place) window-mode / resolution change without tearing down the rw engine.
+// Returns true if applied; false if the backend doesn't support live apply (caller
+// should fall back to the destructive _psSelectScreenVM path, which is only safe in
+// the main frontend / when no game is loaded).
+extern bool psApplyWindowModeLive();
+
 extern void InitialiseLanguage();
 
 extern RwBool _psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode);

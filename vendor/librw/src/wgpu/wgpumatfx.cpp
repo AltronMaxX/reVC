@@ -315,7 +315,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = cullMode;
             rpDesc.depthStencil = &depthStencil;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
 
@@ -337,7 +337,8 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
         static WGPURenderPipeline
         getOrCreateMatFXPipeline(bool zWrite, uint32 cullMode, bool zTest)
         {
-            uint32 key = (uint32)zWrite | ((cullMode & 0x3) << 1) | ((uint32)zTest << 3);
+            uint32 key = (uint32)zWrite | ((cullMode & 0x3) << 1) | ((uint32)zTest << 3)
+                | (currentSampleCount() << 28);
             int free = -1;
             for (int i = 0; i < MATFX_CACHE_SIZE; i++)
             {
@@ -363,6 +364,25 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             for (int i = 0; i < MATFX_CACHE_SIZE; i++)
             {
                 if (s_matfxCache[i].valid)
+                {
+                    wgpuRenderPipelineRelease(s_matfxCache[i].pipeline);
+                    s_matfxCache[i].pipeline = nullptr;
+                    s_matfxCache[i].valid = false;
+                }
+            }
+        }
+
+        // Flush only render pipelines (for real-time MSAA change). Cheaper than
+        // closeMatFX — releases the cached pipelines but leaves the shared shader
+        // module, BGLs and samplers intact. Pipelines are sample-count-specific
+        // in wgpu, so they must be released when wgpuGlobals.numSamples changes;
+        // the next draw will lazily recreate them via the existing getOrCreate*
+        // path with the new sample count.
+        void flushMatfxPipelines(void)
+        {
+            for (int i = 0; i < MATFX_CACHE_SIZE; i++)
+            {
+                if (s_matfxCache[i].valid && s_matfxCache[i].pipeline)
                 {
                     wgpuRenderPipelineRelease(s_matfxCache[i].pipeline);
                     s_matfxCache[i].pipeline = nullptr;

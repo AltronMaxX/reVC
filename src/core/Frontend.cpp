@@ -820,7 +820,11 @@ CMenuManager::DisplayHelperText(const char *text)
 
 		if(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action == MENUACTION_SCREENRES) {
 			CFont::PrintString(SCREEN_STRETCH_FROM_RIGHT(HELPER_TEXT_RIGHT_MARGIN), SCREEN_SCALE_FROM_BOTTOM(HELPER_TEXT_BOTTOM_MARGIN),
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+			                   TheText.Get("FET_MIG"));
+#else
 			                   m_bGameNotLoaded ? TheText.Get("FET_MIG") : TheText.Get("FEH_NA"));
+#endif
 			return;
 		}
 
@@ -1199,9 +1203,11 @@ for(int i = 0; i < NUM_MENUROWS; ++i) {
 					AsciiToUnicode(_psGetVideoModeList()[m_nDisplayVideoMode], unicodeTemp);
 					rightText = unicodeTemp;
 
+#ifndef UNLOCK_MENU_OPTIONS_INGAME
 					if(!m_bGameNotLoaded) {
 						CFont::SetColor(CRGBA(DARKMENUOPTION_COLOR.r, DARKMENUOPTION_COLOR.g, DARKMENUOPTION_COLOR.b, FadeIn(255)));
 					}
+#endif
 					break;
 				case MENUACTION_AUDIOHW:
 					if(m_nPrefsAudio3DProviderIndex == NO_AUDIO_PROVIDER)
@@ -4687,7 +4693,26 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 		case MENUACTION_SCREENRES:
 			if(m_nDisplayVideoMode != m_nPrefsVideoMode) {
 				m_nPrefsVideoMode = m_nDisplayVideoMode;
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+				{
+					// Live apply: just resize/move the existing GLFW window without
+					// tearing down the rw engine (which would crash via the static
+					// CRadar::WaypointSprite's atexit destructor — even in main menu,
+					// once the user has at least once started a game and loaded
+					// textures, the atexit chain still fires on X errors).
+					//
+					// Sync the dimension prefs from the new video mode so the windowed
+					// apply path uses the right framebuffer size.
+					RwVideoMode newVm;
+					RwEngineGetVideoModeInfo(&newVm, m_nPrefsVideoMode);
+					m_nPrefsWidth  = newVm.width;
+					m_nPrefsHeight = newVm.height;
+					m_nPrefsDepth  = newVm.depth;
+					psApplyWindowModeLive();
+				}
+#else
 				_psSelectScreenVM(m_nPrefsVideoMode);
+#endif
 				if(!CGame::ShouldPreserveWindowPauseMusicMode()) DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
 				DMAudio.Service();
 				CentreMousePointer();
@@ -4911,6 +4936,50 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 			break;
 #endif
 		case MENUACTION_SCREENRES:
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+		{
+			RwChar **videoMods = _psGetVideoModeList();
+			// Diagnostic: print the number of video modes known to librw and how many
+			// are exclusive (selectable). This is logged once per L/R press to stdout
+			// so we can see whether the user's monitor reports only one exclusive mode
+			// (in which case the do-while loop wraps back to the same mode and there
+			// is genuinely nothing else to switch to) or many (in which case the L/R
+			// is silently not being reached for some other reason).
+			static bool diagPrinted = false;
+			if(!diagPrinted) {
+				int total = _psGetNumVideModes();
+				int exclusive = 0;
+				for(int k = 0; k < total; k++) if(videoMods[k]) exclusive++;
+				fprintf(stderr, "[UNLOCK_DIAG] SCREENRES L/R: total=%d exclusive=%d current=%d\n", total, exclusive, m_nDisplayVideoMode);
+				for(int k = 0; k < total; k++) if(videoMods[k]) fprintf(stderr, "[UNLOCK_DIAG]   mode %d: %s\n", k, videoMods[k]);
+				fflush(stderr);
+				diagPrinted = true;
+			}
+			// Loop guard: if there's only one exclusive mode (or zero), the do-while
+			// would either loop forever (zero) or wrap back to the same mode (one).
+			// Short-circuit in that case so the user at least doesn't hang.
+			int totalModes = _psGetNumVideModes();
+			int exclusiveCount = 0;
+			for(int k = 0; k < totalModes; k++) if(videoMods[k]) exclusiveCount++;
+			if(exclusiveCount <= 1) {
+				// nothing else to switch to; leave m_nDisplayVideoMode unchanged.
+				break;
+			}
+			if(changeAmount > 0) {
+				do {
+					++m_nDisplayVideoMode;
+
+					if(m_nDisplayVideoMode >= totalModes) m_nDisplayVideoMode = 0;
+				} while(!videoMods[m_nDisplayVideoMode]);
+			} else {
+				do {
+					--m_nDisplayVideoMode;
+
+					if(m_nDisplayVideoMode < 0) m_nDisplayVideoMode = totalModes - 1;
+				} while(!videoMods[m_nDisplayVideoMode]);
+			}
+		}
+#else
 			if(m_bGameNotLoaded) {
 				RwChar **videoMods = _psGetVideoModeList();
 				if(changeAmount > 0) {
@@ -4927,6 +4996,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 					} while(!videoMods[m_nDisplayVideoMode]);
 				}
 			}
+#endif
 			break;
 		case MENUACTION_AUDIOHW:
 			if(m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {

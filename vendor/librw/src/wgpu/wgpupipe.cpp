@@ -181,7 +181,7 @@ namespace rw
             s_atomic.defaultSampler = wgpuDeviceCreateSampler(dev, &samplerDesc);
         }
 
-        static void flushPipelineCache(void);
+        void flushPipelineCache(void);
 
         void closeAtomic(void)
         {
@@ -645,7 +645,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = cullMode;
             rpDesc.depthStencil = &depthStencil;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
 
@@ -679,7 +679,8 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                 | ((srcBlend & 0xF) << 5)
                 | ((destBlend & 0xF) << 9)
                 | ((cullMode & 0x3) << 13)
-                | ((uint32)zTest << 15);
+                | ((uint32)zTest << 15)
+                | (currentSampleCount() << 28);
         }
 
         static WGPURenderPipeline
@@ -700,11 +701,14 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             return pipe;
         }
 
-        static void
+        void
         flushPipelineCache(void)
         {
             imPipeCacheRelease(&s_pipelineCache);
         }
+        // (Forward declaration above changed from static to external so the
+        // MSAA-recreate path in wgpudevice.cpp can flush the atomic cache.
+        // Function body unchanged.)
 
         // ========================================================================
         // Render Callback

@@ -361,7 +361,8 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             bool vertexAlpha = s_renderState.vertexAlpha != 0;
             uint32 key = ((uint32)sf << 8) | (uint32)df | (ztest ? (1u << 20) : 0u)
                 | (isLine ? (1u << 21) : 0u) | (zwrite ? (1u << 22) : 0u)
-                | (vertexAlpha ? (1u << 23) : 0u);
+                | (vertexAlpha ? (1u << 23) : 0u)
+                | (currentSampleCount() << 28);
             WGPURenderPipeline cached = imPipeCacheFind(pc, key);
             if (cached) return cached;
 
@@ -415,7 +416,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None;
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             WGPURenderPipeline pipe = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -829,7 +830,8 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             bool isLine = (topology == WGPUPrimitiveTopology_LineList);
             bool vertexAlpha = s_renderState.vertexAlpha != 0;
             uint32 key = ((uint32)sf << 8) | (uint32)df | (ztest ? (1u << 20) : 0u) | (zwrite ? (1u << 21) : 0u) | (
-                isLine ? (1u << 22) : 0u) | (vertexAlpha ? (1u << 23) : 0u);
+                isLine ? (1u << 22) : 0u) | (vertexAlpha ? (1u << 23) : 0u)
+                | (currentSampleCount() << 28);
             WGPURenderPipeline cached = imPipeCacheFind(pc, key);
             if (cached) return cached;
 
@@ -885,7 +887,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None;
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             WGPURenderPipeline pipe = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -1164,7 +1166,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None;
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             s_im2d.pipeline = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -1362,7 +1364,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None;
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             s_im2dText.pipeline = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -1578,7 +1580,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             rpDesc.primitive.frontFace = WGPUFrontFace_CCW;
             rpDesc.primitive.cullMode = WGPUCullMode_None; // let app control via flags
             rpDesc.depthStencil = &ds;
-            rpDesc.multisample.count = 1;
+            rpDesc.multisample.count = currentSampleCount();
             rpDesc.multisample.mask = 0xFFFFFFFF;
             rpDesc.fragment = &fragState;
             s_im3d.pipeline = wgpuDeviceCreateRenderPipeline(dev, &rpDesc);
@@ -1588,6 +1590,28 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             s_im3d.pc.shader = shaderMod;
             s_im3d.pc.playout = pl;
             s_im3d.pc.count = 0;
+        }
+
+        // Flush only render pipelines (for real-time MSAA change). Cheaper than
+        // closeIm2D/closeIm2DText/closeIm3D — releases the cached pipelines but
+        // leaves shaders, BGLs, samplers, uniform buffers intact. Pipelines are
+        // sample-count-specific in wgpu, so they must be released when
+        // wgpuGlobals.numSamples changes. The next draw will lazily recreate
+        // them via the existing getOrCreate* path with the new sample count.
+        void flushIm2DPipelines(void)
+        {
+            imPipeCacheRelease(&s_im2d.pc);
+            if (s_im2d.pipeline) { wgpuRenderPipelineRelease(s_im2d.pipeline); s_im2d.pipeline = nullptr; }
+        }
+        void flushIm2DTextPipelines(void)
+        {
+            imPipeCacheRelease(&s_im2dText.pc);
+            if (s_im2dText.pipeline) { wgpuRenderPipelineRelease(s_im2dText.pipeline); s_im2dText.pipeline = nullptr; }
+        }
+        void flushIm3DPipelines(void)
+        {
+            imPipeCacheRelease(&s_im3d.pc);
+            if (s_im3d.pipeline) { wgpuRenderPipelineRelease(s_im3d.pipeline); s_im3d.pipeline = nullptr; }
         }
 
         void closeIm3D(void)
