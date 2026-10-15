@@ -34,12 +34,19 @@ We have implemented a number of changes and improvements to the original game.
 They can be configured in `core/config.h`.
 Some of them can be toggled at runtime, some cannot.
 
+_* Features ported from [ViceExtended](https://github.com/x87/gta-extended-2025)
+  - Firing and aiming like in San Andreas (free-aim with any weapon)
+  - ~~Drive-by shooting (aim and shoot in any direction from vehicle)~~ TODO 
+  - Improved menu and input
+  - First person mode
+  - Crouching like in San Andreas
+  - Climbing like in San Andreas
+  - Swimming like in San Andreas
+  - Shortcut from Airport to Sunshine Autos_
 * Skip phone calls by using Enter/Exit car button
 * Autosaves after mission
 * Fixed the game running on Linux with Wayland
 * Fixed vigilante mission text for VCPD Cheetah
-* Added shortcut from airport to Sunshine Autos
-* Increased draw distance and ped/vehicle spawn limit (WIP)
 * Discord Rich Presence
 * Fixed a lot of smaller and bigger bugs
 * User files (saves and settings) stored in GTA root directory
