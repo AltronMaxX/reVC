@@ -53,20 +53,6 @@ jobs:
       run: |
         mv ./vendor/mpg123/dist/Win64/libmpg123-0.dll ./gamefiles/
         mv ./vendor/openal-soft/dist/Win64/OpenAL32.dll ./gamefiles/
-    - name: Package x64 ASI loader
-      shell: pwsh
-      run: |
-        $loader = "./vendor/ultimate-asi-loader/dist/Win64/dinput8.dll"
-        $expectedHash = "FA266E3513D02C08A1B808F28C10538A489EAFFAA4B0707F7CC1066E71B5AFD7"
-        $actualHash = (Get-FileHash -LiteralPath $loader -Algorithm SHA256).Hash
-
-        if ($actualHash -ne $expectedHash) {
-          throw "Unexpected Ultimate ASI Loader SHA-256: $actualHash"
-        }
-
-        Copy-Item -LiteralPath $loader -Destination "./gamefiles/dinput8.dll"
-        Copy-Item -LiteralPath "./vendor/ultimate-asi-loader/README.md" -Destination "./gamefiles/Ultimate-ASI-Loader-README.md"
-        Copy-Item -LiteralPath "./vendor/ultimate-asi-loader/LICENSE" -Destination "./gamefiles/Ultimate-ASI-Loader-LICENSE.txt"
     - name: Collect artifact name
       id: artname
       shell: pwsh
