@@ -163,6 +163,27 @@ const char *FrontendFilenames[][2] = {
 #define MENU_Y(y) StretchY(y)
 #endif
 
+struct SkinScrollbarGeometry {
+	float top, bottom, travel;
+};
+
+static SkinScrollbarGeometry
+GetSkinScrollbarGeometry(int32 totalRows, int32 firstVisibleRow)
+{
+	const float trackTop = SCREEN_SCALE_Y(PLAYERSETUP_LIST_BODY_TOP);
+	const float trackBottom = SCREEN_SCALE_FROM_BOTTOM(PLAYERSETUP_LIST_BOTTOM + PLAYERSETUP_SCROLLBUTTON_HEIGHT + 4.0f);
+	const float trackHeight = Max(0.0f, trackBottom - trackTop);
+	const int32 maxFirstRow = Max(0, totalRows - MAX_VISIBLE_LIST_ROW);
+	// Keep even very long lists' thumbs visible, and use the same geometry for
+	// drawing, hit testing and dragging. A fitting list fills the whole track.
+	const float thumbHeight = Min(trackHeight, Max(SCREEN_SCALE_Y(8.0f), trackHeight * MAX_VISIBLE_LIST_ROW / Max(totalRows, MAX_VISIBLE_LIST_ROW)));
+	SkinScrollbarGeometry bar;
+	bar.travel = trackHeight - thumbHeight;
+	bar.top = trackTop + (maxFirstRow > 0 ? bar.travel * Clamp(firstVisibleRow, 0, maxFirstRow) / maxFirstRow : 0.0f);
+	bar.bottom = bar.top + thumbHeight;
+	return bar;
+}
+
 #ifdef XBOX_MESSAGE_SCREEN
 bool CMenuManager::m_bDialogOpen = false;
 uint32 CMenuManager::m_nDialogHideTimer = 0;
@@ -402,6 +423,7 @@ DoRWStuffEndOfFrame(void);
 void
 CMenuManager::SwitchToNewScreen(int8 screen)
 {
+	holdingScrollBar = false;
 	bMenuChangeOngoing = true;
 	DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255);
 	DrawBackground(true);
@@ -565,6 +587,7 @@ CMenuManager::SetFrontEndRenderStates(void)
 void
 CMenuManager::Initialise(void)
 {
+	holdingScrollBar = false;
 	DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255);
 	DoRWStuffEndOfFrame();
 	m_AllowNavigation = false;
@@ -3087,7 +3110,7 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 	// Skin list
 	SET_FONT_FOR_LIST_ITEM
 	if(m_nSkinsTotal > 0) {
-		for(m_pSelectedSkin = m_pSkinListHead.nextSkin; m_pSelectedSkin->skinId != m_nFirstVisibleRowOnList;
+		for(m_pSelectedSkin = m_pSkinListHead.nextSkin; m_pSelectedSkin && m_pSelectedSkin->skinId != m_nFirstVisibleRowOnList;
 		    m_pSelectedSkin = m_pSelectedSkin->nextSkin);
 
 		int rowTextY = PLAYERSETUP_LIST_BODY_TOP - 1;
@@ -3157,32 +3180,14 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 		                          SCREEN_SCALE_FROM_BOTTOM(PLAYERSETUP_LIST_BOTTOM)),
 		                    CRGBA(100, 100, 66, FadeIn(205)));
 
-		float scrollbarHeight = SCROLLBAR_MAX_HEIGHT / (m_nSkinsTotal / (float)MAX_VISIBLE_LIST_ROW);
-		float scrollbarBottom, scrollbarTop;
-		if(m_nSkinsTotal <= MAX_VISIBLE_LIST_ROW) {
-			scrollbarBottom = SCREEN_SCALE_FROM_BOTTOM(PLAYERSETUP_LIST_BOTTOM + PLAYERSETUP_SCROLLBUTTON_HEIGHT + 4.0f);
-			scrollbarTop = MENU_Y(PLAYERSETUP_LIST_BODY_TOP);
-
-			// Scrollbar shadow
-			CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4), scrollbarTop,
-			                          MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 1 - PLAYERSETUP_SCROLLBAR_WIDTH),
-			                          scrollbarBottom + MENU_Y(1.0f)),
-			                    CRGBA(50, 50, 50, FadeIn(255)));
-		} else {
-#ifdef FIX_BUGS
-			scrollbarBottom = MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 8 + m_nScrollbarTopMargin + scrollbarHeight);
-			scrollbarTop = MENU_Y(PLAYERSETUP_LIST_BODY_TOP + m_nScrollbarTopMargin);
-#else
-			scrollbarBottom =
-			    MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 4 + m_nScrollbarTopMargin + scrollbarHeight - SCROLLBAR_MAX_HEIGHT / m_nSkinsTotal);
-			scrollbarTop = MENU_Y(SCROLLBAR_MAX_HEIGHT / m_nSkinsTotal + PLAYERSETUP_LIST_BODY_TOP - 3 + m_nScrollbarTopMargin);
-#endif
-			// Scrollbar shadow
-			CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4), scrollbarTop,
-			                          MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 1 - PLAYERSETUP_SCROLLBAR_WIDTH),
-			                          scrollbarBottom + MENU_Y(1.0f)),
-			                    CRGBA(50, 50, 50, FadeIn(255)));
-		}
+		const SkinScrollbarGeometry scrollbar = GetSkinScrollbarGeometry(m_nSkinsTotal, m_nFirstVisibleRowOnList);
+		const float scrollbarTop = scrollbar.top;
+		const float scrollbarBottom = scrollbar.bottom;
+		// Scrollbar shadow
+		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4), scrollbarTop,
+		                          MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 1 - PLAYERSETUP_SCROLLBAR_WIDTH),
+		                          scrollbarBottom + MENU_Y(1.0f)),
+		                    CRGBA(50, 50, 50, FadeIn(255)));
 		// Scrollbar
 		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4), scrollbarTop,
 		                          MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH), scrollbarBottom),
@@ -3292,37 +3297,19 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 			if(m_nHoverOption != HOVEROPTION_CLICKED_SCROLL_UP && m_nHoverOption != HOVEROPTION_CLICKED_SCROLL_DOWN)
 				m_nHoverOption = HOVEROPTION_OVER_SCROLL_DOWN;
 
-		} else if(m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 2) &&
+		} else if(m_nSkinsTotal > MAX_VISIBLE_LIST_ROW && m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 2) &&
 		          m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH - 2) &&
-		          m_nMousePosY > MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 3)
-#ifdef FIX_BUGS
-		          && m_nMousePosY < MENU_Y(PLAYERSETUP_LIST_BODY_TOP + m_nScrollbarTopMargin)) {
-#else
-		          && m_nMousePosY < MENU_Y(SCROLLBAR_MAX_HEIGHT / m_nTotalListRow + PLAYERSETUP_LIST_BODY_TOP - 3 + m_nScrollbarTopMargin)) {
-#endif
+		          m_nMousePosY > MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 3) && m_nMousePosY < scrollbarTop) {
 			m_nHoverOption = HOVEROPTION_PAGEUP;
 
-		} else if(m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 2) &&
-		          m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH - 2)
-#ifdef FIX_BUGS
-		          && m_nMousePosY > MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 8 + m_nScrollbarTopMargin + scrollbarHeight)
-#else
-		          && m_nMousePosY >
-		                 MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 3 + m_nScrollbarTopMargin + scrollbarHeight - SCROLLBAR_MAX_HEIGHT / m_nTotalListRow)
-#endif
-		          && m_nMousePosY < SCREEN_SCALE_FROM_BOTTOM(PLAYERSETUP_LIST_BOTTOM + PLAYERSETUP_SCROLLBUTTON_HEIGHT + 1)) {
+		} else if(m_nSkinsTotal > MAX_VISIBLE_LIST_ROW && m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 2) &&
+		          m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH - 2) &&
+		          m_nMousePosY > scrollbarBottom && m_nMousePosY < SCREEN_SCALE_FROM_BOTTOM(PLAYERSETUP_LIST_BOTTOM + PLAYERSETUP_SCROLLBUTTON_HEIGHT + 1)) {
 			m_nHoverOption = HOVEROPTION_PAGEDOWN;
 
-		} else if(m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4) &&
-		          m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH)
-#ifdef FIX_BUGS
-		          && m_nMousePosY > MENU_Y(PLAYERSETUP_LIST_BODY_TOP + m_nScrollbarTopMargin) &&
-		          m_nMousePosY < MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 8 + m_nScrollbarTopMargin + scrollbarHeight)) {
-#else
-		          && m_nMousePosY > MENU_Y(SCROLLBAR_MAX_HEIGHT / m_nTotalListRow + PLAYERSETUP_LIST_BODY_TOP - 3 + m_nScrollbarTopMargin) &&
-		          m_nMousePosY <
-		              MENU_Y(PLAYERSETUP_LIST_BODY_TOP - 3 + m_nScrollbarTopMargin + scrollbarHeight - SCROLLBAR_MAX_HEIGHT / m_nTotalListRow)) {
-#endif
+		} else if(m_nSkinsTotal > MAX_VISIBLE_LIST_ROW && m_nMousePosX > MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - 4) &&
+		          m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT - PLAYERSETUP_SCROLLBAR_WIDTH) &&
+		          m_nMousePosY > scrollbarTop && m_nMousePosY < scrollbarBottom) {
 			m_nHoverOption = HOVEROPTION_HOLDING_SCROLLBAR;
 
 		} else if(m_nMousePosX > MENU_X_LEFT_ALIGNED(PLAYERSETUP_LIST_LEFT) && m_nMousePosX < MENU_X_RIGHT_ALIGNED(PLAYERSETUP_LIST_RIGHT) &&
@@ -4615,9 +4602,18 @@ CMenuManager::PrintRadioSelector(void)
 void
 CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 {
-	if(m_bWaitingForNewKeyBind) return;
+	if(m_bWaitingForNewKeyBind) {
+		holdingScrollBar = false;
+		return;
+	}
 
-	if(m_nCurrScreen == MENUPAGE_SKIN_SELECT) { m_nTotalListRow = m_nSkinsTotal; }
+	if(m_nCurrScreen == MENUPAGE_SKIN_SELECT) {
+		m_nTotalListRow = Max(0, m_nSkinsTotal);
+		m_nFirstVisibleRowOnList = Clamp(m_nFirstVisibleRowOnList, 0, Max(0, m_nTotalListRow - MAX_VISIBLE_LIST_ROW));
+		m_nSelectedListRow = Clamp(m_nSelectedListRow, m_nFirstVisibleRowOnList,
+		                          Max(0, Min(m_nTotalListRow - 1, m_nFirstVisibleRowOnList + MAX_VISIBLE_LIST_ROW - 1)));
+		m_nScrollbarTopMargin = SCROLLBAR_MAX_HEIGHT * m_nFirstVisibleRowOnList / Max(1, m_nTotalListRow);
+	}
 #ifdef IMPROVED_MENU_AND_INPUT
 	if (m_nCurrScreen == MENUPAGE_PC_FOOT_CONTROLS || m_nCurrScreen == MENUPAGE_PC_VEHICLE_CONTROLS) {
 		m_nTotalListRow = m_nCurrScreen == MENUPAGE_PC_FOOT_CONTROLS ? NUM_PC_FOOT_OPTIONS : NUM_PC_VEHICLE_OPTIONS;
@@ -4758,7 +4754,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 				PageDownList(false);
 			}
 		}
-		if(CPad::GetPad(0)->GetHome()) {
+		if(m_nTotalListRow > 0 && CPad::GetPad(0)->GetHome()) {
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
 			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
@@ -4766,7 +4762,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 			m_nSelectedListRow = 0;
 			m_nScrollbarTopMargin = (SCROLLBAR_MAX_HEIGHT / m_nTotalListRow) * m_nFirstVisibleRowOnList;
 		}
-		if(CPad::GetPad(0)->GetEnd()) {
+		if(m_nTotalListRow > 0 && CPad::GetPad(0)->GetEnd()) {
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
 			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
@@ -4807,33 +4803,45 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		m_nHoverOption = HOVEROPTION_NOT_HOVERING;
 	}
 
-	if(!CPad::GetPad(0)->GetLeftMouse()) {
+	static float scrollBarGrabOffset;
+	if(!CPad::GetPad(0)->GetLeftMouse() || goBack || m_nCurrScreen != MENUPAGE_SKIN_SELECT || m_nTotalListRow <= MAX_VISIBLE_LIST_ROW) {
 		holdingScrollBar = false;
-	} else {
-		if((m_nHoverOption == HOVEROPTION_HOLDING_SCROLLBAR) || holdingScrollBar) {
-			holdingScrollBar = true;
-			// TODO: This part is a bit hard to reverse. Not much code tho
-			assert(0 && "Holding scrollbar isn't done yet");
-		} else {
-			switch(m_nHoverOption) {
-			case HOVEROPTION_OVER_SCROLL_UP:
-			case HOVEROPTION_CLICKED_SCROLL_UP:
-				if(!m_bPressedScrollButton) {
-					m_bPressedScrollButton = true;
-					lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
-					ScrollUpListByOne();
-				}
-				break;
-			case HOVEROPTION_OVER_SCROLL_DOWN:
-			case HOVEROPTION_CLICKED_SCROLL_DOWN:
-				if(!m_bPressedScrollButton) {
-					m_bPressedScrollButton = true;
-					lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
-					ScrollDownListByOne();
-				}
-				break;
-			default: m_bPressedScrollButton = false;
+	} else if(CPad::GetPad(0)->GetLeftMouseJustDown()) {
+		// Do not grab the thumb when an already-held mouse merely crosses it.
+		holdingScrollBar = m_nHoverOption == HOVEROPTION_HOLDING_SCROLLBAR;
+		if(holdingScrollBar)
+			scrollBarGrabOffset = m_nMousePosY - GetSkinScrollbarGeometry(m_nTotalListRow, m_nFirstVisibleRowOnList).top;
+	}
+
+	if(holdingScrollBar) {
+		const SkinScrollbarGeometry scrollbar = GetSkinScrollbarGeometry(m_nTotalListRow, m_nFirstVisibleRowOnList);
+		if(scrollbar.travel > 0.0f) {
+			const int32 maxFirstRow = m_nTotalListRow - MAX_VISIBLE_LIST_ROW;
+			const float offset = Clamp(m_nMousePosY - scrollBarGrabOffset - MENU_Y(PLAYERSETUP_LIST_BODY_TOP), 0.0f, scrollbar.travel);
+			m_nFirstVisibleRowOnList = Clamp((int32)(offset / scrollbar.travel * maxFirstRow + 0.5f), 0, maxFirstRow);
+			m_nSelectedListRow = Clamp(m_nSelectedListRow, m_nFirstVisibleRowOnList, m_nFirstVisibleRowOnList + MAX_VISIBLE_LIST_ROW - 1);
+			m_nScrollbarTopMargin = (SCROLLBAR_MAX_HEIGHT / m_nTotalListRow) * m_nFirstVisibleRowOnList;
+			m_nCurrExLayer = HOVEROPTION_LIST;
+		}
+	} else if(CPad::GetPad(0)->GetLeftMouse() && !goBack) {
+		switch(m_nHoverOption) {
+		case HOVEROPTION_OVER_SCROLL_UP:
+		case HOVEROPTION_CLICKED_SCROLL_UP:
+			if(!m_bPressedScrollButton) {
+				m_bPressedScrollButton = true;
+				lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
+				ScrollUpListByOne();
 			}
+			break;
+		case HOVEROPTION_OVER_SCROLL_DOWN:
+		case HOVEROPTION_CLICKED_SCROLL_DOWN:
+			if(!m_bPressedScrollButton) {
+				m_bPressedScrollButton = true;
+				lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
+				ScrollDownListByOne();
+			}
+			break;
+		default: m_bPressedScrollButton = false;
 		}
 	}
 }
@@ -6251,7 +6259,11 @@ CMenuManager::SwitchMenuOnAndOff()
 		switchButtonPressed = switchButtonPressed || (CPad::GetPad(0)->GetBackJustUp() && !m_bGameNotLoaded && m_nCurrScreen == MENUPAGE_PAUSE_MENU && m_bMenuActive);
 #endif
 
-		if((!windowPauseMenuActive && switchButtonPressed) || m_bShutDownFrontEndRequested || m_bStartUpFrontEndRequested) {
+		// Escape/Start may also dismiss the automatic pause menu after Alt+Tab,
+		// but only once that menu is open and the game has regained focus.
+		const bool canToggleMenu = !windowPauseMenuActive ||
+		                          (m_bMenuActive && IsForegroundApp() && !CTimer::GetWindowMinimizedPause());
+		if((canToggleMenu && switchButtonPressed) || m_bShutDownFrontEndRequested || m_bStartUpFrontEndRequested) {
 
 			if(m_nCurrScreen != MENUPAGE_LOADING_IN_PROGRESS
 #ifdef XBOX_MESSAGE_SCREEN
