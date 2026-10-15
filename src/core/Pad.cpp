@@ -898,6 +898,9 @@ CMouseControllerState CMousePointerStateHelper::GetMouseSetUp()
 void CPad::UpdateMouse()
 {
 #if defined RW_D3D9 || defined RWLIBS
+	// A lost/recreated device must release old buttons and relative movement,
+	// even when this frame cannot read it. Clear() alone does not reset x/y.
+	PCTempMouseControllerState = CMouseControllerState();
 	if ( IsForegroundApp() )
 	{
 		if ( PSGLOBAL(mouse) == nil )
@@ -918,8 +921,6 @@ void CPad::UpdateMouse()
 					signX = -1;
 			}
 
-			PCTempMouseControllerState.Clear();
-
 			PCTempMouseControllerState.x = (float)(signX * state.lX);
 			PCTempMouseControllerState.y = (float)(signy * state.lY);
 			PCTempMouseControllerState.LMB = state.rgbButtons[0] & 128;
@@ -932,11 +933,10 @@ void CPad::UpdateMouse()
 				PCTempMouseControllerState.WHEELUP = 1;
 			else if ( state.lZ < 0 )
 				PCTempMouseControllerState.WHEELDN = 1;
-
-			OldMouseControllerState = NewMouseControllerState;
-			NewMouseControllerState = PCTempMouseControllerState;
 		}
 	}
+	OldMouseControllerState = NewMouseControllerState;
+	NewMouseControllerState = PCTempMouseControllerState;
 #else
 	if ( IsForegroundApp() && PSGLOBAL(cursorIsInWindow) )
 	{

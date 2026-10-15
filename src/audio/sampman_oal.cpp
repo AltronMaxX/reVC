@@ -16,6 +16,8 @@
 
 // for user MP3s
 #include <direct.h>
+// Use the Windows C-linkage GUID declarations instead of eax.h's fallback.
+#include <guiddef.h>
 #include <shlguid.h>
 #include <shlobj.h>
 #else
