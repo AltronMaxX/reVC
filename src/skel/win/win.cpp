@@ -381,16 +381,72 @@ psCameraBeginUpdate(RwCamera *camera)
 void
 psCameraShowRaster(RwCamera *camera)
 {
+	// Changing VSync for menus resets the D3D9 device. Pace menus in the main
+	// loop instead, keeping the user's presentation interval unchanged.
 #ifdef LEGACY_MENU_OPTIONS
-	if (FrontEndMenuManager.m_PrefsVsync || FrontEndMenuManager.m_bMenuActive)
+	if (FrontEndMenuManager.m_PrefsVsync)
 #else
-	if (FrontEndMenuManager.m_PrefsFrameLimiter || FrontEndMenuManager.m_bMenuActive)
+	if (FrontEndMenuManager.m_PrefsFrameLimiter)
 #endif
 		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPWAITVSYNC);
 	else
 		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPDONTWAIT);
 
 	return;
+}
+
+static bool
+IsFrameReady(float maxFPS)
+{
+	if (maxFPS <= 0.0f)
+		return true;
+
+	const double elapsed = (double)CTimer::GetCurrentTimeInCycles() / (double)CTimer::GetCyclesPerMillisecond();
+	const double remaining = 1000.0 / (double)maxFPS - elapsed;
+	if (remaining <= 0.0)
+		return true;
+
+	// Yield between frames, but wake immediately for input or focus changes.
+	// Recheck those messages in the main loop before starting another frame.
+	struct MenuFrameTimer {
+		HANDLE handle;
+		MenuFrameTimer() : handle(nil)
+		{
+			typedef HANDLE (WINAPI *CreateTimerFn)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD);
+			CreateTimerFn createTimer = (CreateTimerFn)GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "CreateWaitableTimerExW");
+			if (createTimer)
+				// CREATE_WAITABLE_TIMER_HIGH_RESOLUTION (Windows 10 1803+).
+				handle = createTimer(nil, nil, 0x00000002, SYNCHRONIZE | TIMER_MODIFY_STATE);
+		}
+		~MenuFrameTimer()
+		{
+			if (handle) {
+				CancelWaitableTimer(handle);
+				CloseHandle(handle);
+			}
+		}
+	};
+	static MenuFrameTimer timer;
+	if (timer.handle) {
+		LARGE_INTEGER dueTime;
+		dueTime.QuadPart = -(LONGLONG)ceil(remaining * 10000.0);
+		if (SetWaitableTimer(timer.handle, &dueTime, 0, nil, nil, FALSE)) {
+			DWORD result = MsgWaitForMultipleObjectsEx(1, &timer.handle, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+			CancelWaitableTimer(timer.handle);
+			if (result != WAIT_FAILED)
+				return false;
+		}
+	}
+
+	// Older Windows versions lack high-resolution waitable timers. Request a
+	// finer timeout only for this wait, and release it before returning.
+	const DWORD waitMs = (DWORD)ceil(remaining);
+	const bool raisedTimerResolution = timeBeginPeriod(1) == TIMERR_NOERROR;
+	if (MsgWaitForMultipleObjectsEx(0, nil, waitMs, QS_ALLINPUT, MWMO_INPUTAVAILABLE) == WAIT_FAILED)
+		Sleep(waitMs);
+	if (raisedTimerResolution)
+		timeEndPeriod(1);
+	return false;
 }
 
 
@@ -1120,6 +1176,13 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 	
 	switch( message )
 	{
+		case WM_SYSCOMMAND:
+		{
+			if ((wParam & 0xFFF0) == SC_KEYMENU && lParam == 0)
+				return 0L;
+			break;
+		}
+
 		case WM_SETCURSOR:
 		{
 			if (LOWORD(lParam) == HTCLIENT && !WindowPlatformPaused)
@@ -1877,6 +1940,9 @@ psSelectDevice()
 RwBool _psSetVideoMode(RwInt32 subSystem, RwInt32 videoMode)
 {
 	RwInitialised = FALSE;
+	// Drop DirectInput's association with the old renderer/window state before
+	// D3D tears it down. psRestoreFocusAfterPause recreates the mouse afterwards.
+	_InputShutdownMouse();
 	
 	RsEventHandler(rsRWTERMINATE, nil);
 	
@@ -2656,6 +2722,9 @@ WinMain(HINSTANCE instance,
 					
 					case GS_FRONTEND:
 					{
+						if (!IsFrameReady(60.0f))
+							break;
+
 						GetWindowPlacement(PSGLOBAL(window), &wp);
 						
 						if (wp.showCmd != SW_SHOWMINIMIZED)
@@ -2728,11 +2797,18 @@ WinMain(HINSTANCE instance,
 					
 					case GS_PLAYING_GAME:
 					{
-						float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
 						if ( RwInitialised )
 						{
-							if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
-								RsEventHandler(rsIDLE, (void *)TRUE);
+							if (FrontEndMenuManager.m_bMenuActive || CGame::IsWindowPauseMenuActive()) {
+								float maxFPS = FrontEndMenuManager.m_PrefsFrameLimiter ? (float)RsGlobal.maxFPS : 0.0f;
+								maxFPS = maxFPS > 0.0f ? Min(maxFPS, 60.0f) : 60.0f;
+								if (IsFrameReady(maxFPS))
+									RsEventHandler(rsIDLE, (void *)TRUE);
+							} else {
+								float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+								if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
+									RsEventHandler(rsIDLE, (void *)TRUE);
+							}
 						}
 						break;
 					}
@@ -2900,9 +2976,16 @@ HRESULT _InputInitialise()
 HRESULT _InputInitialiseMouse(bool exclusive)
 {
 	HRESULT hr;
+	if (PSGLOBAL(mouse) != nil)
+		return S_OK;
+	if (PSGLOBAL(dinterface) == nil)
+		return DIERR_NOTINITIALIZED;
 
 	// Obtain an interface to the system mouse device.
-	if( FAILED( hr = PSGLOBAL(dinterface)->CreateDevice( GUID_SysMouse, &PSGLOBAL(mouse), nil ) ) )
+	// Publish it only after setup succeeds, so a failed mode/focus transition
+	// cannot leave a half-configured device that prevents the next frame retry.
+	LPDIRECTINPUTDEVICE8 mouse = nil;
+	if( FAILED( hr = PSGLOBAL(dinterface)->CreateDevice( GUID_SysMouse, &mouse, nil ) ) )
 		return hr;
 	
 	// Set the data format to "mouse format" - a predefined data format 
@@ -2912,14 +2995,21 @@ HRESULT _InputInitialiseMouse(bool exclusive)
 	//
 	// This tells DirectInput that we will be passing a
 	// DIMOUSESTATE2 structure to IDirectInputDevice::GetDeviceState.
-	if( FAILED( hr = PSGLOBAL(mouse)->SetDataFormat( &c_dfDIMouse2 ) ) )
+	if( FAILED( hr = mouse->SetDataFormat( &c_dfDIMouse2 ) ) ) {
+		mouse->Release();
 		return hr;
+	}
 	
-	if( FAILED( hr = PSGLOBAL(mouse)->SetCooperativeLevel( PSGLOBAL(window), (exclusive ? DISCL_EXCLUSIVE : DISCL_NONEXCLUSIVE) | DISCL_FOREGROUND ) ) )
+	if( FAILED( hr = mouse->SetCooperativeLevel( PSGLOBAL(window), (exclusive ? DISCL_EXCLUSIVE : DISCL_NONEXCLUSIVE) | DISCL_FOREGROUND ) ) ) {
+		mouse->Release();
 		return hr;
+	}
 	
-	// Acquire the newly created device
-	PSGLOBAL(mouse)->Acquire();
+	PSGLOBAL(mouse) = mouse;
+	// Losing focus here is temporary: polling will retry acquisition once the
+	// window is active, without blocking the message loop or rebuilding a frame.
+	if (IsWindowActuallyActive())
+		mouse->Acquire();
 	
 	return S_OK;
 }
@@ -3169,14 +3259,12 @@ HRESULT _InputAddJoys()
 HRESULT _InputGetMouseState(DIMOUSESTATE2 *state)
 {
 	HRESULT		  hr;
+	ZeroMemory(state, sizeof(DIMOUSESTATE2));
 	
 	if ( PSGLOBAL(mouse) == nil )
-		return S_FALSE;
+		return DIERR_NOTACQUIRED;
 	if (!IsWindowActuallyActive())
 		return DIERR_OTHERAPPHASPRIO;
-	
-	// Get the input's device state, and put the state in dims
-	ZeroMemory( state, sizeof(DIMOUSESTATE2) );
 	
 	hr = PSGLOBAL(mouse)->GetDeviceState( sizeof(DIMOUSESTATE2), state );
 
@@ -3190,16 +3278,15 @@ HRESULT _InputGetMouseState(DIMOUSESTATE2 *state)
 		// Retry once. A loop here can deadlock Alt+Tab because DirectInput
 		// cannot recover until the main thread processes more window events.
 		hr = PSGLOBAL(mouse)->Acquire();
-		if ( FAILED(hr) )
-			return hr;
-		
-		ZeroMemory( state, sizeof(DIMOUSESTATE2) );
-		hr = PSGLOBAL(mouse)->GetDeviceState( sizeof(DIMOUSESTATE2), state );
-		
-		return hr;
+		if ( SUCCEEDED(hr) ) {
+			ZeroMemory( state, sizeof(DIMOUSESTATE2) );
+			hr = PSGLOBAL(mouse)->GetDeviceState( sizeof(DIMOUSESTATE2), state );
+		}
 	}
 	
-	return S_OK;
+	if ( FAILED(hr) )
+		ZeroMemory(state, sizeof(DIMOUSESTATE2));
+	return hr;
 }
 
 void _InputShutdown()

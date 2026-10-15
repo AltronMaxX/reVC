@@ -6,6 +6,7 @@
 #include "ControllerConfig.h"
 #include "Camera.h"
 #include "Font.h"
+#include "Game.h"
 #include "Hud.h"
 #include "ModelIndices.h"
 #include "Replay.h"
@@ -407,6 +408,11 @@ cMusicManager::Service()
 	static bool8 bRadioStatsRecorded = FALSE;
 
 	if (!m_bIsInitialised || m_bDisabled) return;
+
+	// Window pause preserves the current stream and music mode. A paused stream
+	// reports as not playing, so servicing it could restart it and clear its pause.
+	if (CTimer::GetWindowMinimizedPause() || CGame::IsWindowPauseMenuActive())
+		return;
 
 	if (!m_bMusicModeChangeStarted)
 		m_nMusicModeToBeSet = m_nUpcomingMusicMode;
