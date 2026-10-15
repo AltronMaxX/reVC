@@ -1176,6 +1176,13 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 	
 	switch( message )
 	{
+		case WM_SYSCOMMAND:
+		{
+			if ((wParam & 0xFFF0) == SC_KEYMENU && lParam == 0)
+				return 0L;
+			break;
+		}
+
 		case WM_SETCURSOR:
 		{
 			if (LOWORD(lParam) == HTCLIENT && !WindowPlatformPaused)
