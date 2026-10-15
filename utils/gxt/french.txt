@@ -14733,6 +14733,45 @@ HRTF
 [FEA_HAU]
 Auto
 
+[FET_AGC]
+CONFIGURATION DE LA MANETTE
+
+[FEC_REL]
+Recharger l'arme
+
+[FEC_RZO]
+Zoom radar
+
+[FEC_DS5]
+DUALSENSE
+
+[FEC_LSX]
+Sensibilité de vue X
+
+[FEC_LSY]
+Sensibilité de vue Y
+
+[FEC_ASX]
+Sensibilité de visée X
+
+[FEC_ASY]
+Sensibilité de visée Y
+
+[FEC_IVL]
+Inverser verticalement
+
+[FEC_FOV]
+Champ de vision
+
+[FEC_RVD]
+Véhicule relatif en drive-by
+
+[FEC_DOM]
+Mode DOOM
+
+[FEC_ACV]
+Centrage auto en véhicule
+
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
 AS THE LAST LABEL DOES NOT GET COMPILED
