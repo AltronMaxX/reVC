@@ -14467,6 +14467,21 @@ Modo DOOM
 [FEC_ACV]
 Auto-centrado en vehículo
 
+[FEC_LZN]
+Zona muerta stick izquierdo
+
+[FEC_RZN]
+Zona muerta stick derecho
+
+[FEC_VBF]
+Fuerza de vibración
+
+[FEC_AIM]
+Apuntado automático
+
+[FEC_WAL]
+Caminar
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

@@ -14492,6 +14492,21 @@ Aiming sensitivity Y
 [FEC_ACV]
 Auto-centering in vehicle
 
+[FEC_LZN]
+Left stick deadzone
+
+[FEC_RZN]
+Right stick deadzone
+
+[FEC_VBF]
+Vibration force
+
+[FEC_AIM]
+Auto aiming
+
+[FEC_WAL]
+Walk
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

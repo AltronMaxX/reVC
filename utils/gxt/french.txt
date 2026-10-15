@@ -14772,6 +14772,21 @@ Mode DOOM
 [FEC_ACV]
 Centrage auto en véhicule
 
+[FEC_LZN]
+Zone morte stick gauche
+
+[FEC_RZN]
+Zone morte stick droit
+
+[FEC_VBF]
+Force de vibration
+
+[FEC_AIM]
+Visée automatique
+
+[FEC_WAL]
+Marcher
+
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
 AS THE LAST LABEL DOES NOT GET COMPILED
