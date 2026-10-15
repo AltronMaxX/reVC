@@ -3107,7 +3107,7 @@ CAutomobile::ProcessControlInputs(uint8 pad)
 	   pDriver && pDriver->m_pVehicleAnim && (pDriver->m_pVehicleAnim->animId == ANIM_STD_ROLLOUT_LHS ||
 	                                          pDriver->m_pVehicleAnim->animId == ANIM_STD_ROLLOUT_RHS))
 #ifdef FIRING_AND_AIMING // we can't use handbrake during driveby
-		bIsHandbrakeOn = FindPlayerPed()->bIsPlayerAiming ? false : !!CPad::GetPad(pad)->GetHandBrake();
+		bIsHandbrakeOn = bEnableDriveByShooting ? (FindPlayerPed()->bIsPlayerAiming ? false : !!CPad::GetPad(pad)->GetHandBrake()) : !!CPad::GetPad(pad)->GetHandBrake();
 #else
 			bIsHandbrakeOn = !!CPad::GetPad(pad)->GetHandBrake();
 #endif
@@ -3875,19 +3875,20 @@ CAutomobile::DoDriveByShootings(void)
 		return;
 
 	CWeapon *weapon = pDriver->GetWeapon();
+	if(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_SUBMACHINEGUN
 #ifdef FIRING_AND_AIMING
-	if(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_SUBMACHINEGUN &&
-		CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_HANDGUN)
-#else
-	if(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_SUBMACHINEGUN)
+		&& (!bEnableDriveByShooting || CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != WEAPONSLOT_HANDGUN)
 #endif
+	)
 		return;
 
 #ifdef FIRING_AND_AIMING // turn on/off driveby
-	if (CPad::GetPad(0)->GetTarget() && !FindPlayerPed()->bIsPlayerAiming && FindPlayerPed()->CanUseDriveBy())
-		FindPlayerPed()->SetPointGunAt(nil);
-	else if (!CPad::GetPad(0)->GetTarget() && FindPlayerPed()->bIsPlayerAiming || !FindPlayerPed()->CanUseDriveBy())
-		FindPlayerPed()->ClearWeaponTarget();
+	if (bEnableDriveByShooting && bEnableFiringAndAiming) {
+		if (CPad::GetPad(0)->GetTarget() && !FindPlayerPed()->bIsPlayerAiming && FindPlayerPed()->CanUseDriveBy())
+			FindPlayerPed()->SetPointGunAt(nil);
+		else if (!CPad::GetPad(0)->GetTarget() && FindPlayerPed()->bIsPlayerAiming || !FindPlayerPed()->CanUseDriveBy())
+			FindPlayerPed()->ClearWeaponTarget();
+	}
 #endif
 
 	weapon->Update(pDriver->m_audioEntityId, nil);
@@ -3915,10 +3916,12 @@ CAutomobile::DoDriveByShootings(void)
 	}
 
 #ifdef FIRING_AND_AIMING // hide/show weapon in vehicle
-	if (!FindPlayerPed()->m_pWeaponModel && (FindPlayerPed()->bIsPlayerAiming || (lookingLeft || lookingRight)))
-		pDriver->AddWeaponModel(weapon->GetInfo()->m_nModelId);
-	else if (FindPlayerPed()->m_pWeaponModel && !FindPlayerPed()->bIsPlayerAiming && !lookingLeft && !lookingRight)
-		pDriver->RemoveWeaponModel(weapon->GetInfo()->m_nModelId);
+	if (bEnableDriveByShooting) {
+		if (!FindPlayerPed()->m_pWeaponModel && (FindPlayerPed()->bIsPlayerAiming || (lookingLeft || lookingRight)))
+			pDriver->AddWeaponModel(weapon->GetInfo()->m_nModelId);
+		else if (FindPlayerPed()->m_pWeaponModel && !FindPlayerPed()->bIsPlayerAiming && !lookingLeft && !lookingRight)
+			pDriver->RemoveWeaponModel(weapon->GetInfo()->m_nModelId);
+	}
 #endif
 
 #if defined FIRING_AND_AIMING && defined FIRST_PERSON // reloading weapon during driveby/first person/use pistol

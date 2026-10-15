@@ -610,6 +610,10 @@ bool LoadINISettings()
 #ifdef CLIMBING
 	ReadIniIfExists("Features", "Climbing", &bEnableClimbing);
 #endif
+#ifdef FIRING_AND_AIMING
+	ReadIniIfExists("Features", "FiringAndAiming", &bEnableFiringAndAiming);
+	ReadIniIfExists("Features", "DriveByShooting", &bEnableDriveByShooting);
+#endif
 #endif
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
@@ -753,6 +757,10 @@ void SaveINISettings()
 #endif
 #ifdef CLIMBING
 	StoreIni("Features", "Climbing", bEnableClimbing);
+#endif
+#ifdef FIRING_AND_AIMING
+	StoreIni("Features", "FiringAndAiming", bEnableFiringAndAiming);
+	StoreIni("Features", "DriveByShooting", bEnableDriveByShooting);
 #endif
 #endif
 #ifdef CUSTOM_FRONTEND_OPTIONS

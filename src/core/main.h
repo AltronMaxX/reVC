@@ -75,13 +75,5 @@ extern bool gbDrawVersionText;
 #ifdef NO_MOVIES
 extern bool gbNoMovies;
 #endif
-#ifdef FEATURES_INI
-#ifdef CUSTOM_SWIMMING
-extern bool bEnableSwimming;
-#endif
-#ifdef CLIMBING
-extern bool bEnableClimbing;
-#endif
-#endif
 
 #endif // __GTA_MAIN_H__

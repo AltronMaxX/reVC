@@ -195,16 +195,19 @@ CPed::SetPointGunAt(CEntity *to)
 			aimAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, GetCrouchFireAnim(curWeapon), 4.0f);
 		} else {
 #if defined FIRING_AND_AIMING && defined FIRST_PERSON
-			AssocGroupId animToPlay = curWeapon->m_AnimToPlay;
-			if (IsPlayer() && !bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_REAL_1ST_PERSON && animToPlay == ASSOCGRP_BUDDY)
-				animToPlay = ASSOCGRP_RIFLE;
-			else if (InVehicle())
-				animToPlay = ASSOCGRP_COLT;
+			if (bEnableFiringAndAiming) {
+				AssocGroupId animToPlay = curWeapon->m_AnimToPlay;
+				if (IsPlayer() && !bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_REAL_1ST_PERSON && animToPlay == ASSOCGRP_BUDDY)
+					animToPlay = ASSOCGRP_RIFLE;
+				else if (InVehicle())
+					animToPlay = ASSOCGRP_COLT;
 
-			aimAssoc = CAnimManager::AddAnimation(GetClump(), animToPlay, ANIM_WEAPON_FIRE);
-#else
-			aimAssoc = CAnimManager::AddAnimation(GetClump(), curWeapon->m_AnimToPlay, ANIM_WEAPON_FIRE);
+				aimAssoc = CAnimManager::AddAnimation(GetClump(), animToPlay, ANIM_WEAPON_FIRE);
+			} else
 #endif
+			{
+				aimAssoc = CAnimManager::AddAnimation(GetClump(), curWeapon->m_AnimToPlay, ANIM_WEAPON_FIRE);
+			}
 		}
 
 		aimAssoc->blendAmount = 0.0f;
@@ -475,28 +478,31 @@ CPed::SetAttack(CEntity *victim)
 				}
 
 #if defined FIRING_AND_AIMING && defined FIRST_PERSON
-				AssocGroupId animToPlay = curWeapon->m_AnimToPlay;
-				if (IsPlayer() && !bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_REAL_1ST_PERSON && animToPlay == ASSOCGRP_BUDDY)
-					animToPlay = ASSOCGRP_RIFLE;
-				else if (InVehicle())
-					animToPlay = ASSOCGRP_COLT;
+				if (bEnableFiringAndAiming) {
+					AssocGroupId animToPlay = curWeapon->m_AnimToPlay;
+					if (IsPlayer() && !bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_REAL_1ST_PERSON && animToPlay == ASSOCGRP_BUDDY)
+						animToPlay = ASSOCGRP_RIFLE;
+					else if (InVehicle())
+						animToPlay = ASSOCGRP_COLT;
 
-				CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
-				if (curFireAssoc) {
-					if (strcmp(CAnimManager::GetAnimAssociation(animToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
-						delete curFireAssoc;
+					CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
+					if (curFireAssoc) {
+						if (strcmp(CAnimManager::GetAnimAssociation(animToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
+							delete curFireAssoc;
+						}
 					}
-				}
-				animAssoc = CAnimManager::BlendAnimation(GetClump(), animToPlay, fireAnim, animDelta);
-#else
-				CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
-				if (curFireAssoc) {
-					if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
-						delete curFireAssoc;
-					}
-				}
-				animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, fireAnim, animDelta);
+					animAssoc = CAnimManager::BlendAnimation(GetClump(), animToPlay, fireAnim, animDelta);
+				} else
 #endif
+				{
+					CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
+					if (curFireAssoc) {
+						if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
+							delete curFireAssoc;
+						}
+					}
+					animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, fireAnim, animDelta);
+				}
 			}
 
 			animAssoc->SetRun();
@@ -4015,9 +4021,10 @@ CPed::DriveVehicle(void)
 	CVehicle *veh = m_pMyVehicle;
 	if (veh->IsBike()) {
 #ifdef FIRING_AND_AIMING
-		if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming) {
-			if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_RIDE))
-				delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_RIDE);
+		if (bEnableFiringAndAiming) {
+			if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming) {
+				if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_RIDE))
+					delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_RIDE);
 
 			if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_READY))
 				delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_READY);
@@ -4045,6 +4052,7 @@ CPed::DriveVehicle(void)
 				delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_BIKE_RIGHT_DB);
 
 			m_pVehicleAnim = CAnimManager::BlendAnimation(GetClump(), ((CBike*)veh)->m_bikeAnimType, ANIM_BIKE_RIDE, 100.0f);
+		}
 		}
 #endif
 		CBike *bike = (CBike*)veh;
@@ -4090,13 +4098,16 @@ CPed::DriveVehicle(void)
 		if (!drivebyAssoc && Abs(velocityFwdDotProd) < 0.02f) {
 			if (!stillAssoc || stillAssoc->blendAmount < 1.0 && stillAssoc->blendDelta <= 0.0) {
 #ifdef FIRING_AND_AIMING
-				if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
-					stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY_DB, 2.0f);
-				else
-					stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY, 2.0f);
-#else
-				stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY, 2.0f);
+				if (bEnableFiringAndAiming) {
+					if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
+						stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY_DB, 2.0f);
+					else
+						stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY, 2.0f);
+				} else
 #endif
+				{
+					stillAssoc = CAnimManager::BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY, 2.0f);
+				}
 			}
 		} else {
 			if (velocityFwdDotProd >= 0.0f) {
@@ -4247,24 +4258,27 @@ CPed::DriveVehicle(void)
 			}
 		}
 #ifdef FIRING_AND_AIMING
-		if (!leftAssoc) {
-			if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
-				leftAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_LEFT_DB);
-			else
+		if (bEnableFiringAndAiming) {
+			if (!leftAssoc) {
+				if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
+					leftAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_LEFT_DB);
+				else
+					leftAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_LEFT);
+			}
+			if (!rightAssoc) {
+				if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
+					rightAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_RIGHT_DB);
+				else
+					rightAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_RIGHT);
+			}
+		} else
+#endif
+		{
+			if (!leftAssoc)
 				leftAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_LEFT);
-		}
-		if (!rightAssoc) {
-			if (IsPlayer() && FindPlayerPed()->bIsPlayerAiming)
-				rightAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_RIGHT_DB);
-			else
+			if (!rightAssoc)
 				rightAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_RIGHT);
 		}
-#else
-		if (!leftAssoc)
-			leftAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_LEFT);
-		if (!rightAssoc)
-			rightAssoc = CAnimManager::AddAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_RIGHT);
-#endif
 
 		if (bike->m_fPedLeanAmountLR < 0.0f) {
 			leftAssoc->blendAmount = leftRightBlend;
@@ -4291,7 +4305,8 @@ CPed::DriveVehicle(void)
 		return;
 
 	#ifdef FIRING_AND_AIMING
-	if (FindPlayerPed()->bIsPlayerAiming) {
+	if (bEnableFiringAndAiming) {
+		if (FindPlayerPed()->bIsPlayerAiming) {
 		if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_SIT)) {
 			delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_SIT);
 			delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_DRIVE_LEFT);
@@ -4476,7 +4491,9 @@ CPed::DriveVehicle(void)
 				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_LOOKBEHIND, 4.0f);
 		}
 	}
-#else
+	} else
+#endif
+	{
 
 	float steerAngle = m_pMyVehicle->m_fSteerAngle;
 	CAnimBlendAssociation* lDriveAssoc;
@@ -4578,7 +4595,7 @@ CPed::DriveVehicle(void)
 				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_LOOKBEHIND, 4.0f);
 		}
 	}
-#endif
+	}
 }
 
 void

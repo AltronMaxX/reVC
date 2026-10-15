@@ -1427,10 +1427,12 @@ CBoat::DoDriveByShootings(void)
 		return;
 
 #ifdef FIRING_AND_AIMING // turn on/off driveby
-	if (CPad::GetPad(0)->GetTarget() && !FindPlayerPed()->bIsPlayerAiming && FindPlayerPed()->CanUseDriveBy())
-		FindPlayerPed()->SetPointGunAt(nil);
-	else if (!CPad::GetPad(0)->GetTarget() && FindPlayerPed()->bIsPlayerAiming || !FindPlayerPed()->CanUseDriveBy())
-		FindPlayerPed()->ClearWeaponTarget();
+	if (bEnableDriveByShooting && bEnableFiringAndAiming) {
+		if (CPad::GetPad(0)->GetTarget() && !FindPlayerPed()->bIsPlayerAiming && FindPlayerPed()->CanUseDriveBy())
+			FindPlayerPed()->SetPointGunAt(nil);
+		else if (!CPad::GetPad(0)->GetTarget() && FindPlayerPed()->bIsPlayerAiming || !FindPlayerPed()->CanUseDriveBy())
+			FindPlayerPed()->ClearWeaponTarget();
+	}
 #endif
 
 	weapon->Update(pDriver->m_audioEntityId, nil);

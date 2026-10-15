@@ -250,7 +250,7 @@ void CHud::Draw()
 #endif
 			DrawCrossHairPC = true;
 #if defined FIRING_AND_AIMING && defined IMPROVED_MENU_AND_INPUT
-		if (playerPed->bIsPlayerAiming && !playerPed->bIsAutoAiming
+		if ((bEnableFiringAndAiming ? (playerPed->bIsPlayerAiming && !playerPed->bIsAutoAiming) : (TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam() && (!CPad::GetPad(0)->GetLookBehindForPed() || TheCamera.m_bPlayerIsInGarage)))
 #else
 		if (TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam() && (!CPad::GetPad(0)->GetLookBehindForPed() || TheCamera.m_bPlayerIsInGarage)
 #endif
@@ -278,7 +278,7 @@ void CHud::Draw()
 			float fMultBright = SpriteBrightness * 0.03f * (0.25f * fStep + 0.75f);
 			CRect rect;
 #ifdef IMPROVED_MENU_AND_INPUT
-if (DrawCrossHairPC && !playerPed->bIsAutoAiming) {
+if (DrawCrossHairPC && (bEnableFiringAndAiming ? !playerPed->bIsAutoAiming : TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam())) {
 #else
 if (DrawCrossHairPC && TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam()) {
 #endif

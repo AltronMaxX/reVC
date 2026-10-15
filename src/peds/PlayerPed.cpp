@@ -1746,6 +1746,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 	if (!m_pFire) {
 		eWeaponType weapon = GetWeapon()->m_eWeaponType;
 		#if defined FIRING_AND_AIMING && defined FIRST_PERSON
+		if (bEnableFiringAndAiming) {
 		bool bSniperCamera = weapon == WEAPONTYPE_SNIPERRIFLE || weapon == WEAPONTYPE_LASERSCOPE || weapon == WEAPONTYPE_CAMERA;
 
 		uint32 slot = CWeaponInfo::GetWeaponInfo(weapon)->m_nWeaponSlot;
@@ -1896,7 +1897,9 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 
 			StopAimingAnims();
 		}
-#else
+		} else
+#endif
+		{
 		if (weapon == WEAPONTYPE_ROCKETLAUNCHER || weapon == WEAPONTYPE_SNIPERRIFLE ||
 			weapon == WEAPONTYPE_LASERSCOPE || weapon == WEAPONTYPE_M4 ||
 			weapon == WEAPONTYPE_RUGER || weapon == WEAPONTYPE_M60 ||
@@ -1928,7 +1931,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 				if (weapon == WEAPONTYPE_ROCKETLAUNCHER || weapon == WEAPONTYPE_SNIPERRIFLE || weapon == WEAPONTYPE_LASERSCOPE || weapon == WEAPONTYPE_CAMERA)
 					return;
 		}
-#endif
+		}
 	}
 
 	#ifdef IMPROVED_MENU_AND_INPUT

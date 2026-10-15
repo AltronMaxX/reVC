@@ -414,5 +414,17 @@ template<int s, int t> struct check_size {
 #define CONCAT_(x,y) x##y
 #define CONCAT(x,y) CONCAT_(x,y)
 
+#ifdef FEATURES_INI
+#ifdef CUSTOM_SWIMMING
+extern bool bEnableSwimming;
+#endif
+#ifdef CLIMBING
+extern bool bEnableClimbing;
+#endif
+#ifdef FIRING_AND_AIMING
+extern bool bEnableFiringAndAiming;
+extern bool bEnableDriveByShooting;
+#endif
+#endif
 
 #endif // __GTA_COMMON_H__

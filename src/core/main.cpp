@@ -113,6 +113,10 @@ bool bEnableSwimming;
 #ifdef CLIMBING
 bool bEnableClimbing;
 #endif
+#ifdef FIRING_AND_AIMING
+bool bEnableFiringAndAiming = true;
+bool bEnableDriveByShooting = false;
+#endif
 #endif
 
 volatile int32 frameCount;

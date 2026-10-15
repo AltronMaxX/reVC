@@ -235,8 +235,10 @@ CDarkel::RegisterKillByPlayer(CPed *victim, eWeaponType weapon, bool headshot)
 		return;
 #endif
 #ifdef FIRING_AND_AIMING // Drive-by during the rampage
-	if (FindPlayerVehicle() && weapon == WEAPONTYPE_UZI)
-		weapon = WEAPONTYPE_UZI_DRIVEBY;
+	if (bEnableDriveByShooting) {
+		if (FindPlayerVehicle() && weapon == WEAPONTYPE_UZI)
+			weapon = WEAPONTYPE_UZI_DRIVEBY;
+	}
 #endif
 	if (FrenzyOnGoing() && (weapon == WeaponType
 			|| weapon == WEAPONTYPE_EXPLOSION
