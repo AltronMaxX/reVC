@@ -56,6 +56,18 @@ public:
 #ifndef MASTER
 	static bool bDebugPlayerInfo;
 #endif
+#ifdef FIRING_AND_AIMING
+	bool bIsPlayerAiming;
+#endif
+
+
+#ifdef CUSTOM_SWIMMING
+	bool bIsTiredSwimmingFast;
+#endif
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	bool bIsAutoAiming;
+#endif
 
 	CPlayerPed();
 	~CPlayerPed();
@@ -94,6 +106,9 @@ public:
 	void ProcessAnimGroups(void);
 	void ProcessPlayerWeapon(CPad*);
 	void PlayerControlZelda(CPad*);
+#ifdef CUSTOM_SWIMMING
+	void ProcessSwimming(CPad*);	// reVC fork addition: surface swimming controller
+#endif
 	bool DoesPlayerWantNewWeapon(eWeaponType, bool);
 	void PlayIdleAnimations(CPad*);
 	void RemovePedFromMeleeList(CPed*);
@@ -105,6 +120,20 @@ public:
 	void FindNewAttackPoints(void);
 	void SetNearbyPedsToInteractWithPlayer(void);
 	void UpdateMeleeAttackers(void);
+#ifdef CROUCH
+	void ProcessCrouch(void);
+
+	static void FinishRollCB(CAnimBlendAssociation* assoc, void* arg);
+#endif
+#ifdef CUSTOM_SWIMMING
+	void ProcessSwimming(void);
+#endif
+#if defined FIRING_AND_AIMING && defined FIRST_PERSON
+	void ProcessAiming(void);
+	void StopAimingAnims(void);
+	bool CanUseDriveBy(void);
+	bool IsDoomMode(void);
+#endif
 
 	static void SetupPlayerPed(int32);
 	static void DeactivatePlayerPed(int32);

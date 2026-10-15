@@ -209,6 +209,10 @@ void CControllerConfigManager::InitDefaultControlConfiguration()
 																		          
 	SetControllerKeyAssociatedWithAction    (VEHICLE_BRAKE,                       rsDOWN,     KEYBOARD);
 	SetControllerKeyAssociatedWithAction    (VEHICLE_BRAKE,                       'S',        OPTIONAL_EXTRA);
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	SetControllerKeyAssociatedWithAction    (VEHICLE_LOOKBEHIND,                  'C',		  KEYBOARD);
+#endif
 																		          
 	SetControllerKeyAssociatedWithAction    (TOGGLE_SUBMISSIONS,                  rsPLUS,     KEYBOARD);
 	SetControllerKeyAssociatedWithAction    (TOGGLE_SUBMISSIONS,                  rsCAPSLK,   OPTIONAL_EXTRA);
@@ -225,22 +229,46 @@ void CControllerConfigManager::InitDefaultControlConfiguration()
 	SetControllerKeyAssociatedWithAction    (GO_BACK,                             rsDOWN,     KEYBOARD);
 	SetControllerKeyAssociatedWithAction    (GO_BACK,                             'S',        OPTIONAL_EXTRA);
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	SetControllerKeyAssociatedWithAction    (NETWORK_TALK,                        'K',        KEYBOARD);
+
+	SetControllerKeyAssociatedWithAction    (RADAR_ZOOM_OUT,                      'T',        KEYBOARD);
+
+	SetControllerKeyAssociatedWithAction    (PED_RELOAD,						  'R',        KEYBOARD);
+
+	SetControllerKeyAssociatedWithAction    (PED_WALK,							  rsLALT,     KEYBOARD);
+
+	SetControllerKeyAssociatedWithAction    (PED_LOOKBEHIND,                      'C',		  KEYBOARD);
+#else
 	SetControllerKeyAssociatedWithAction    (NETWORK_TALK,                        'T',        KEYBOARD);
-																		          
+
 	SetControllerKeyAssociatedWithAction    (PED_LOOKBEHIND,                      rsPADEND,   KEYBOARD);
+#endif
 	SetControllerKeyAssociatedWithAction    (PED_LOOKBEHIND,                      rsCAPSLK,   OPTIONAL_EXTRA);
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	SetControllerKeyAssociatedWithAction    (PED_DUCK,                            rsLCTRL,	  KEYBOARD);
+#else
 	SetControllerKeyAssociatedWithAction    (PED_DUCK,                            'C',        KEYBOARD);
+#endif
 																		          
 	SetControllerKeyAssociatedWithAction    (PED_FIREWEAPON,                      rsPADINS,   KEYBOARD);
+#ifndef IMPROVED_MENU_AND_INPUT
 	SetControllerKeyAssociatedWithAction    (PED_FIREWEAPON,                      rsLCTRL,    OPTIONAL_EXTRA);
+#endif
 #ifdef BIND_VEHICLE_FIREWEAPON
 	SetControllerKeyAssociatedWithAction    (VEHICLE_FIREWEAPON,                  rsPADINS,   KEYBOARD);
 	SetControllerKeyAssociatedWithAction    (VEHICLE_FIREWEAPON,                  rsLCTRL,    OPTIONAL_EXTRA);
 #endif
+#ifdef IMPROVED_MENU_AND_INPUT
+	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_LEFT,               'Q', KEYBOARD);
+
+	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_RIGHT,              'E', OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?
+#else
 	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_LEFT,               rsPADDEL,   KEYBOARD);
 
 	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_RIGHT,              rsPADENTER, OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?
+#endif
 																		          
 	SetControllerKeyAssociatedWithAction    (PED_LOCK_TARGET,                     rsDEL,      KEYBOARD);
 																		          
@@ -539,6 +567,11 @@ void CControllerConfigManager::InitialiseControllerActionNameArray()
 	SETACTIONNAME(TOGGLE_DPAD);
 	SETACTIONNAME(SWITCH_DEBUG_CAM_ON);
 	SETACTIONNAME(TAKE_SCREEN_SHOT);
+#ifdef IMPROVED_MENU_AND_INPUT
+	SETACTIONNAME(PED_WALK);
+	SETACTIONNAME(RADAR_ZOOM_OUT);
+	SETACTIONNAME(PED_RELOAD);
+#endif
 
 #undef SETACTIONNAME
 }
@@ -658,6 +691,9 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown(int32 button, 
 
 		bool firstPerson = false;
 		bool playerDriving = false;
+#ifdef FIRING_AND_AIMING
+		bool playerDriveby = false;
+#endif
 
 		if (FindPlayerVehicle() != NULL)
 		{
@@ -666,6 +702,12 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown(int32 button, 
 			{
 				if (plr->m_nPedState == PED_DRIVING)
 					playerDriving = true;
+
+
+#ifdef FIRING_AND_AIMING
+				if (plr->m_nPedState == PED_AIM_GUN || plr->m_nPedState == PED_ATTACK)
+					playerDriveby = true;
+#endif
 			}
 		}
 
@@ -698,7 +740,11 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown(int32 button, 
 
 		if (pad != NULL)
 		{
+#ifdef FIRING_AND_AIMING
+			if (playerDriving || playerDriveby)
+#else
 			if (playerDriving)
+#endif
 			{
 				AffectControllerStateOn_ButtonDown_Driving(button, type, *state);
 				AffectControllerStateOn_ButtonDown_VehicleAndThirdPersonOnly(button, type, *state);
@@ -753,6 +799,11 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 		state.Square = 255;
 	if (button == GetControllerKeyAssociatedWithAction(TOGGLE_SUBMISSIONS, type))
 		state.RightShock = 255;
+
+#ifdef FIRING_AND_AIMING // vehicle lock target button
+	if (button == GetControllerKeyAssociatedWithAction(PED_LOCK_TARGET, type))
+		state.DPadDown = 255;
+#endif
 	
 	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_TURRETLEFT, type))
 	{
@@ -835,6 +886,32 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 		else
 			state.RightStickY = -128;
 	}
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (button == GetControllerKeyAssociatedWithAction(GO_LEFT, type))
+	{
+		if (state.DPadRight || m_aSimCheckers[SIM_X1][type])
+		{
+			m_aSimCheckers[SIM_X1][type] = true;
+			state.DPadLeft = 0;
+			state.DPadRight = 0;
+		}
+		else
+			state.DPadLeft = 255;
+	}
+
+	if (button == GetControllerKeyAssociatedWithAction(GO_RIGHT, type))
+	{
+		if (state.DPadLeft || m_aSimCheckers[SIM_X1][type])
+		{
+			m_aSimCheckers[SIM_X1][type] = true;
+			state.DPadLeft = 0;
+			state.DPadRight = 0;
+		}
+		else
+			state.DPadRight = 255;
+	}
+#endif
 }
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstPersonOnly(int32 button, eControllerType type, CControllerState &state)
@@ -854,7 +931,11 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_ThirdPersonOnl
 	if (button == GetControllerKeyAssociatedWithAction(PED_JUMPING, type))
 		state.Square = 255;
 	if (button == GetControllerKeyAssociatedWithAction(PED_ANSWER_PHONE, type))
-		state.LeftShoulder1 = 255;
+#ifdef IMPROVED_MENU_AND_INPUT
+		state.Circle = 255;
+#else
+			state.LeftShoulder1 = 255;
+#endif
 	if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_LEFT, type))
 		state.LeftShoulder2 = 255;
 	if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_RIGHT, type))
@@ -863,6 +944,14 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_ThirdPersonOnl
 		state.Cross = 255;
 	if (button == GetControllerKeyAssociatedWithAction(PED_DUCK, type))
 		state.LeftShock = 255;
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (button == GetControllerKeyAssociatedWithAction(PED_WALK, type))
+		state.bWalk = 255;
+
+	if (button == GetControllerKeyAssociatedWithAction(PED_RELOAD, type))
+		state.Circle = 255;
+#endif
 	
 	if (FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC)
 	{
@@ -881,13 +970,20 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 
 #ifdef BIND_VEHICLE_FIREWEAPON
 	if (button == GetControllerKeyAssociatedWithAction(PED_FIREWEAPON, type))
-		state.Circle = 255;
+#ifdef IMPROVED_MENU_AND_INPUT
+		state.LeftShoulder1 = 255;
+#else
+			state.Circle = 255;
+#endif
 #endif
 	if (button == GetControllerKeyAssociatedWithAction(PED_LOCK_TARGET, type))
 		state.RightShoulder1 = 255;
 
 	if (button == GetControllerKeyAssociatedWithAction(GO_FORWARD, type))
 	{
+#ifdef IMPROVED_MENU_AND_INPUT
+		state.LeftStickY = -255;
+#else
 		if (state.DPadDown || m_aSimCheckers[SIM_Y1][type])
 		{
 			m_aSimCheckers[SIM_Y1][type] = true;
@@ -896,10 +992,14 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 		}
 		else
 			state.DPadUp = 255;
+#endif
 	}
 
 	if (button == GetControllerKeyAssociatedWithAction(GO_BACK, type))
 	{
+#ifdef IMPROVED_MENU_AND_INPUT
+		state.LeftStickY = 255;
+#else
 		if (state.DPadUp || m_aSimCheckers[SIM_Y1][type])
 		{
 			m_aSimCheckers[SIM_Y1][type] = true;
@@ -908,6 +1008,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 		}
 		else
 			state.DPadDown = 255;
+#endif
 	}
 
 	if (button == GetControllerKeyAssociatedWithAction(PED_1RST_PERSON_LOOK_LEFT, type))
@@ -958,6 +1059,14 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 				state.RightStickY = -128;
 		}
 	}
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (button == GetControllerKeyAssociatedWithAction(GO_LEFT, type))
+		state.LeftStickX = -255;
+
+	if (button == GetControllerKeyAssociatedWithAction(GO_RIGHT, type))
+		state.LeftStickX = 255;
+#endif
 }
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int32 button, eControllerType type, CControllerState &state)
@@ -970,6 +1079,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int3
 		state.Circle = 255;
 #endif
 
+#ifndef IMPROVED_MENU_AND_INPUT
 	if (button == GetControllerKeyAssociatedWithAction(GO_LEFT, type))
 	{
 		if (state.DPadRight || m_aSimCheckers[SIM_X1][type])
@@ -993,6 +1103,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int3
 		else
 			state.DPadRight = 255;
 	}
+#endif
 
 	if (button == GetControllerKeyAssociatedWithAction(NETWORK_TALK, type))
 		state.NetworkTalk = 255;
@@ -1002,6 +1113,11 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_VehicleAndThir
 {
 	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_ENTER_EXIT, type))
 		state.Triangle = 255;
+
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (button == GetControllerKeyAssociatedWithAction(RADAR_ZOOM_OUT, type))
+		state.DPadUp = 255;
+#endif
 }
 
 void CControllerConfigManager::UpdateJoyInConfigMenus_ButtonUp(int32 button, int32 padnumber)
@@ -1776,6 +1892,11 @@ void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(e_Control
 	if (!GetIsKeyBlank(key, type))
 	{
 		CLEAR_ACTION_IF_NEEDED(VEHICLE_ENTER_EXIT);
+#ifdef IMPROVED_MENU_AND_INPUT
+		CLEAR_ACTION_IF_NEEDED(PED_WALK);
+		CLEAR_ACTION_IF_NEEDED(RADAR_ZOOM_OUT);
+		CLEAR_ACTION_IF_NEEDED(PED_RELOAD);
+#endif
 	}
 }
 
@@ -1828,6 +1949,11 @@ bool CControllerConfigManager::IsAnyVehicleActionAssignedToMouseKey(int32 key)
 		CHECK_ACTION(TOGGLE_DPAD);
 		CHECK_ACTION(TAKE_SCREEN_SHOT);
 		CHECK_ACTION(SHOW_MOUSE_POINTER_TOGGLE);
+#ifdef IMPROVED_MENU_AND_INPUT
+		CHECK_ACTION(PED_WALK);
+		CHECK_ACTION(RADAR_ZOOM_OUT);
+		CHECK_ACTION(PED_RELOAD);
+#endif
 	}
 	return false;
 }
@@ -1936,6 +2062,10 @@ e_ControllerActionType CControllerConfigManager::GetActionType(e_ControllerActio
 	case PED_CYCLE_TARGET_LEFT:
 	case PED_CYCLE_TARGET_RIGHT:
 	case PED_CENTER_CAMERA_BEHIND_PLAYER:
+#ifdef IMPROVED_MENU_AND_INPUT
+	case PED_WALK:
+	case PED_RELOAD:
+#endif
 		return ACTIONTYPE_3RDPERSON;
 		break;
 
@@ -1959,6 +2089,9 @@ e_ControllerActionType CControllerConfigManager::GetActionType(e_ControllerActio
 		break;
 
 	case VEHICLE_ENTER_EXIT:
+#ifdef IMPROVED_MENU_AND_INPUT
+	case RADAR_ZOOM_OUT:
+#endif
 		return ACTIONTYPE_VEHICLE_3RDPERSON;
 		break;
 
@@ -2706,6 +2839,9 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 		case CMenuManager::CONTROLLER_DUALSHOCK2:
 		case CMenuManager::CONTROLLER_DUALSHOCK3:
 		case CMenuManager::CONTROLLER_DUALSHOCK4:
+#ifdef IMPROVED_MENU_AND_INPUT // Gamepad buttons
+		case CMenuManager::CONTROLLER_DUALSENSE:
+#endif
 			Buttons = CFont::ButtonsSlot != -1 ? PlayStationButtons : PlayStationButtons_noIcons;
 			break;
 		case CMenuManager::CONTROLLER_NINTENDO_SWITCH:

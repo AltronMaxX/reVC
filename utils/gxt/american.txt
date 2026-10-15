@@ -14447,6 +14447,51 @@ Game saved!
 [SKIP]
 Press the ~h~~k~~VEHICLE_ENTER_EXIT~~w~ to skip phone call.
 
+[FEA_HRT]
+HRTF
+
+[FEA_HAU]
+Auto
+
+[FET_AGC]
+GAMEPAD CONFIGURATION
+
+[FEC_REL]
+Reload weapon
+
+[FEC_RZO]
+Radar zoom
+
+[FEC_DS5]
+DUALSENSE
+
+[FEC_LSX]
+Look sensitivity X
+
+[FEC_ASX]
+Aiming sensitivity X
+
+[FEC_IVL]
+Invert vertically
+
+[FEC_FOV]
+Field of view
+
+[FEC_RVD]
+Relative vehicle while driveby
+
+[FEC_DOM]
+DOOM Mode
+
+[FEC_LSY]
+Look sensitivity Y
+
+[FEC_ASY]
+Aiming sensitivity Y
+
+[FEC_ACV]
+Auto-centering in vehicle
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!

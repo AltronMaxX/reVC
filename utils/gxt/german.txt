@@ -14727,6 +14727,51 @@ PED DENSITY
 [FEM_CAR]
 CAR DENSITY
 
+FEA_HRT]
+HRTF
+
+[FEA_HAU]
+Auto
+
+[FET_AGC]
+GAMEPAD-KONFIGURATION
+
+[FEC_REL]
+Waffe nachladen
+
+[FEC_RZO]
+Radarzoom
+
+[FEC_DS5]
+DUALSENSE
+
+[FEC_LSX]
+Blickempfindlichkeit X
+
+[FEC_LSY]
+Blickempfindlichkeit Y
+
+[FEC_ASX]
+Zielgenauigkeit X
+
+[FEC_ASY]
+Zielgenauigkeit Y
+
+[FEC_IVL]
+Vertikal invertieren
+
+[FEC_FOV]
+Sichtfeld
+
+[FEC_RVD]
+Relatives Fahrzeug beim Drive-By
+
+[FEC_DOM]
+DOOM-Modus
+
+[FEC_ACV]
+Auto-Zentrierung im Fahrzeug
+
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
 AS THE LAST LABEL DOES NOT GET COMPILED

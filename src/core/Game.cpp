@@ -1420,7 +1420,6 @@ CGame::ResumeWindowPauseMenuAfterFocusRestore(void)
 		DMAudio.Service();
 		return;
 	}
-
 	CTimer::StartUserPause();
 	DMAudio.SetStreamsPausedForWindowPause(true);
 	DMAudio.Service();

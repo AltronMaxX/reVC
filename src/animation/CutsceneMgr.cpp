@@ -556,12 +556,13 @@ CCutsceneMgr::Update(void)
 
 	if (!ms_running) return;
 
+
+
 	if (ms_waitingForAudioAfterWindowPause) {
-		const bool hasCutsceneAudio = bCamLoaded
+		const bool hasSynchronizedAudio = bCamLoaded
 			&& CGeneral::faststricmp(ms_cutsceneName, "finale")
 			&& FindCutsceneAudioTrackId(ms_cutsceneName) != -1;
-
-		if (!hasCutsceneAudio) {
+		if (!hasSynchronizedAudio) {
 			ms_waitingForAudioAfterWindowPause = false;
 		} else {
 			if (!ms_cutsceneAudioResumeRequested) {
@@ -581,11 +582,6 @@ CCutsceneMgr::Update(void)
 		}
 	}
 
-	// Keep the visual timeline on the frame timer. Stream positions are buffered
-	// snapshots and may stay unchanged (or briefly move backwards) across frames;
-	// forcing the spline to that value every frame makes the camera stop and jump.
-	// Window pause freezes both clocks, and the wait above only ensures that the
-	// audio stream is running again before the cutscene continues.
 	ms_cutsceneTimer += CTimer::GetTimeStepNonClippedInSeconds();
 
 	for (int i = 0; i < ms_numCutsceneObjs; i++) {

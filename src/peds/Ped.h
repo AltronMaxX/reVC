@@ -317,6 +317,9 @@ enum PedState
 	PED_FLASH,
 	PED_JOG,
 	PED_ANSWER_MOBILE,
+#ifdef CUSTOM_SWIMMING
+PED_SWIM,
+#endif
 
 	PED_UNKNOWN,	// Same with IDLE, but also infects up to 5 peds with same pedType and WANDER_PATH, so they become stone too. HANG_OUT in Fire_Head's idb
 
@@ -329,6 +332,13 @@ enum PedState
 	PED_GETUP,
 	PED_STAGGER,
 	PED_DIVE_AWAY,
+	#ifdef CLIMBING
+	PED_CLIMBING,
+#endif
+
+#ifdef CROUCH
+PED_ROLL,
+#endif
 
 	PED_STATES_NO_ST,
 	PED_ENTER_TRAIN,
@@ -474,6 +484,9 @@ public:
 	uint32 bHeadStuckInCollision : 1;
 	uint32 bDeadPedInFrontOfCar : 1;
 	uint32 bStayInCarOnJack : 1;
+#ifdef CUSTOM_SWIMMING
+	uint32 bIsSwimming : 1;
+#endif
 
 	uint32 bDontFight : 1;
 	uint32 bDoomAim : 1;
@@ -495,7 +508,7 @@ public:
 
 #ifdef KANGAROO_CHEAT
 	// our own flags
-	uint32 m_ped_flagI80 : 1; // KANGAROO_CHEAT define makes use of this as cheat toggle 
+	uint32 m_ped_flagI80 : 1; // KANGAROO_CHEAT define makes use of this as cheat toggle
 #endif
 
 	uint8 m_gangFlags;
@@ -651,6 +664,44 @@ public:
 	CVector m_vecSpotToGuard;
 	float m_radiusToGuard;
 
+#ifdef CLIMBING
+	static bool bClimbingInInteriors;
+	static bool bClimbingOnVehicles;
+	static bool bClimbingPeds;
+	static float maxPossibleClimbingHeight;
+	static float maxPossibleCheckHeightForPeds;
+	static float maxHighClimbingHeight;
+	static float highClimbingOffsetSpeed;
+	static float playerVerticalVelocityAtWhichStartsToFall;
+
+	bool bIsReadyToClimbing;
+
+	bool bIsClimbing;
+
+	float currentClimbingHeight;
+	CVector newClimbingPosition;
+
+	CVector correctedClimbingStandPosition;
+	CAnimBlendAssociation* currentClimbingStandAnim;
+
+	bool bIsStartHighClimbing;
+	bool bIsClimbingHighJump;
+	bool bIsClimbingIdle;
+	bool bIsClimbingPull;
+	CVector newClimbingIdlePosition;
+	CVector newStartClimbingIdlePosition;
+	CAnimBlendAssociation* currentClimbingIdleAnim;
+
+	bool bIsClimbingJumpB;
+	CVector newStartClimbingJumpBPosition;
+	CVector newClimbingJumpBPosition;
+	CAnimBlendAssociation* currentClimbingJumpBAnim;
+
+	CAnimBlendAssociation* currentJumpGlideAnim;
+
+	float m_tJumpAllowedTimer;
+#endif
+
 	static void *operator new(size_t) throw();
 	static void *operator new(size_t, int) throw();
 	static void operator delete(void*, size_t) throw();
@@ -658,6 +709,25 @@ public:
 
 	CPed(uint32 pedType);
 	~CPed(void);
+
+#ifdef CLIMBING
+	bool CanPedClimbingThis(CColPoint& hitForwardPoint, CColPoint& hitBackwardPoint, CColPoint& hitJumpBPoint);
+	bool CheckObjectFrontPlayer(CColPoint& hitForwardPoint);
+	bool CheckObjectAbovePlayer(CColPoint& hitForwardPoint);
+	bool CheckPotentialClimbingPlaceFind(CColPoint hitForwardPoint, CColPoint& hitBackwardPoint);
+	bool CheckClimbingPlaceFree(CColPoint hitBackwardPoint);
+
+	bool CheckClimbingTheFence(CColPoint& hitForwardPoint, CColPoint& hitBackwardPoint, CColPoint& hitJumpBPoint);
+	bool IsNeedFixFenceSideNormal(CColPoint hitForwardPoint);
+	bool CheckPotentialClimbingTheFencePlaceFind(CColPoint& hitForwardPoint, CColPoint& hitBackwardPoint, CColPoint& hitJumpBPoint);
+
+	bool IsClimbingHeightHigherThanPossible(float currentHeight, float startHeight) const { return currentHeight - startHeight > maxPossibleClimbingHeight; }
+	bool IsClimbingHeightHigherThanHigh(float currentHeight, float startHeight) const { return currentHeight - startHeight > maxHighClimbingHeight; }
+
+	void StartClimbing(CColPoint& hitForwardPoint, CColPoint& hitBackwardPoint, CColPoint& hitJumpBPoint);
+
+	void EndClimbing(bool bIsCancel);
+#endif
 
 	void DeleteRwObject();
 	void SetModelIndex(uint32 mi);
@@ -874,6 +944,9 @@ public:
 	void PositionAttachedPed();
 	bool CanUseTorsoWhenLooking();
 	void ScanForDelayedResponseThreats();
+#ifdef CUSTOM_SWIMMING
+	void RemoveSwimAnims(void);
+#endif
 
 	// Static methods
 	static CVector GetLocalPositionToOpenCarDoor(CVehicle *veh, uint32 component, float offset);
@@ -891,6 +964,12 @@ public:
 	static void FinishedWaitCB(CAnimBlendAssociation *assoc, void *arg);
 	static void FinishLaunchCB(CAnimBlendAssociation *assoc, void *arg);
 	static void FinishHitHeadCB(CAnimBlendAssociation *assoc, void *arg);
+#ifdef CLIMBING
+	static void FinishHighClimbingCB(CAnimBlendAssociation *assoc, void *arg);
+	static void FinishClimbingPullCB(CAnimBlendAssociation* assoc, void* arg);
+	static void FinishClimbingCB(CAnimBlendAssociation *assoc, void *arg);
+	static void FinishFinallyStandClimbingCB(CAnimBlendAssociation *assoc, void *arg);
+#endif
 	static void PedAnimGetInCB(CAnimBlendAssociation *assoc, void *arg);
 	static void PedAnimDoorOpenCB(CAnimBlendAssociation *assoc, void *arg);
 	static void PedAnimPullPedOutCB(CAnimBlendAssociation *assoc, void *arg);

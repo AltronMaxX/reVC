@@ -353,14 +353,22 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 
 	for(node = list.first; node; node = node->next) {
 		e = (CEntity *)node->item;
+#ifdef CLIMBING
+		if(e->m_scanCode != GetCurrentScanCode() && e != pIgnoreEntity && ((e->bUsesCollision || e->IsPed() && ((CPed*)e)->bIsClimbing) || deadPeds || bikers) &&
+#else
 		if(e->m_scanCode != GetCurrentScanCode() && e != pIgnoreEntity && (e->bUsesCollision || deadPeds || bikers) &&
+#endif
 		   !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
 			colmodel = nil;
 			tyreDist = mindist;
 			e->m_scanCode = GetCurrentScanCode();
 
 			if(e->IsPed()) {
+#ifdef CLIMBING
+				if((e->bUsesCollision || ((CPed*)e)->bIsClimbing) || deadPeds && ((CPed *)e)->m_nPedState == PED_DEAD || bikers && ((CPed*)e)->InVehicle() && (((CPed*)e)->m_pMyVehicle->IsBike() || ((CPed*)e)->m_pMyVehicle->IsBoat())) {
+#else
 				if(e->bUsesCollision || deadPeds && ((CPed *)e)->m_nPedState == PED_DEAD || bikers && ((CPed*)e)->InVehicle() && (((CPed*)e)->m_pMyVehicle->IsBike() || ((CPed*)e)->m_pMyVehicle->IsBoat())) {
+#endif
 					colmodel = ((CPedModelInfo *)CModelInfo::GetModelInfo(e->GetModelIndex()))->AnimatePedColModelSkinned(e->GetClump());
 				} else
 					colmodel = nil;
@@ -2215,7 +2223,11 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 						float fDamage = 250.0f * fDamageMultiplier;
 						pPed->InflictDamage(pCreator, WEAPONTYPE_EXPLOSION, fDamage,
 						                    PEDPIECE_TORSO, direction);
+#ifdef CUSTOM_SWIMMING
+						if(pPed->m_nPedState != PED_DIE && !pPed->bIsSwimming)						if(pPed->m_nPedState != PED_DIE && !pPed->bIsSwimming)
+#else
 						if(pPed->m_nPedState != PED_DIE)
+#endif
 							pPed->SetFall(2000,
 							              (AnimationId)(direction + ANIM_STD_HIGHIMPACT_FRONT), 0);
 						if(pCreator && pCreator->IsPed()) {
