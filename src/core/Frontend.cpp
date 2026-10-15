@@ -1871,6 +1871,7 @@ CMenuManager::DrawControllerBound(int32 yStart, int32 xStart, int32 unused, int8
 		int nextX = xStart;
 		int bindingsForThisOpt = 0;
 		int contSetOrder = SETORDER_1;
+		controllerAction = -1;
 		CFont::SetColor(CRGBA(255, 255, 255, FadeIn(255)));
 
 		#ifdef IMPROVED_MENU_AND_INPUT
