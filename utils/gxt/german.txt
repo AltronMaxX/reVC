@@ -14772,6 +14772,21 @@ DOOM-Modus
 [FEC_ACV]
 Auto-Zentrierung im Fahrzeug
 
+[FEC_LZN]
+Links-Stick Deadzone
+
+[FEC_RZN]
+Rechts-Stick Deadzone
+
+[FEC_VBF]
+Vibrationsstärke
+
+[FEC_AIM]
+Automatisches Zielen
+
+[FEC_WAL]
+Gehen
+
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
 AS THE LAST LABEL DOES NOT GET COMPILED

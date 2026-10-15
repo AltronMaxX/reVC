@@ -14781,6 +14781,21 @@ Modalità DOOM
 [FEC_ACV]
 Auto-centramento nel veicolo
 
+[FEC_LZN]
+ Zona morta stick sinistro
+
+[FEC_RZN]
+Zona morta stick destro
+
+[FEC_VBF]
+Intensità vibrazione
+
+[FEC_AIM]
+Mirino automatico
+
+[FEC_WAL]
+Camminare
+
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
 AS THE LAST LABEL DOES NOT GET COMPILED

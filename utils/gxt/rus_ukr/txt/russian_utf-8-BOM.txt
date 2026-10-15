@@ -14507,6 +14507,21 @@ DUALSENSE
 [FEC_ACV]
 Автоцентрирование в транспорте
 
+[FEC_LZN]
+Мёртвая зона левого стика
+
+[FEC_RZN]
+Мёртвая зона правого стика
+
+[FEC_VBF]
+Сила вибрации
+
+[FEC_AIM]
+Автоприцеливание
+
+[FEC_WAL]
+Идти
+
 { end of file }
 [DUMMY]
 THIS LABEL NEEDS TO BE HERE !!!
