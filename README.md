@@ -34,7 +34,10 @@ We have implemented a number of changes and improvements to the original game.
 They can be configured in `core/config.h`.
 Some of them can be toggled at runtime, some cannot.
 
-_* Features ported from [ViceExtended](https://github.com/x87/gta-extended-2025)
+* WebGPU rendering backend (via librw WGPU platform, powered by wgpu-native)
+  - Cross-backend support: Vulkan, OpenGL, Direct3D 12 (auto-selected or user-picked)
+  - Backend selector in the Display menu (persists to INI, applied on next launch)
+* Features ported from [ViceExtended](https://github.com/x87/gta-extended-2025)
   - Firing and aiming like in San Andreas (free-aim with any weapon)
   - ~~Drive-by shooting (aim and shoot in any direction from vehicle)~~ TODO 
   - Improved menu and input
