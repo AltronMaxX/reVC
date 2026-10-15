@@ -612,7 +612,7 @@ bool LoadINISettings()
 #endif
 #ifdef FIRING_AND_AIMING
 	ReadIniIfExists("Features", "FiringAndAiming", &bEnableFiringAndAiming);
-	ReadIniIfExists("Features", "DriveByShooting", &bEnableDriveByShooting);
+	//ReadIniIfExists("Features", "DriveByShooting", &bEnableDriveByShooting); TODO: we need to load some anims not from ped.ifp. Will work on this when I implement modloader
 #endif
 #endif
 
