@@ -1,0 +1,94 @@
+name: Build (WebGPU)
+
+on:
+  pull_request:
+  push:
+  release:
+    types: published
+
+jobs:
+  # ── Linux: CMake ───────────────────────────────────────────────────────────
+  linux:
+    name: Ubuntu (WebGPU, CMake)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libglfw3-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            xorg-dev
+
+      - name: Configure (CMake)
+        run: |
+          cmake -S . -B build \
+            -DLIBRW_PLATFORM=WGPU \
+            -DLIBRW_EXAMPLES=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POLICY_DEFAULT_CMP0074=NEW
+
+      - name: Build
+        run: cmake --build build --config Release --verbose
+
+      - name: Stage artifact
+        run: |
+          mkdir -p out
+          find build -type f -executable -not -name '*.so' -exec cp {} out/ \; || true
+          cp external/wgpu-native/linux-x64/lib/libwgpu_native.so out/ || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librw-wgpu-Linux
+          path: out/*
+          if-no-files-found: warn
+
+  # ── Windows: premake ───────────────────────────────────────────────────────
+  windows:
+    name: Windows (WebGPU, premake)
+    runs-on: windows-latest
+    env:
+      GLFW_BASE: "glfw-3.4.bin.WIN64"
+      GLFW_FILE: "glfw-3.4.bin.WIN64.zip"
+      GLFW_URL: "https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip"
+      PLATFORM: "win-amd64-wgpu"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v3
+        with:
+          vs-prerelease: true
+
+      - name: Download glfw
+        run: Invoke-WebRequest -Uri "${{ env.GLFW_URL }}" -OutFile "${{ env.GLFW_FILE }}"
+
+      - name: Unpack glfw
+        run: 7z x ${{ env.GLFW_FILE }}
+
+      - name: Configure build (premake)
+        shell: pwsh
+        run: ./premake5.exe vs2022 --glfwdir64=${{ env.GLFW_BASE }}
+
+      - name: Build librw + im3d example
+        run: |
+          msbuild build/librw.sln /t:librw /property:Configuration=Release /property:Platform=${{ env.PLATFORM }}
+          msbuild build/librw.sln /t:im3d  /property:Configuration=Release /property:Platform=${{ env.PLATFORM }}
+
+      - name: Stage artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Get-ChildItem -Recurse -Path bin, lib -Include *.exe | ForEach-Object { Copy-Item $_.FullName out/ }
+          Copy-Item external/wgpu-native/windows-x64/lib/wgpu_native.dll out/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: librw-wgpu-Windows
+          path: out/*
+          if-no-files-found: warn

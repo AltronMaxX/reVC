@@ -112,7 +112,7 @@ Microsoft recently discontinued its downloads of the DX9 SDK. You can download a
 
 > :information_source: There are various settings in [config.h](https://github.com/AltronMaxX/reVC/tree/miami/src/core/config.h), you may want to take a look there.
 
-> :information_source: reVC uses completely homebrew RenderWare-replacement rendering engine; [librw](https://github.com/aap/librw/). librw is included as a submodule, but you also can use LIBRW environment variable to specify path to your own librw.
+> :information_source: reVC uses the homebrew RenderWare-replacement rendering engine [librw](https://github.com/aap/librw/). This branch includes the WGPU-enabled library directly in `vendor/librw`, restored from upstream reVC commit `a8780b5c98460574ba080ff116b264c4e8e870bb`; no separate `librw-wgpu` repository is needed. You can also use the LIBRW environment variable to specify a path to your own librw when building with premake.
 
 If you feel the need, you can also use CodeWarrior 7 to compile reVC using the supplied codewarrior/reVC.mcp project - this requires the original RW34 libraries, and the DX8 SDK. The build is unstable compared to the MSVC builds though, and is mostly meant to serve as a reference.
 
