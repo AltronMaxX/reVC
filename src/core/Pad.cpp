@@ -1,6 +1,7 @@
 #define WITHDINPUT
 #include "common.h"
 #include "crossplatform.h"
+#include "main.h"
 #include "platform.h"
 #ifdef XINPUT
 #include <xinput.h>
@@ -685,6 +686,9 @@ CControllerState::Clear(void)
 	Square = Triangle = Cross = Circle = 0;
 	LeftShock = RightShock = 0;
 	NetworkTalk = 0;
+#ifdef IMPROVED_MENU_AND_INPUT // walking on the key
+	bWalk = 0;
+#endif
 }
 
 void CKeyboardState::Clear()
@@ -759,7 +763,12 @@ void CPad::Clear(bool bResetPlayerControls)
 #endif
 
 	Phase = 0;
+#ifdef IMPROVED_MENU_AND_INPUT
+	ShakeLowFreq = 0;
+	ShakeHighFreq = 0;
+#else
 	ShakeFreq = 0;
+#endif
 	ShakeDur = 0;
 
 	for (int32 i = 0; i < DRUNK_STEERING_BUFFER_SIZE; i++)
@@ -978,6 +987,14 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 
 	ReconState.Clear();
 
+#ifdef IMPROVED_MENU_AND_INPUT
+#define _RECONCILE_LTRIGGER(button) \
+	{ if ( State1.button || State2.button ) ReconState.button = IsAffectedByController ? State2.LeftShoulder2 : 255 ; }
+
+#define _RECONCILE_RTRIGGER(button) \
+	{ if ( State1.button || State2.button ) ReconState.button = IsAffectedByController ? State2.RightShoulder2 : 255 ; }
+#endif
+
 #define _RECONCILE_BUTTON(button) \
 	{ if ( State1.button || State2.button ) ReconState.button = 255; }
 
@@ -996,10 +1013,15 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 #define _FIX_RECON_DIR(pos, neg, axis) \
 	{ if ( (ReconState.pos || ReconState.axis < 0) && (ReconState.neg || ReconState.axis > 0) ) { ReconState.pos = 0; ReconState.neg = 0; ReconState.axis = 0; } }
 
-	_RECONCILE_BUTTON(LeftShoulder1);
+#ifdef IMPROVED_MENU_AND_INPUT
+	_RECONCILE_LTRIGGER(LeftShoulder2);
+	_RECONCILE_RTRIGGER(RightShoulder2);
+#else
 	_RECONCILE_BUTTON(LeftShoulder2);
-	_RECONCILE_BUTTON(RightShoulder1);
 	_RECONCILE_BUTTON(RightShoulder2);
+#endif
+	_RECONCILE_BUTTON(LeftShoulder1);
+	_RECONCILE_BUTTON(RightShoulder1);
 	_RECONCILE_BUTTON(Start);
 	_RECONCILE_BUTTON(Select);
 	_RECONCILE_BUTTON(Square);
@@ -1009,6 +1031,9 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 	_RECONCILE_BUTTON(LeftShock);
 	_RECONCILE_BUTTON(RightShock);
 	_RECONCILE_BUTTON(NetworkTalk);
+#ifdef IMPROVED_MENU_AND_INPUT // walking on the key
+	_RECONCILE_BUTTON(bWalk);
+#endif
 	_RECONCILE_AXIS(LeftStickX);
 	_RECONCILE_AXIS(LeftStickY);
 	_FIX_AXIS_DIR(LeftStickX);
@@ -1021,8 +1046,13 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 	_RECONCILE_BUTTON(DPadDown);
 	_RECONCILE_BUTTON(DPadLeft);
 	_RECONCILE_BUTTON(DPadRight);
+#ifdef IMPROVED_MENU_AND_INPUT
+	_FIX_AXIS_DIR(LeftStickX);
+	_FIX_AXIS_DIR(LeftStickY);
+#else
 	_FIX_RECON_DIR(DPadUp, DPadDown, LeftStickY);
 	_FIX_RECON_DIR(DPadLeft, DPadRight, LeftStickX);
+#endif
 
 	return ReconState;
 
@@ -1035,6 +1065,60 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 }
 #endif
 
+#ifdef IMPROVED_MENU_AND_INPUT
+void CPad::StartShake(int16 nDur, uint8 nLowFreq, uint8 nHighFreq)
+{
+	if (!IsAffectedByController)
+		return;
+
+	if (CCutsceneMgr::IsRunning() || CGame::playingIntro)
+		return;
+
+	if (nLowFreq == 0 && nHighFreq == 0)
+	{
+		ShakeDur = 0;
+		nLowFreq = 0;
+		nHighFreq = 0;
+		return;
+	}
+
+	if (nDur > ShakeDur)
+	{
+		ShakeDur = nDur;
+		ShakeLowFreq = nLowFreq * FrontEndMenuManager.m_PrefsVibrationForce;
+		ShakeHighFreq = nHighFreq * FrontEndMenuManager.m_PrefsVibrationForce;
+	}
+}
+
+void CPad::StartShake_Distance(int16 nDur, uint8 nLowFreq, uint8 nHighFreq, float fX, float fY, float fZ)
+{
+	if (!IsAffectedByController)
+		return;
+
+	if (CCutsceneMgr::IsRunning() || CGame::playingIntro)
+		return;
+
+	float fDist = (TheCamera.GetPosition() - CVector(fX, fY, fZ)).Magnitude();
+
+	if (fDist < 70.0f)
+	{
+		if (nLowFreq == 0 && nHighFreq == 0)
+		{
+			ShakeDur = 0;
+			nLowFreq = 0;
+			nHighFreq = 0;
+			return;
+		}
+
+		if (nDur > ShakeDur)
+		{
+			ShakeDur = nDur;
+			ShakeLowFreq = nLowFreq * FrontEndMenuManager.m_PrefsVibrationForce;
+			ShakeHighFreq = nHighFreq * FrontEndMenuManager.m_PrefsVibrationForce;
+		}
+	}
+}
+#else
 void CPad::StartShake(int16 nDur, uint8 nFreq)
 {
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
@@ -1083,11 +1167,18 @@ void CPad::StartShake_Distance(int16 nDur, uint8 nFreq, float fX, float fY, floa
 		}
 	}
 }
+#endif
 
 void CPad::StartShake_Train(float fX, float fY)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (!IsAffectedByController)
+		return;
+#else
+
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
+#endif
 
 	if ( CCutsceneMgr::IsRunning() || CGame::playingIntro )
 		return;
@@ -1104,7 +1195,11 @@ void CPad::StartShake_Train(float fX, float fY)
 		if ( ShakeDur < 100 )
 		{
 			ShakeDur = 100;
+#ifdef IMPROVED_MENU_AND_INPUT
+			ShakeHighFreq = freq * FrontEndMenuManager.m_PrefsVibrationForce;
+#else
 			ShakeFreq = freq;
+#endif
 		}
 	}
 }
@@ -1631,12 +1726,20 @@ void CPad::AffectFromXinput(uint32 pad)
 		float rx = (float)xstate.Gamepad.sThumbRX / (float)0x7FFF;
 		float ry = (float)xstate.Gamepad.sThumbRY / (float)0x7FFF;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+		if (Abs(lx) > 0.12f || Abs(ly) > 0.12f) {
+#else
 		if (Abs(lx) > 0.3f || Abs(ly) > 0.3f) {
+#endif
 			PCTempJoyState.LeftStickX = (int32)(lx * 128.0f);
 			PCTempJoyState.LeftStickY = (int32)(-ly * 128.0f);
 		}
 
+#ifdef IMPROVED_MENU_AND_INPUT
+		if (Abs(rx) > 0.1f || Abs(ry) > 0.1f) {
+#else
 		if (Abs(rx) > 0.3f || Abs(ry) > 0.3f) {
+#endif
 			PCTempJoyState.RightStickX = (int32)(rx * 128.0f);
 			PCTempJoyState.RightStickY = (int32)(-ry * 128.0f);
 		}
@@ -1645,14 +1748,27 @@ void CPad::AffectFromXinput(uint32 pad)
 
 		memset(&VibrationState, 0, sizeof(XINPUT_VIBRATION));
 
+#ifdef IMPROVED_MENU_AND_INPUT
+		uint16 iLeftMotor = (uint16)((float)ShakeLowFreq / 255.0f * (float)0xffff);
+		uint16 iRightMotor = (uint16)((float)ShakeHighFreq / 255.0f * (float)0xffff);
+#else
 		uint16 iLeftMotor = (uint16)((float)ShakeFreq / 255.0f * (float)0xffff);
 		uint16 iRightMotor = (uint16)((float)ShakeFreq / 255.0f * (float)0xffff);
+#endif
 
 		if (ShakeDur < CTimer::GetTimeStepInMilliseconds())
 			ShakeDur = 0;
 		else
 			ShakeDur -= CTimer::GetTimeStepInMilliseconds();
+
+#ifdef IMPROVED_MENU_AND_INPUT
+		if (ShakeDur == 0) {
+			ShakeLowFreq = 0;
+			ShakeHighFreq = 0;
+		}
+#else
 		if (ShakeDur == 0) ShakeFreq = 0;
+#endif
 
 		VibrationState.wLeftMotorSpeed = iLeftMotor;
 		VibrationState.wRightMotorSpeed = iRightMotor;
@@ -1690,9 +1806,17 @@ void CPad::UpdatePads(void)
 #endif
 
 #ifdef DETECT_PAD_INPUT_SWITCH
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (GetPad(0)->PCTempJoyState.CheckForInput()) {
+		IsAffectedByController = true;
+		CCamera::m_bUseMouse3rdPerson = false;
+		FrontEndMenuManager.m_ControlMethod = CONTROL_CLASSIC;
+	} else {
+#else
 	if (GetPad(0)->PCTempJoyState.CheckForInput())
 		IsAffectedByController = true;
 	else {
+#endif
 #endif
 		ControlsManager.ClearSimButtonPressCheckers();
 		ControlsManager.AffectPadFromKeyBoard();
@@ -1700,8 +1824,16 @@ void CPad::UpdatePads(void)
 
 #ifdef DETECT_PAD_INPUT_SWITCH
 	}
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (IsAffectedByController && (GetPad(0)->PCTempKeyState.CheckForInput() || GetPad(0)->PCTempMouseState.CheckForInput())) {
+		IsAffectedByController = false;
+		CCamera::m_bUseMouse3rdPerson = true;
+		FrontEndMenuManager.m_ControlMethod = CONTROL_STANDARD;
+	}
+#else
 	if (IsAffectedByController && (GetPad(0)->PCTempKeyState.CheckForInput() || GetPad(0)->PCTempMouseState.CheckForInput()))
 		IsAffectedByController = false;
+#endif
 #endif
 
 	if ( CReplay::IsPlayingBackFromFile() && !FrontEndMenuManager.m_bMenuActive )
@@ -2123,7 +2255,12 @@ void CPad::StopPadsShaking(void)
 void CPad::StopShaking(int16 pad)
 {
 #ifdef GTA_PS2_STUFF
+#ifdef IMPROVED_MENU_AND_INPUT
+	ShakeLowFreq = 0;
+	ShakeHighFreq = 0;
+#else
 	ShakeFreq = 0;
+#endif
 	ShakeDur = 0;
 
 #ifdef GTA_PS2
@@ -2200,6 +2337,9 @@ int16 CPad::GetSteeringUpDown(void)
 		case 0:
 		case 2:
 		{
+#ifdef IMPROVED_MENU_AND_INPUT
+			return NewState.LeftStickY;
+#else
 			int16 axis = NewState.LeftStickY;
 			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
@@ -2207,6 +2347,7 @@ int16 CPad::GetSteeringUpDown(void)
 				return axis;
 			else
 				return dpad;
+#endif
 
 			break;
 		}
@@ -2228,26 +2369,35 @@ int16 CPad::GetCarGunUpDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return 0;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	int16 axis = NewState.RightStickY;
+
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone)
+		return (axis > 0.f ? axis - FrontEndMenuManager.m_PrefsRightStickDeadzone : axis + FrontEndMenuManager.m_PrefsRightStickDeadzone);
+	else
+		return 0;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return NewState.RightStickY;
+	case 0:
+	case 1:
+	case 2:
+	{
+		return NewState.RightStickY;
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return (NewState.DPadUp - NewState.DPadDown) / 2;
+	case 3:
+	{
+		return (NewState.DPadUp - NewState.DPadDown) / 2;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return 0;
+#endif
 }
 
 int16 CPad::GetCarGunLeftRight(void)
@@ -2255,26 +2405,35 @@ int16 CPad::GetCarGunLeftRight(void)
 	if ( ArePlayerControlsDisabled() )
 		return 0;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	int16 axis = NewState.RightStickX;
+
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone)
+		return (axis > 0.f ? axis - FrontEndMenuManager.m_PrefsRightStickDeadzone : axis + FrontEndMenuManager.m_PrefsRightStickDeadzone);
+	else
+		return 0;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return NewState.RightStickX;
+	case 0:
+	case 1:
+	case 2:
+	{
+		return NewState.RightStickX;
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return (NewState.DPadRight - NewState.DPadLeft) / 2;
+	case 3:
+	{
+		return (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return 0;
+#endif
 }
 
 int16 CPad::GetPedWalkLeftRight(void)
@@ -2288,12 +2447,24 @@ int16 CPad::GetPedWalkLeftRight(void)
 		case 2:
 		{
 			int16 axis = NewState.LeftStickX;
+#ifdef IMPROVED_MENU_AND_INPUT
+			if (Abs(axis) > FrontEndMenuManager.m_PrefsLeftStickDeadzone)
+				return axis;
+			else
+				return 0;
+#else
 			int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
+
+			if (RwCameraGetMirror(Scene.camera)) {
+				axis *= -1;
+				dpad *= -1;
+			}
 
 			if ( Abs(axis) > Abs(dpad) )
 				return axis;
 			else
 				return dpad;
+#endif
 
 			break;
 		}
@@ -2301,7 +2472,20 @@ int16 CPad::GetPedWalkLeftRight(void)
 		case 1:
 		case 3:
 		{
+#ifdef IMPROVED_MENU_AND_INPUT
+			int16 axis = NewState.LeftStickX;
+
+			if (Abs(axis) > FrontEndMenuManager.m_PrefsLeftStickDeadzone)
+				return axis;
+			else
+				return 0;
+#else
+			if (RwCameraGetMirror(Scene.camera)) {
+				NewState.LeftStickX *= -1;
+			}
+
 			return NewState.LeftStickX;
+#endif
 
 			break;
 		}
@@ -2321,12 +2505,19 @@ int16 CPad::GetPedWalkUpDown(void)
 		case 2:
 		{
 			int16 axis = NewState.LeftStickY;
+#ifdef IMPROVED_MENU_AND_INPUT
+			if (Abs(axis) > FrontEndMenuManager.m_PrefsLeftStickDeadzone)
+				return axis;
+			else
+				return 0;
+#else
 			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
 			if ( Abs(axis) > Abs(dpad) )
 				return axis;
 			else
 				return dpad;
+#endif
 
 			break;
 		}
@@ -2334,7 +2525,15 @@ int16 CPad::GetPedWalkUpDown(void)
 		case 1:
 		case 3:
 		{
+#ifdef IMPROVED_MENU_AND_INPUT
+			int16 axis = NewState.LeftStickY;
+			if (Abs(axis) > FrontEndMenuManager.m_PrefsLeftStickDeadzone)
+				return axis;
+			else
+				return 0;
+#else
 			return NewState.LeftStickY;
+#endif
 
 			break;
 		}
@@ -2345,62 +2544,69 @@ int16 CPad::GetPedWalkUpDown(void)
 
 int16 CPad::GetAnalogueUpDown(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	return NewState.LeftStickY;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		{
-			int16 axis = NewState.LeftStickY;
-			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
+	case 0:
+	case 2:
+	{
+		int16 axis = NewState.LeftStickY;
+		int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+		if ( Abs(axis) > Abs(dpad) )
+			return axis;
+		else
+			return dpad;
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	case 3:
+	{
+		return NewState.LeftStickY;
 
-		case 1:
-		case 3:
-		{
-			return NewState.LeftStickY;
-
-			break;
-		}
+		break;
+	}
 	}
 
 	return 0;
+#endif
 }
 
 int16 CPad::GetAnalogueLeftRight(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	return NewState.LeftStickX;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		{
-			int16 axis = NewState.LeftStickX;
-			int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
+	case 0:
+	case 2:
+	{
+		int16 axis = NewState.LeftStickX;
+		int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+		if ( Abs(axis) > Abs(dpad) )
+			return axis;
+		else
+			return dpad;
 
-			break;
-		}
+		break;
+	}
 
-		case 1:
-		case 3:
-		{
-			return NewState.LeftStickX;
+	case 1:
+	case 3:
+	{
+		return NewState.LeftStickX;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return 0;
+#endif
 }
 
 bool CPad::GetLookLeft(void)
@@ -2408,7 +2614,29 @@ bool CPad::GetLookLeft(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.LeftShoulder2 && !NewState.RightShoulder2);
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.LeftShoulder1 && !NewState.RightShoulder1);
+
+		break;
+	}
+	}
+
+	return 0;
+#else
+
 	return !!(NewState.LeftShoulder2 && !NewState.RightShoulder2);
+#endif
 }
 
 bool CPad::GetLookRight(void)
@@ -2416,7 +2644,29 @@ bool CPad::GetLookRight(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.RightShoulder2 && !NewState.LeftShoulder2);
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.RightShoulder1 && !NewState.LeftShoulder1);;
+
+		break;
+	}
+	}
+
+	return 0;
+#else
+
 	return !!(NewState.RightShoulder2 && !NewState.LeftShoulder2);
+#endif
 }
 
 
@@ -2425,7 +2675,30 @@ bool CPad::GetLookBehindForCar(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.RightShoulder2 && NewState.LeftShoulder2);
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		return NewState.RightShock || !!(NewState.RightShoulder1 && NewState.LeftShoulder1);
+
+		break;
+	}
+	}
+
+	return 0;
+#else
 	return !!(NewState.RightShoulder2 && NewState.LeftShoulder2);
+#endif
 }
 
 bool CPad::GetLookBehindForPed(void)
@@ -2441,38 +2714,42 @@ bool CPad::GetHorn(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!NewState.LeftShock;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		{
-			return !!NewState.LeftShock;
+	case 0:
+	{
+		return !!NewState.LeftShock;
 
-			break;
-		}
+		break;
+	}
 
-		case 1:
-		{
-			return !!NewState.LeftShoulder1;
+	case 1:
+	{
+		return !!NewState.LeftShoulder1;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!NewState.RightShoulder1;
+	case 2:
+	{
+		return !!NewState.RightShoulder1;
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!NewState.LeftShock;
+	case 3:
+	{
+		return !!NewState.LeftShock;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::HornJustDown(void)
@@ -2480,38 +2757,42 @@ bool CPad::HornJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!(NewState.LeftShock && !OldState.LeftShock);
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		{
-			return !!(NewState.LeftShock && !OldState.LeftShock);
+	case 0:
+	{
+		return !!(NewState.LeftShock && !OldState.LeftShock);
 
-			break;
-		}
+		break;
+	}
 
-		case 1:
-		{
-			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+	case 1:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+	case 2:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!(NewState.LeftShock && !OldState.LeftShock);
+	case 3:
+	{
+		return !!(NewState.LeftShock && !OldState.LeftShock);
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::GetCarGunFired(void)
@@ -2519,26 +2800,30 @@ bool CPad::GetCarGunFired(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!NewState.Circle;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return !!NewState.Circle;
+	case 0:
+	case 1:
+	case 2:
+	{
+		return !!NewState.Circle;
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!NewState.RightShoulder1;
+	case 3:
+	{
+		return !!NewState.RightShoulder1;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::CarGunJustDown(void)
@@ -2546,26 +2831,30 @@ bool CPad::CarGunJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!(NewState.Circle && !OldState.Circle);
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return !!(NewState.Circle && !OldState.Circle);
+	case 0:
+	case 1:
+	case 2:
+	{
+		return !!(NewState.Circle && !OldState.Circle);
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+	case 3:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 int16 CPad::GetHandBrake(void)
@@ -2575,27 +2864,45 @@ int16 CPad::GetHandBrake(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		{
-			return NewState.RightShoulder1;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return NewState.RightShoulder1;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return NewState.Triangle;
+	case 1:
+	case 3:
+	{
+		return NewState.Cross;
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	{
+		return NewState.RightShoulder1;
 
-		case 3:
-		{
-			return NewState.LeftShoulder1;
+		break;
+	}
 
-			break;
-		}
+	case 2:
+	{
+		return NewState.Triangle;
+
+		break;
+	}
+
+	case 3:
+	{
+		return NewState.LeftShoulder1;
+
+		break;
+	}
+#endif
 	}
 
 	return 0;
@@ -2608,32 +2915,55 @@ int16 CPad::GetBrake(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		{
-			return NewState.Square;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return NewState.Square;
 
-			break;
-		}
+		break;
+	}
 
-		case 1:
-		{
-			return NewState.Square;
+	case 1:
+	case 3:
+	{
+		int16 axis = NewState.LeftShoulder2;
 
-			break;
-		}
+		if ( axis < 0 )
+			return 0;
+		else
+			return axis;
 
-		case 3:
-		{
-			int16 axis = 2 * NewState.RightStickY;
+		break;
+	}
+#else
+	case 0:
+	case 2:
+	{
+		return NewState.Square;
 
-			if ( axis < 0 )
-				return 0;
-			else
-				return axis;
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	{
+		return NewState.Square;
+
+		break;
+	}
+
+	case 3:
+	{
+		int16 axis = 2 * NewState.RightStickY;
+
+		if ( axis < 0 )
+			return 0;
+		else
+			return axis;
+
+		break;
+	}
+#endif
 	}
 
 	return 0;
@@ -2648,26 +2978,30 @@ bool CPad::GetExitVehicle(void)
 	if ( JustOutOfFrontend != 0 )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!NewState.Triangle;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 3:
-		{
-			return !!NewState.Triangle;
+	case 0:
+	case 1:
+	case 3:
+	{
+		return !!NewState.Triangle;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!NewState.LeftShoulder1;
+	case 2:
+	{
+		return !!NewState.LeftShoulder1;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::ExitVehicleJustDown(void)
@@ -2678,26 +3012,30 @@ bool CPad::ExitVehicleJustDown(void)
 	if ( JustOutOfFrontend != 0 )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!(NewState.Triangle && !OldState.Triangle);
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 3:
-		{
-			return !!(NewState.Triangle && !OldState.Triangle);
+	case 0:
+	case 1:
+	case 3:
+	{
+		return !!(NewState.Triangle && !OldState.Triangle);
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+	case 2:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 int32 CPad::GetWeapon(void)
@@ -2707,27 +3045,62 @@ int32 CPad::GetWeapon(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		{
-			return NewState.Circle;
+#if defined IMPROVED_MENU_AND_INPUT && defined FIRING_AND_AIMING
+	case 0:
+	case 2:
+	{
+		if (FindPlayerVehicle() || CPad::GetPad(0)->IsAffectedByController && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_HELICANNON_1STPERSON) {
+			if (IsAffectedByController)
+				return NewState.RightShoulder1 || NewState.Circle;
 
-			break;
+			return NewState.Circle || (NewState.RightShoulder1 && NewState.LeftShoulder1);
 		}
 
-		case 2:
-		{
-			return NewState.Cross;
+		if (IsAffectedByController)
+			return NewState.RightShoulder1 && NewState.LeftShoulder1;
 
-			break;
+		return NewState.LeftShoulder1;
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		if (FindPlayerVehicle()) {
+			if (IsAffectedByController)
+				return NewState.RightShoulder1 || NewState.Circle;
+			else
+				return NewState.RightShoulder2 || NewState.Circle;
 		}
 
-		case 3:
-		{
-			return NewState.RightShoulder1;
+		return NewState.RightShoulder2;
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	{
+		return NewState.Circle;
+
+		break;
+	}
+
+	case 2:
+	{
+		return NewState.Cross;
+
+		break;
+	}
+
+	case 3:
+	{
+		return NewState.RightShoulder1;
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -2740,27 +3113,48 @@ bool CPad::WeaponJustDown(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		{
-			return !!(NewState.Circle && !OldState.Circle);
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		if (IsAffectedByController)
+			return !!(NewState.RightShoulder2 && !OldState.RightShoulder2) || !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
 
-			break;
-		}
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
 
-		case 2:
-		{
-			return !!(NewState.Cross && !OldState.Cross);
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	case 3:
+	{
+		return !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
 
-		case 3:
-		{
-			return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	{
+		return !!(NewState.Circle && !OldState.Circle);
 
-			break;
-		}
+		break;
+	}
+
+	case 2:
+	{
+		return !!(NewState.Cross && !OldState.Cross);
+
+		break;
+	}
+
+	case 3:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -2773,32 +3167,55 @@ int16 CPad::GetAccelerate(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		{
-			return NewState.Cross;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return NewState.Cross;
 
-			break;
-		}
+		break;
+	}
 
-		case 1:
-		{
-			return NewState.Cross;
+	case 1:
+	case 3:
+	{
+		int16 axis = NewState.RightShoulder2;
 
-			break;
-		}
+		if ( axis < 0 )
+			return 0;
+		else
+			return axis;
 
-		case 3:
-		{
-			int16 axis = -2 * NewState.RightStickY;
+		break;
+	}
+#else
+	case 0:
+	case 2:
+	{
+		return NewState.Cross;
 
-			if ( axis < 0 )
-				return 0;
-			else
-				return axis;
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	{
+		return NewState.Cross;
+
+		break;
+	}
+
+	case 3:
+	{
+		int16 axis = -2 * NewState.RightStickY;
+
+		if ( axis < 0 )
+			return 0;
+		else
+			return axis;
+
+		break;
+	}
+#endif
 	}
 
 	return 0;
@@ -2806,22 +3223,41 @@ int16 CPad::GetAccelerate(void)
 
 bool CPad::CycleCameraModeJustDown(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!(NewState.Select && !OldState.Select);
+#else
 	bool result;
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		case 3:
+	case 0:
+	case 2:
+	case 3:
+	{
+		result = !!(NewState.Select && !OldState.Select);
+
+		break;
+	}
+
+	case 1:
+	{
+		result = !!(NewState.DPadUp && !OldState.DPadUp);
+
+		break;
+	}
+	default:
+	{
+		result = false;
+		break;
+	}
+	}
+
+	if (!result)
+	{
+		switch (CURMODE)
 		{
-			result = !!(NewState.Select && !OldState.Select);
-
-			break;
-		}
-
 		case 1:
 		{
-			result = !!(NewState.DPadUp && !OldState.DPadUp);
-
+			result = !!(NewState.DPadDown && !OldState.DPadDown);
 			break;
 		}
 		default:
@@ -2829,30 +3265,18 @@ bool CPad::CycleCameraModeJustDown(void)
 			result = false;
 			break;
 		}
-	}
-
-	if (!result)
-	{
-		switch (CURMODE)
-		{
-			case 1:
-			{
-				result = !!(NewState.DPadDown && !OldState.DPadDown);
-				break;
-			}
-			default:
-			{
-				result = false;
-				break;
-			}
 		}
 	}
 
 	return result;
+#endif
 }
 
 bool CPad::CycleCameraModeUpJustDown(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!(NewState.Select && !OldState.Select);
+#endif
 	switch (CURMODE)
 	{
 		case 0:
@@ -2879,71 +3303,233 @@ bool CPad::CycleCameraModeDownJustDown(void)
 {
 	switch (CURMODE)
 	{
-		case 0:
-		case 2:
-		case 3:
-		{
-			return false;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 1:
+	case 3:
+	{
+		return false;
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 2:
+	case 3:
+	{
+		return false;
 
-		case 1:
-		{
-			return !!(NewState.DPadDown && !OldState.DPadDown);
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	{
+		return !!(NewState.DPadDown && !OldState.DPadDown);
+
+		break;
+	}
+#endif
 	}
 
 	return false;
 }
 
-bool CPad::ChangeStationJustDown(void)
+#ifdef IMPROVED_MENU_AND_INPUT
+bool CPad::GetRadarZoomOut(void)
+{
+	if (ArePlayerControlsDisabled())
+		return false;
+
+	if (JustOutOfFrontend != 0)
+		return false;
+
+	if (TheCamera.PlayerWeaponMode.Mode == CCam::MODE_SNIPER || TheCamera.PlayerWeaponMode.Mode == CCam::MODE_CAMERA)
+		return false;
+
+	return IsAffectedByController ? !!NewState.DPadDown : !!NewState.DPadUp;
+}
+
+bool CPad::GetPedWalk()
+{
+	if (ArePlayerControlsDisabled())
+		return false;
+
+	return NewState.bWalk;
+}
+
+bool CPad::WeaponReloadJustDown()
+{
+	if (ArePlayerControlsDisabled())
+		return false;
+
+	return !!(NewState.Circle && !OldState.Circle);
+}
+
+bool CPad::GetMeleeWeapon()
 {
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
 	switch (CURMODE)
 	{
-		case 0:
-		{
-			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+	case 0:
+	case 2:
+	{
+		if (IsAffectedByController)
+			return NewState.Circle;
 
-			break;
-		}
+		return NewState.LeftShoulder1;
 
-		case 1:
-		{
-			return !!(NewState.Select && !OldState.Select);
+		break;
+	}
 
-			break;
-		}
+	case 1:
+	case 3:
+	{
+		return NewState.Circle || NewState.RightShoulder2;
 
-		case 2:
-		{
-			return !!(NewState.LeftShock && !OldState.LeftShock);
-
-			break;
-		}
-
-		case 3:
-		{
-			return !!(NewState.Circle && !OldState.Circle);
-
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
 }
+
+bool CPad::MeleeWeaponJustDown()
+{
+	if (ArePlayerControlsDisabled())
+		return false;
+
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		if (IsAffectedByController)
+			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1) || !!(NewState.Circle && !OldState.Circle);
+
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.Circle && !OldState.Circle) || !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
+
+		break;
+	}
+	}
+
+	return false;
+}
+
+bool CPad::NextStationJustDown(void)
+#else
+bool CPad::ChangeStationJustDown(void)
+#endif
+{
+	if ( ArePlayerControlsDisabled() )
+		return false;
+
+	switch (CURMODE)
+	{
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.DPadRight && !OldState.DPadRight);
+
+		break;
+	}
+#else
+	case 0:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+
+		break;
+	}
+
+	case 1:
+	{
+		return !!(NewState.Select && !OldState.Select);
+
+		break;
+	}
+
+	case 2:
+	{
+		return !!(NewState.LeftShock && !OldState.LeftShock);
+
+		break;
+	}
+
+	case 3:
+	{
+		return !!(NewState.Circle && !OldState.Circle);
+
+		break;
+	}
+#endif
+	}
+
+	return false;
+}
+
+#ifdef IMPROVED_MENU_AND_INPUT
+bool CPad::PrevStationJustDown(void)
+{
+	if (ArePlayerControlsDisabled())
+		return false;
+
+	switch (CURMODE)
+	{
+	case 1:
+	case 3:
+	{
+		return !!(NewState.DPadLeft && !OldState.DPadLeft);
+
+		break;
+	}
+	}
+
+	return false;
+}
+#endif
 
 bool CPad::CycleWeaponLeftJustDown(void)
 {
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.LeftShoulder2 && !OldState.LeftShoulder2);
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.DPadLeft && !OldState.DPadLeft);
+	}
+	}
+
+	return 0;
+#else
 	return !!(NewState.LeftShoulder2 && !OldState.LeftShoulder2);
+#endif
 }
 
 bool CPad::CycleWeaponRightJustDown(void)
@@ -2951,7 +3537,26 @@ bool CPad::CycleWeaponRightJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.DPadRight && !OldState.DPadRight);
+	}
+	}
+
+	return 0;
+#else
 	return !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
+#endif
 }
 
 bool CPad::GetTarget(void)
@@ -2961,21 +3566,49 @@ bool CPad::GetTarget(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return !!NewState.RightShoulder1;
-
-			break;
+#if defined IMPROVED_MENU_AND_INPUT && defined FIRING_AND_AIMING
+	case 0:
+	case 2:
+	{
+		if (FindPlayerVehicle()) {
+			if (IsAffectedByController)
+				return !!NewState.LeftShoulder2;
+			else
+				return !!NewState.DPadDown;
 		}
 
-		case 3:
-		{
+		return !!NewState.RightShoulder1;
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		if (IsAffectedByController && FindPlayerVehicle())
 			return !!NewState.LeftShoulder1;
 
-			break;
-		}
+		return !!NewState.LeftShoulder2;
+
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	case 2:
+	{
+		return !!NewState.RightShoulder1;
+
+		break;
+	}
+
+	case 3:
+	{
+		return !!NewState.LeftShoulder1;
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -2988,21 +3621,39 @@ bool CPad::TargetJustDown(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 2:
-		{
-			return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+	case 1:
+	case 3:
+	{
+		return !!(NewState.LeftShoulder2 && !OldState.LeftShoulder2);
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	case 2:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1);
+
+		break;
+	}
+
+	case 3:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -3013,31 +3664,38 @@ bool CPad::CollectPickupJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (IsAffectedByController)
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+
+	return !!(NewState.Circle && !OldState.Circle);
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		{
-			return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
+	case 0:
+	case 1:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1);
 
-			break;
-		}
-		case 2:
-		{
-			return !!(NewState.Triangle && !OldState.Triangle);
+		break;
+	}
+	case 2:
+	{
+		return !!(NewState.Triangle && !OldState.Triangle);
 
-			break;
-		}
+		break;
+	}
 
-		case 3:
-		{
-			return !!(NewState.Circle && !OldState.Circle);
+	case 3:
+	{
+		return !!(NewState.Circle && !OldState.Circle);
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::DuckJustDown(void)
@@ -3061,26 +3719,30 @@ bool CPad::GetSprint(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	return !!NewState.Cross;
+#else
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 3:
-		{
-			return !!NewState.Cross;
+	case 0:
+	case 1:
+	case 3:
+	{
+		return !!NewState.Cross;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!NewState.Circle;
+	case 2:
+	{
+		return !!NewState.Circle;
 
-			break;
-		}
+		break;
+	}
 	}
 
 	return false;
+#endif
 }
 
 bool CPad::ShiftTargetLeftJustDown(void)
@@ -3088,7 +3750,30 @@ bool CPad::ShiftTargetLeftJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.LeftShoulder2 && !OldState.LeftShoulder2);
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1) || !!(NewState.DPadLeft && !OldState.DPadLeft);
+
+		break;
+	}
+	}
+
+	return false;
+#else
 	return !!(NewState.LeftShoulder2 && !OldState.LeftShoulder2);
+#endif
 }
 
 bool CPad::ShiftTargetRightJustDown(void)
@@ -3096,7 +3781,30 @@ bool CPad::ShiftTargetRightJustDown(void)
 	if ( ArePlayerControlsDisabled() )
 		return false;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	switch (CURMODE)
+	{
+	case 0:
+	case 2:
+	{
+		return !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
+
+		break;
+	}
+
+	case 1:
+	case 3:
+	{
+		return !!(NewState.RightShoulder1 && !OldState.RightShoulder1) || !!(NewState.DPadRight && !OldState.DPadRight);
+
+		break;
+	}
+	}
+
+	return false;
+#else
 	return !!(NewState.LeftShoulder1 && !OldState.LeftShoulder1) || !!(NewState.RightShoulder2 && !OldState.RightShoulder2);
+#endif
 }
 
 bool CPad::GetAnaloguePadUp(void)
@@ -3251,21 +3959,39 @@ bool CPad::SniperZoomIn(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 3:
-		{
-			return !!NewState.Square;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return !!NewState.Square;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!NewState.Triangle;
+	case 1:
+	case 3:
+	{
+		return NewState.DPadUp;
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	case 3:
+	{
+		return !!NewState.Square;
+
+		break;
+	}
+
+	case 2:
+	{
+		return !!NewState.Triangle;
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -3278,21 +4004,39 @@ bool CPad::SniperZoomOut(void)
 
 	switch (CURMODE)
 	{
-		case 0:
-		case 1:
-		case 3:
-		{
-			return !!NewState.Cross;
+#ifdef IMPROVED_MENU_AND_INPUT
+	case 0:
+	case 2:
+	{
+		return !!NewState.Cross;
 
-			break;
-		}
+		break;
+	}
 
-		case 2:
-		{
-			return !!NewState.Square;
+	case 1:
+	case 3:
+	{
+		return NewState.DPadDown;
 
-			break;
-		}
+		break;
+	}
+#else
+	case 0:
+	case 1:
+	case 3:
+	{
+		return !!NewState.Cross;
+
+		break;
+	}
+
+	case 2:
+	{
+		return !!NewState.Square;
+
+		break;
+	}
+#endif
 	}
 
 	return false;
@@ -3302,21 +4046,45 @@ bool CPad::SniperZoomOut(void)
 
 int16 CPad::SniperModeLookLeftRight(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	int16 axis = NewState.RightStickX;
+
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone)
+		return (axis > 0.f ? axis - FrontEndMenuManager.m_PrefsRightStickDeadzone : axis + FrontEndMenuManager.m_PrefsRightStickDeadzone);
+	else
+		return 0;
+#else
 	int16 axis = NewState.LeftStickX;
 	int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
+	if (RwCameraGetMirror(Scene.camera)) {
+		axis *= -1;
+		dpad *= -1;
+	}
+
 	if ( Abs(axis) > Abs(dpad) ) {
 		if ( Abs(axis) > 35.0f ) {
-		  return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
+			return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
 		} else {
-		  return 0;
+			return 0;
 		}
 	} else
 		return dpad;
+#endif
 }
 
 int16 CPad::SniperModeLookUpDown(void)
 {
+#ifdef IMPROVED_MENU_AND_INPUT
+	int16 axis = NewState.RightStickY;
+
+	axis = -axis;
+
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone)
+		return (axis > 0.f ? axis - FrontEndMenuManager.m_PrefsRightStickDeadzone : axis + FrontEndMenuManager.m_PrefsRightStickDeadzone);
+	else
+		return 0;
+#else
 	int16 axis = NewState.LeftStickY;
 	int16 dpad;
 
@@ -3331,22 +4099,28 @@ int16 CPad::SniperModeLookUpDown(void)
 	}
 
 	if ( Abs(axis) > Abs(dpad) ) {
-	    if ( Abs(axis) > 35.0f ) {
-	      return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
-	    } else {
-	      return 0;
-	    }
+		if (Abs(axis) > 35.0f) {
+			return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
+		} else {
+			return 0;
+		}
 	} else
 		return dpad;
+#endif
 }
 
 int16 CPad::LookAroundLeftRight(void)
 {
 	float axis = GetPad(0)->NewState.RightStickX;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone && !GetLookBehindForPed())
+		return (int16)((axis + ((axis > 0) ? -FrontEndMenuManager.m_PrefsRightStickDeadzone : FrontEndMenuManager.m_PrefsRightStickDeadzone)));
+#else
 	if ( Abs(axis) > 85 && !GetLookBehindForPed() )
 		return (int16) ( (axis + ( ( axis > 0 ) ? -85 : 85) )
 							* (127.0f / 32.0f) ); // 3.96875f
+#endif
 
 	else if ( TheCamera.Cams[0].Using3rdPersonMouseCam() && Abs(axis) > 10 )
 		return (int16) ( (axis + ( ( axis > 0 ) ? -10 : 10) )
@@ -3364,9 +4138,14 @@ int16 CPad::LookAroundUpDown(void)
 	if (CPad::bInvertLook4Pad)
 		axis = -axis;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+	if (Abs(axis) > FrontEndMenuManager.m_PrefsRightStickDeadzone && !GetLookBehindForPed())
+		return (int16)((axis + ((axis > 0) ? -FrontEndMenuManager.m_PrefsRightStickDeadzone : FrontEndMenuManager.m_PrefsRightStickDeadzone)));
+#else
 	if ( Abs(axis) > 85 && !GetLookBehindForPed() )
 		return (int16) ( (axis + ( ( axis > 0 ) ? -85 : 85) )
 							* (127.0f / 32.0f) ); // 3.96875f
+#endif
 
 	else if ( TheCamera.Cams[0].Using3rdPersonMouseCam() && Abs(axis) > 40 )
 		return (int16) ( (axis + ( ( axis > 0 ) ? -40 : 40) )

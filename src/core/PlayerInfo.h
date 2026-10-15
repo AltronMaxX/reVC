@@ -18,6 +18,7 @@ enum eBustedAudioState
 	BUSTEDAUDIO_DONE
 };
 
+class CPtrList;
 class CEntity;
 class CPed;
 class CVehicle;

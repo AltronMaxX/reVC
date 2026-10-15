@@ -2342,6 +2342,20 @@ CVehicle::KillPedsInVehicle(void)
 	}
 }
 
+#ifdef FIRST_PERSON
+bool CVehicle::IsOpenTopVehicle(void)
+{
+	if (IsBike())
+		return true;
+	else if (IsBoat())
+		return !(GetModelIndex() == MI_PREDATOR || GetModelIndex() == MI_TROPIC || GetModelIndex() == MI_REEFER);
+	else if (IsCar())
+		return IsOpenTopCar();
+	else
+		return false;
+}
+#endif
+
 void
 DestroyVehicleAndDriverAndPassengers(CVehicle* pVehicle)
 {

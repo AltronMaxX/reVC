@@ -578,17 +578,15 @@ cMusicManager::ServiceGameMode()
 
 	if (m_bGameplayAllowsRadio) {
 		if (ped) {
-			if(!ped->DyingOrDead()) {
+#ifdef FIRING_AND_AIMING // can't change radio during driveby
+			if(!ped->DyingOrDead() && vehicle && !FindPlayerPed()->bIsPlayerAiming) {
+#else
+			if(!ped->DyingOrDead() && vehicle) {
+#endif
 #ifdef GTA_PC
 				if (SampleManager.IsMP3RadioChannelAvailable()
-#ifdef FIX_BUGS
-					&& vehicle
-#endif
 					&& vehicle->m_nRadioStation < USERTRACK
 					&& ControlsManager.GetIsKeyboardKeyJustDown(rsF9)
-#ifndef FIX_BUGS
-					&& vehicle // yeah right, totaly usefull check =P
-#endif
 					)
 				{
 					if (!UsesPoliceRadio(vehicle) && !UsesTaxiRadio(vehicle)) {
@@ -603,7 +601,13 @@ cMusicManager::ServiceGameMode()
 					}
 				}
 #endif
-				if (CPad::GetPad(0)->ChangeStationJustDown() && vehicle) {
+#ifdef IMPROVED_MENU_AND_INPUT
+				if (CPad::GetPad(0)->NextStationJustDown() &&
+					(CPad::GetPad(0)->IsAffectedByController || !CPad::GetPad(0)->IsAffectedByController && TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_HELICANNON_1STPERSON))
+#else
+				if (CPad::GetPad(0)->ChangeStationJustDown())
+#endif
+				{
 					if (!UsesPoliceRadio(vehicle) && !UsesTaxiRadio(vehicle)) {
 						gNumRetunePresses++;
 						gRetuneCounter = RETUNE_TIME;
@@ -611,13 +615,21 @@ cMusicManager::ServiceGameMode()
 					}
 				}
 #ifdef RADIO_SCROLL_TO_PREV_STATION
-				else if(!CPad::GetPad(0)->ArePlayerControlsDisabled() && (CPad::GetPad(0)->GetMouseWheelDownJustDown() || CPad::GetPad(0)->GetMouseWheelUpJustDown()) && vehicle) {
+#ifdef IMPROVED_MENU_AND_INPUT
+			else if(!CPad::GetPad(0)->ArePlayerControlsDisabled() && (CPad::GetPad(0)->GetMouseWheelDownJustDown() || CPad::GetPad(0)->GetMouseWheelUpJustDown() || CPad::GetPad(0)->PrevStationJustDown())) {
+#else
+			else if(!CPad::GetPad(0)->ArePlayerControlsDisabled() && (CPad::GetPad(0)->GetMouseWheelDownJustDown() || CPad::GetPad(0)->GetMouseWheelUpJustDown())) {
+#endif
 					if(!UsesPoliceRadio(vehicle) && !UsesTaxiRadio(vehicle)) {
 						int scrollNext = ControlsManager.GetControllerKeyAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION, MOUSE);
 						int scrollPrev = scrollNext == rsMOUSEWHEELUPBUTTON ? rsMOUSEWHEELDOWNBUTTON
 																			: scrollNext == rsMOUSEWHEELDOWNBUTTON ? rsMOUSEWHEELUPBUTTON : -1;
 
+#ifdef IMPROVED_MENU_AND_INPUT
+						if(scrollPrev != -1 && !ControlsManager.IsAnyVehicleActionAssignedToMouseKey(scrollPrev) || (CPad::GetPad(0)->IsAffectedByController && CPad::GetPad(0)->PrevStationJustDown())) {
+#else
 						if(scrollPrev != -1 && !ControlsManager.IsAnyVehicleActionAssignedToMouseKey(scrollPrev)) {
+#endif
 							gNumRetunePresses--;
 							gRetuneCounter = RETUNE_TIME;
 							RadioStaticCounter = 0;

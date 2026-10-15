@@ -4,3 +4,5 @@ gxt -g VC -i "german.txt" -o "../../gamefiles/TEXT/german.gxt"
 gxt -g VC -i "italian.txt" -o "../../gamefiles/TEXT/italian.gxt"
 gxt -g VC -i "spanish.txt" -o "../../gamefiles/TEXT/spanish.gxt"
 gxt -g VC -i "russian.txt" -o "../../gamefiles/TEXT/russian.gxt"
+cd /d rus_ukr
+build.bat
