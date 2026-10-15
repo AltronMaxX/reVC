@@ -1,6 +1,9 @@
 #if (defined RW_GL3 || defined RW_WGPU) && !defined LIBRW_SDL2
 
 #ifdef _WIN32
+// WinMM and shell headers require the base Windows types first.
+#define NOMINMAX
+#include <windows.h>
 #include <shlobj.h>
 #include <basetsd.h>
 #include <mmsystem.h>
