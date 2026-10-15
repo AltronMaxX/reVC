@@ -2175,7 +2175,8 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 	for (int32 i = 0; i < ARRAY_SIZE(ActionText); i++)
 		ActionText[i] = '\0';
 
-	if (GetControllerKeyAssociatedWithAction(action, type) != rsNULL)
+	if (GetControllerKeyAssociatedWithAction(action, type) != rsNULL &&
+		GetControllerKeyAssociatedWithAction(action, type) != 0)
 	{
 		if (   GetControllerKeyAssociatedWithAction(action, type) >= 0
 			&& GetControllerKeyAssociatedWithAction(action, type) <= 255)
@@ -2560,8 +2561,8 @@ int32 CControllerConfigManager::GetNumOfSettingsForAction(e_ControllerAction act
 {
 	int32 num = 0;
 
-	if (m_aSettings[action][KEYBOARD].m_Key       != rsNULL) num++;
-	if (m_aSettings[action][OPTIONAL_EXTRA].m_Key != rsNULL) num++;
+	if (m_aSettings[action][KEYBOARD].m_Key       != rsNULL && m_aSettings[action][KEYBOARD].m_Key       != 0) num++;
+	if (m_aSettings[action][OPTIONAL_EXTRA].m_Key != rsNULL && m_aSettings[action][OPTIONAL_EXTRA].m_Key != 0) num++;
 	if (m_aSettings[action][MOUSE].m_Key          != 0)      num++;
 	if (m_aSettings[action][JOYSTICK].m_Key       != 0)      num++;
 
