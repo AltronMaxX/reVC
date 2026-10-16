@@ -329,7 +329,7 @@ CMenuManager::PageDownList(bool playSoundOnSuccess)
 }
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
-#define PLUS_LINE_HEIGHT_ON_SCREEN +(aScreens[m_nCurrScreen].layout ? aScreens[m_nCurrScreen].layout->lineHeight : MENU_DEFAULT_LINE_HEIGHT)
+#define PLUS_LINE_HEIGHT_ON_SCREEN +((aScreens[m_nCurrScreen].layout && aScreens[m_nCurrScreen].layout->lineHeight > 0) ? aScreens[m_nCurrScreen].layout->lineHeight : MENU_DEFAULT_LINE_HEIGHT)
 bool
 ScreenHasOption(int screen, const char *gxtKey)
 {
