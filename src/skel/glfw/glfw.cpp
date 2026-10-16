@@ -38,6 +38,11 @@ long _dwOperatingSystemVersion;
 #include "platform.h"
 #include "rwcore.h"
 #include "skeleton.h"
+#include "framepacing.h"
+#ifdef _WIN32
+#include "../win/framewait.h"
+#include "../win/windowssession.h"
+#endif
 #include <stdio.h>
 
 #include "AnimViewer.h"
@@ -79,6 +84,7 @@ static RwBool WindowFocused = TRUE;
 static RwBool WindowFocusLostLatch = FALSE;
 static RwBool WindowPlatformPaused = FALSE;
 static RwInt32 WindowActivePollCount = 2;
+static RsFramePacer FramePacer;
 
 static RwBool RwInitialised = FALSE;
 
@@ -158,6 +164,7 @@ ApplyWindowMinimizedPause(RwBool paused)
 
 	WindowPlatformPaused = paused;
 	ForegroundApp = !paused;
+	FramePacer.Reset();
 	CTimer::SetWindowMinimizedPause(!!paused);
 	MoviePlayer::SetPaused(!!paused);
 
@@ -181,6 +188,47 @@ MarkWindowFocusLost(void)
 	// Defer mouse/audio/game state changes until glfwPollEvents has returned.
 	ForegroundApp = FALSE;
 }
+
+#ifdef _WIN32
+static void
+MinimizeInactiveFullscreenWindow(void)
+{
+	GLFWwindow *window = PSGLOBAL(window);
+	if(window == nil) return;
+	HWND nativeWindow = glfwGetWin32Window(window);
+	static HWND activityWindow = nil;
+	static RwBool WindowHasBeenActive = FALSE;
+	if(activityWindow != nativeWindow) {
+		activityWindow = nativeWindow;
+		WindowHasBeenActive = FALSE;
+	}
+
+	HWND foreground = GetForegroundWindow();
+	if(foreground == nativeWindow) {
+		WindowHasBeenActive = TRUE;
+		return;
+	}
+
+	// GLFW auto-iconifies monitor-attached fullscreen windows only. Borderless
+	// is deliberately a regular window, so pause alone leaves its last frame
+	// covering the desktop when Alt+Tab selects another application.
+	if(!WindowHasBeenActive || !IsFullscreenLikeWindowMode() || foreground == nil ||
+	   RsGlobal.quit || glfwWindowShouldClose(window) ||
+	   !IsWindowVisible(nativeWindow) || IsIconic(nativeWindow)) return;
+
+	DWORD foregroundProcess = 0;
+	if(!GetWindowThreadProcessId(foreground, &foregroundProcess) ||
+	   foregroundProcess == GetCurrentProcessId() ||
+	   GetAncestor(foreground, GA_ROOTOWNER) == GetAncestor(nativeWindow, GA_ROOTOWNER)) return;
+
+	// Run only after glfwPollEvents, never from a focus callback or during a
+	// mode change. Return the desktop before any audio/GPU pause work; restore
+	// remains an explicit user action through the taskbar or Alt+Tab.
+	glfwIconifyWindow(window);
+	WindowIconified = glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
+	if(WindowIconified) MarkWindowFocusLost();
+}
+#endif
 
 bool
 psRefreshAndGetWindowMinimizedPause()
@@ -330,6 +378,23 @@ psCameraShowRaster(RwCamera *camera)
 		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPDONTWAIT);
 
 	return;
+}
+
+static bool
+IsFrameReady(int targetFPS)
+{
+	const double remaining = FramePacer.RemainingSeconds(glfwGetTime(), targetFPS);
+	if(remaining <= 0.0) return true;
+
+	// Windows GLFW truncates its ordinary timeout to whole milliseconds;
+	// use the same precise, message-aware wait as the D3D9 skeleton there.
+#ifdef _WIN32
+	RsWaitForFrameWin32(remaining);
+#else
+	glfwWaitEventsTimeout(remaining);
+#endif
+	// Always recheck close/focus/input in the main loop, even after a timeout.
+	return false;
 }
 
 /*
@@ -2171,7 +2236,6 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance __RWUNUSED__, CMDSTR cmdLine,
 	SetGameWorkingDirectory();
 	RwInt32 argc;
 	RwChar **argv;
-	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, nil, SPIF_SENDCHANGE);
 
 #ifndef MASTER
 	if(strstr(cmdLine, "-console")) {
@@ -2292,19 +2356,7 @@ main(int argc, char *argv[])
 		RsEventHandler(rsCAMERASIZE, &r);
 	}
 #ifdef _WIN32
-	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-
-	STICKYKEYS SavedStickyKeys;
-	SavedStickyKeys.cbSize = sizeof(STICKYKEYS);
-
-	SystemParametersInfo(SPI_GETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
-
-	STICKYKEYS NewStickyKeys;
-	NewStickyKeys.cbSize = sizeof(STICKYKEYS);
-	NewStickyKeys.dwFlags = SKF_TWOKEYSOFF;
-
-	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &NewStickyKeys, SPIF_SENDCHANGE);
+	RsWindowsSession windowsSession;
 #endif
 
 	{
@@ -2360,6 +2412,7 @@ main(int argc, char *argv[])
 
 	while(TRUE) {
 		RwInitialised = TRUE;
+		FramePacer.Reset();
 
 		/*
 		 * Set the initial mouse position...
@@ -2399,10 +2452,28 @@ main(int argc, char *argv[])
 #endif
 		{
 			glfwPollEvents();
+			// Alt+F4/close received above must not start one last GPU frame or
+			// apply a queued resize before we leave the render loop.
+			if(RsGlobal.quit || glfwWindowShouldClose(PSGLOBAL(window))) break;
+#ifdef _WIN32
+			MinimizeInactiveFullscreenWindow();
+#endif
+#if defined(_WIN32) && defined(RW_WGPU)
+			// A fast CPU must not queue frames faster than D3D12/the compositor
+			// can retire them. Keep pumping focus/minimize/close messages while
+			// the previous frame finishes, before resize/acquire can block in DXGI.
+			psRefreshAndGetWindowMinimizedPause();
+			if(RwInitialised && !rw::wgpu::pollFrameReady()) {
+				RsWaitForFrameWin32(0.001);
+				continue;
+			}
+#endif
 			ApplyPendingRenderSize();
 			// Callbacks above only latch raw state. Apply the transition here,
 			// outside GLFW's native message-dispatch stack.
+#if !defined(_WIN32) || !defined(RW_WGPU)
 			psRefreshAndGetWindowMinimizedPause();
+#endif
 #ifdef GET_KEYBOARD_INPUT_FROM_X11
 			checkKeyPresses();
 #endif
@@ -2516,6 +2587,9 @@ main(int argc, char *argv[])
 				}
 
 				case GS_FRONTEND: {
+					if(!IsFrameReady(RsFramePacer::GetTargetFPS(FrontEndMenuManager.m_PrefsFrameLimiter,
+					                                             RsGlobal.maxFPS, true)))
+						break;
 					if(!WindowIconified) RsEventHandler(rsFRONTENDIDLE, nil);
 
 #ifdef PS2_MENU
@@ -2578,9 +2652,10 @@ main(int argc, char *argv[])
 				}
 
 				case GS_PLAYING_GAME: {
-					float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
 					if(RwInitialised) {
-						if(!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
+						const int targetFPS = RsFramePacer::GetTargetFPS(FrontEndMenuManager.m_PrefsFrameLimiter,
+						    RsGlobal.maxFPS, FrontEndMenuManager.m_bMenuActive || CGame::IsWindowPauseMenuActive());
+						if(IsFrameReady(targetFPS))
 							RsEventHandler(rsIDLE, (void *)TRUE);
 					}
 					break;
@@ -2596,6 +2671,15 @@ main(int argc, char *argv[])
 		 * About to shut down - block resize events again...
 		 */
 		RwInitialised = FALSE;
+
+#if defined(_WIN32) && defined(RW_WGPU)
+		if(RsGlobal.quit || glfwWindowShouldClose(PSGLOBAL(window))) {
+			// Return the desktop and cursor before resource/driver teardown.
+			// A borderless window must not cover other apps during cleanup.
+			_InputShutdownMouse();
+			glfwHideWindow(PSGLOBAL(window));
+		}
+#endif
 
 		FrontEndMenuManager.UnloadTextures();
 #ifdef PS2_MENU
@@ -2695,9 +2779,6 @@ main(int argc, char *argv[])
 	 */
 	free(argv);
 
-	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, TRUE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, TRUE, nil, SPIF_SENDCHANGE);
 	SetErrorMode(0);
 #endif
 

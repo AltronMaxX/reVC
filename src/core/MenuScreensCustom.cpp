@@ -28,6 +28,7 @@
 #include "Text.h"
 #include "crossplatform.h"
 #include "custompipes.h"
+#include "framepacing.h"
 #include "main.h"
 #include "platform.h"
 #include "postfx.h"
@@ -37,6 +38,9 @@
 #ifdef PC_MENU
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
+
+#define FRAME_LIMIT_SELECTOR                                                                                                                                    \
+        MENUACTION_CFO_DYNAMIC, "FEM_FRM", {new CCFODynamic(nil, nil, nil, FrameLimitDraw, FrameLimitButtonPress)}, 0, 0, MENUALIGN_LEFT,
 
 #if defined(IMPROVED_VIDEOMODE) && !defined(GTA_HANDHELD)
 #ifdef UNLOCK_MENU_OPTIONS_INGAME
@@ -146,6 +150,58 @@
 
 const char *filterNames[] = { "FEM_NON", "FEM_SIM", "FEM_NRM", "FEM_MOB" };
 const char *off_on[] = { "FEM_OFF", "FEM_ON" };
+
+static const int frameLimits[] = {30, 40, 50, 60, 75, 90, 100, 120, 144, 165, 180, 200, 240};
+
+static wchar *
+FrameLimitDraw(bool *disabled, bool userHovering)
+{
+        (void)userHovering;
+        *disabled = false;
+        if(!FrontEndMenuManager.m_PrefsFrameLimiter) return TheText.Get("FEM_OFF");
+
+        static wchar text[16];
+        char value[16];
+        snprintf(value, sizeof(value), "%d FPS", RsFramePacer::SanitizeLimit(RsGlobal.maxFPS));
+        AsciiToUnicode(value, text);
+        return text;
+}
+
+static void
+FrameLimitButtonPress(int8 action)
+{
+        if(action != FEOPTION_ACTION_LEFT && action != FEOPTION_ACTION_RIGHT && action != FEOPTION_ACTION_SELECT) return;
+
+        const bool increase = action != FEOPTION_ACTION_LEFT;
+        if(!FrontEndMenuManager.m_PrefsFrameLimiter) {
+                RsGlobal.maxFPS = increase ? frameLimits[0] : frameLimits[ARRAY_SIZE(frameLimits) - 1];
+                FrontEndMenuManager.m_PrefsFrameLimiter = true;
+        } else {
+                const int current = RsFramePacer::SanitizeLimit(RsGlobal.maxFPS);
+                int next = 0;
+                if(increase) {
+                        for(int i = 0; i < ARRAY_SIZE(frameLimits); i++) {
+                                if(frameLimits[i] > current) {
+                                        next = frameLimits[i];
+                                        break;
+                                }
+                        }
+                } else {
+                        for(int i = ARRAY_SIZE(frameLimits) - 1; i >= 0; i--) {
+                                if(frameLimits[i] < current) {
+                                        next = frameLimits[i];
+                                        break;
+                                }
+                        }
+                }
+
+                // Keep the last valid limit while disabled; zero is never a frame interval.
+                if(next) RsGlobal.maxFPS = next;
+                else FrontEndMenuManager.m_PrefsFrameLimiter = false;
+        }
+        FrontEndMenuManager.SaveSettings();
+}
+
 #ifdef RW_WGPU
 // WebGPU backend choices. Index maps to rw::wgpu::BACKEND_* in the startup
 // plumbing (glfw.cpp). D3D12 is Windows-only; OpenGL is the desktop-GL path.
@@ -161,6 +217,7 @@ RestoreDefGraphics(int8 action)
 {
         if(action != FEOPTION_ACTION_SELECT) return;
 
+        RsGlobal.maxFPS = 30;
 #ifdef PS2_ALPHA_TEST
         gPS2alphaTest = false;
 #endif
@@ -748,12 +805,7 @@ CMenuScreenCustom aScreens[] = {
         0,
         MENUALIGN_LEFT,
 #endif
-        MENUACTION_FRAMELIMIT,
-        "FEM_FRM",
-        {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS},
-        0,
-        0,
-        MENUALIGN_LEFT,
+        FRAME_LIMIT_SELECTOR
 #if defined LEGACY_MENU_OPTIONS && !defined EXTENDED_COLOURFILTER
         MENUACTION_TRAILS,
         "FED_TRA",
@@ -1953,12 +2005,7 @@ CMenuScreenCustom aScreens[] = {
         0,
         MENUALIGN_LEFT,
 #endif
-        MENUACTION_FRAMELIMIT,
-        "FEM_FRM",
-        {nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS},
-        0,
-        0,
-        MENUALIGN_LEFT,
+        FRAME_LIMIT_SELECTOR
         MULTISAMPLING_SELECTOR ISLAND_LOADING_SELECTOR DUALPASS_SELECTOR
                 WGPU_BACKEND_SELECTOR
 #ifdef EXTENDED_COLOURFILTER

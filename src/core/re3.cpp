@@ -50,6 +50,7 @@
 #include "Zones.h"
 
 #include "crossplatform.h"
+#include "framepacing.h"
 
 #ifndef _WIN32
 #include "assert.h"
@@ -560,6 +561,7 @@ bool LoadINISettings()
 	ReadIniIfExists("Graphics", "AspectRatio", &FrontEndMenuManager.m_PrefsUseWideScreen);
 	ReadIniIfExists("Graphics", "FrameLimiter", &FrontEndMenuManager.m_PrefsFrameLimiter);
 	ReadIniIfExists("Graphics", "MaxFPS", &RsGlobal.maxFPS);
+	RsGlobal.maxFPS = RsFramePacer::SanitizeLimit(RsGlobal.maxFPS);
 #ifdef LEGACY_MENU_OPTIONS
 	ReadIniIfExists("Graphics", "VSync", &FrontEndMenuManager.m_PrefsVsyncDisp);
 	ReadIniIfExists("Graphics", "Trails", &CMBlur::BlurOn);

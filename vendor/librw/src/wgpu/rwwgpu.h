@@ -36,6 +36,12 @@ namespace rw
         int getBackend(void); // the requested preference
         const char* getBackendName(void); // the backend actually in use (after open)
 
+#ifdef _WIN32
+        // Nonblocking backpressure for the Win32 UI/render thread. Recheck
+        // window messages while GPU work is pending instead of piling up frames.
+        bool pollFrameReady(void);
+#endif
+
         void registerPlatformPlugins(void);
         void initMatFX(void);
         void initSkin(void);
