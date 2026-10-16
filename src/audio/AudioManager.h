@@ -291,6 +291,19 @@ public:
 	bool8 m_bIsPaused;
 	bool8 m_bWasPaused;
 	uint32 m_FrameCounter;
+#ifdef FIX_BUGS
+	// Wall-clock timestamp (ms) of the last cAudioManager::Service() that
+	// actually did work. Used to rate-limit Service() on the render thread:
+	// on Linux the FPS limiter is just VSync on/off, so when the user disables
+	// it the render loop runs at hundreds of FPS and used to drive the audio
+	// logic at the same rate. The original game was tuned for ~30 FPS, so
+	// running the queue / OpenAL polling logic at 200+ Hz caused engine REV
+	// hum (m_nLoopCount == 0) and gear-up one-shots (m_nLoopCount == 1) to
+	// re-trigger chaotically several times per second. Service() now no-ops
+	// if called more often than once every AUDIO_TICK_MS milliseconds.
+	uint32 m_nLastServiceMs;
+	static constexpr uint32 AUDIO_TICK_MS = 16; // ~60 Hz cap
+#endif
 
 	cAudioManager();
 	~cAudioManager();

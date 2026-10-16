@@ -24,6 +24,18 @@ class CChannel
 	ALint  LoopPoints[2];
 	ALint  SavedState, SavedOffset, SavedLooping;
 	float  SavedMix;
+#ifdef FIX_BUGS
+	// Wall-clock timestamp (ms, from CTimer::GetTimeInMillisecondsPauseMode) of the
+	// last alSourcePlay on this channel. Used to give OpenAL a grace period after
+	// Start(): alGetSourcei(AL_SOURCE_STATE) can briefly return AL_STOPPED /
+	// AL_INITIAL for a few ms right after alSourcePlay before the source actually
+	// transitions to AL_PLAYING (especially on Linux/OpenAL Soft at high frame
+	// rates). Without the grace window, ProcessActiveQueues and
+	// ProcessPlayersVehicleEngine think the sound already finished and re-trigger
+	// it, which is heard as the sound restarting several times per second.
+	uint32 m_nStartMs;
+	static constexpr uint32 START_GRACE_MS = 50;
+#endif
 public:
 	static void InitChannels();
 	static void DestroyChannels();

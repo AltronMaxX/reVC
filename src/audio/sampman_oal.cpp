@@ -1603,7 +1603,17 @@ cSampleManager::SetChannelLoopPoints(uint32 nChannel, uint32 nLoopStart, int32 n
 {
 	ASSERT(nChannel < NUM_CHANNELS);
 
+#ifdef FIX_BUGS
+	// -1 means "until the end of the sample" (sfx.SDT convention). Computing -1 / 2 with
+	// the DIGITALBITS/8 byte->sample conversion turned it into 0, which made OpenAL
+	// reject the loop points and made looped sounds (vehicle engines, etc.) fall back
+	// to looping the entire buffer — sounding like the sound restarting several times
+	// a second. Preserve -1 and let CChannel::Start translate it to the real sample
+	// count when the buffer is uploaded.
+	aChannel[nChannel].SetLoopPoints(nLoopStart / (DIGITALBITS / 8), nLoopEnd < 0 ? -1 : nLoopEnd / (DIGITALBITS / 8));
+#else
 	aChannel[nChannel].SetLoopPoints(nLoopStart / (DIGITALBITS / 8), nLoopEnd / (DIGITALBITS / 8));
+#endif
 }
 
 void

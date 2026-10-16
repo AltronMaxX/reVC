@@ -3,6 +3,9 @@
 #ifdef AUDIO_OAL
 #include "channel.h"
 #include "sampman.h"
+#ifdef FIX_BUGS
+#include "Timer.h"
+#endif
 
 #ifndef _WIN32
 #include <float.h>
@@ -74,6 +77,9 @@ CChannel::SetDefault()
 
 	Frequency = MAX_FREQ;
 	bForce2D = bIs2DDefault;
+#ifdef FIX_BUGS
+	m_nStartMs = 0;
+#endif
 }
 
 void
@@ -136,15 +142,41 @@ CChannel::Start()
 		alBufferData(alBuffers[id], AL_FORMAT_STEREO16, tempStereoBuffer, DataSize * 2, Frequency);
 	} else
 		alBufferData(alBuffers[id], AL_FORMAT_MONO16, Data, DataSize, Frequency);
+#ifdef FIX_BUGS
+	// Loop points come from sfx.SDT, an end of -1 means "until the end of the sample".
+	// Dividing -1 by 2 (DIGITALBITS/8) in SetChannelLoopPoints turned it into 0, which
+	// made OpenAL reject the loop points. As a result, looped sounds such as vehicle
+	// engines fell back to looping the entire buffer (including any non-loop intro),
+	// which on Linux/OpenAL Soft sounded like the sound restarting several times a
+	// second — very noticeable when the FPS limiter is off. Preserve -1 here and
+	// translate it to the real sample count, and only pass loop points OpenAL accepts.
+	if ( LoopPoints[0] > 0 || LoopPoints[1] > 0 )
+	{
+		ALint numSamples = DataSize / sizeof(int16);
+		ALint loopPoints[2] = { LoopPoints[0], LoopPoints[1] < 0 ? numSamples : LoopPoints[1] };
+		if ( loopPoints[0] >= 0 && loopPoints[0] < loopPoints[1] && loopPoints[1] <= numSamples )
+			alBufferiv(alBuffers[id], AL_LOOP_POINTS_SOFT, loopPoints);
+	}
+#else
 	if(LoopPoints[0] != 0 && LoopPoints[0] != -1) alBufferiv(alBuffers[id], AL_LOOP_POINTS_SOFT, LoopPoints);
+#endif
 	alSourcei(alSources[id], AL_BUFFER, alBuffers[id]);
 	alSourcePlay(alSources[id]);
+#ifdef FIX_BUGS
+	// Remember when we started so IsUsed() can give OpenAL a grace period
+	// before trusting AL_SOURCE_STATE (which can flicker AL_STOPPED for a
+	// few ms right after alSourcePlay, especially on Linux/OpenAL Soft).
+	m_nStartMs = CTimer::GetTimeInMillisecondsPauseMode();
+#endif
 }
 
 void
 CChannel::Stop()
 {
 	if(HasSource()) alSourceStop(alSources[id]);
+#ifdef FIX_BUGS
+	m_nStartMs = 0;
+#endif
 }
 
 bool
@@ -157,6 +189,21 @@ CChannel::IsUsed()
 	if(HasSource()) {
 		ALint sourceState;
 		alGetSourcei(alSources[id], AL_SOURCE_STATE, &sourceState);
+#ifdef FIX_BUGS
+		// OpenAL Soft on Linux can briefly report AL_STOPPED (or AL_INITIAL) for
+		// a few ms right after alSourcePlay before the source actually transitions
+		// to AL_PLAYING. At high frame rates (FPS limiter off) the audio manager
+		// polls IsUsed() many times per second, sees the transient AL_STOPPED,
+		// and re-triggers the sound — heard as engine / gear-up sounds restarting
+		// several times per second. While we are inside the start grace window,
+		// treat any non-AL_PAUSED state as "still playing" so the audio manager
+		// does not yank the channel and restart it.
+		if (sourceState != AL_PLAYING && sourceState != AL_PAUSED && m_nStartMs != 0) {
+			const uint32 now = CTimer::GetTimeInMillisecondsPauseMode();
+			if (now - m_nStartMs < START_GRACE_MS)
+				return true;
+		}
+#endif
 		return sourceState == AL_PLAYING;
 	}
 	return false;

@@ -51,6 +51,9 @@ cAudioManager::cAudioManager()
 	m_nAudioEntitiesCount = 0;
 	m_FrameCounter = 0;
 	m_bReduceReleasingPriority = FALSE;
+#ifdef FIX_BUGS
+	m_nLastServiceMs = 0;
+#endif
 	m_bTimerJustReset = FALSE;
 	m_nTimer = 0;
 }
@@ -117,6 +120,21 @@ cAudioManager::Terminate()
 void
 cAudioManager::Service()
 {
+#ifdef FIX_BUGS
+	// Frame-rate-independent audio service: rate-limit on a wall-clock timer
+	// so the audio logic doesn't run faster than the original 30 Hz tuning
+	// when the render loop is unbounded (FPS limiter off on Linux). When the
+	// game is paused or the timer was just reset, always run so the pause
+	// transition (StopChannel for everything, ClearRequestedQueue etc.) and
+	// the timer reset propagation happen immediately rather than getting
+	// delayed by up to AUDIO_TICK_MS.
+	if (m_bIsInitialised && !CTimer::GetIsUserPaused() && !m_bTimerJustReset) {
+		const uint32 now = CTimer::GetTimeInMillisecondsPauseMode();
+		if (m_nLastServiceMs != 0 && now - m_nLastServiceMs < AUDIO_TICK_MS)
+			return;
+		m_nLastServiceMs = now;
+	}
+#endif
 	GenerateIntegerRandomNumberTable();
 	if (m_bTimerJustReset) {
 		ResetAudioLogicTimers(m_nTimer);
@@ -575,6 +593,14 @@ cAudioManager::ServiceSoundEffects()
 		}
 		ClearActiveSamples();
 	}
+#ifdef FIX_BUGS
+	// Backstop: never let the queue swap / entity interrogation / OpenAL
+	// polling run more often than the original game's 30 Hz tuning, even if
+	// Service() was explicitly called from the pause handler or menu within
+	// the wall-clock rate-limit window above.
+	if (CTimer::GetLogicalFramesPassed() != 0)
+#endif
+	{
 	m_nActiveQueue = m_nActiveQueue == 1 ? 0 : 1;
 #ifdef AUDIO_REVERB
 	if(m_bIsSurround) ProcessReverb();
@@ -591,6 +617,7 @@ cAudioManager::ServiceSoundEffects()
 	AdjustSamplesVolume();
 #endif
 	ProcessActiveQueues();
+	}
 #ifndef AUDIO_MSS
 	SampleManager.Service();
 #endif
