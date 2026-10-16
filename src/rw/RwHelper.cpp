@@ -6,6 +6,7 @@
 #include "skeleton.h"
 #include "Debug.h"
 #include "MBlur.h"
+#include "postfx.h"
 #if !defined(FINAL) || defined(DEBUGMENU)
 #include "rtcharse.h"
 #endif
@@ -582,7 +583,12 @@ CameraSize(RwCamera * camera, RwRect * rect,
 			raster->width = zRaster->width = rect->w;
 			raster->height = zRaster->height = rect->h;
 #endif
-#ifdef FIX_BUGS
+#ifdef EXTENDED_COLOURFILTER
+			// Extended post-FX keep their own camera-sized resources even when
+			// legacy motion blur is disabled. Rebuild those on every live resize.
+			if(CPostFX::pFrontBuffer || CPostFX::pBackBuffer)
+				CPostFX::Open(camera);
+#elif defined FIX_BUGS
 			if(CMBlur::BlurOn){
 				CMBlur::MotionBlurClose();
 				CMBlur::MotionBlurOpen(camera);
@@ -591,7 +597,13 @@ CameraSize(RwCamera * camera, RwRect * rect,
 		}
 
 		/* Figure out the view window */
-		if (videoMode.flags & rwVIDEOMODEEXCLUSIVE)
+		bool useAspectRatio = (videoMode.flags & rwVIDEOMODEEXCLUSIVE) != 0;
+#ifdef IMPROVED_VIDEOMODE
+		// Desktop presentation is windowed even for fullscreen rendering. Keep
+		// honoring the game's aspect-ratio choice instead of the device flag.
+		useAspectRatio = true;
+#endif
+		if (useAspectRatio)
 		{
 			/* derive ratio from aspect ratio */
 			vw.x = viewWindow;

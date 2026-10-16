@@ -73,6 +73,10 @@ const CRGBA SCROLLBAR_COLOR = LABEL_COLOR;
 
 #ifdef SCROLLABLE_PAGES
 #define MAX_VISIBLE_OPTION 12
+#define SCROLLBAR_BOTTOM_Y 105.0f
+#define SCROLLBAR_RIGHT_X 26.0f
+#define SCROLLBAR_WIDTH 9.5f
+#define SCROLLBAR_TOP_Y 84.0f
 #define MAX_VISIBLE_OPTION_ON_SCREEN (hasNativeList(m_nCurrScreen) ? MAX_VISIBLE_LIST_ROW : MAX_VISIBLE_OPTION)
 #define SCREEN_HAS_AUTO_SCROLLBAR (m_nTotalListRow > MAX_VISIBLE_OPTION && !hasNativeList(m_nCurrScreen))
 
@@ -183,6 +187,29 @@ GetSkinScrollbarGeometry(int32 totalRows, int32 firstVisibleRow)
 	bar.bottom = bar.top + thumbHeight;
 	return bar;
 }
+
+#ifdef SCROLLABLE_PAGES
+struct MenuScrollbarGeometry {
+	float left, right, trackTop, trackBottom, top, bottom, travel;
+};
+
+static MenuScrollbarGeometry
+GetMenuScrollbarGeometry(int32 totalRows, int32 firstVisibleRow)
+{
+	MenuScrollbarGeometry bar;
+	bar.left = MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 2);
+	bar.right = MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 2 - SCROLLBAR_WIDTH);
+	bar.trackTop = MENU_Y(SCROLLBAR_TOP_Y + 2.0f);
+	bar.trackBottom = SCREEN_SCALE_FROM_BOTTOM(SCROLLBAR_BOTTOM_Y + 2.0f);
+	const float trackHeight = Max(0.0f, bar.trackBottom - bar.trackTop);
+	const float thumbHeight = Min(trackHeight, Max(MENU_Y(8.0f), trackHeight * MAX_VISIBLE_OPTION / Max(totalRows, MAX_VISIBLE_OPTION)));
+	const int32 maxFirstRow = Max(0, totalRows - MAX_VISIBLE_OPTION);
+	bar.travel = trackHeight - thumbHeight;
+	bar.top = bar.trackTop + (maxFirstRow > 0 ? bar.travel * Clamp(firstVisibleRow, 0, maxFirstRow) / maxFirstRow : 0.0f);
+	bar.bottom = bar.top + thumbHeight;
+	return bar;
+}
+#endif
 
 #ifdef XBOX_MESSAGE_SCREEN
 bool CMenuManager::m_bDialogOpen = false;
@@ -649,18 +676,8 @@ void
 CMenuManager::CentreMousePointer()
 {
 	if(SCREEN_WIDTH * 0.5f != 0.0f && 0.0f != SCREEN_HEIGHT * 0.5f) {
-#if defined RW_D3D9 || defined RWLIBS
-		tagPOINT Point;
-		Point.x = SCREEN_WIDTH / 2;
-		Point.y = SCREEN_HEIGHT / 2;
-		ClientToScreen(PSGLOBAL(window), &Point);
-		SetCursorPos(Point.x, Point.y);
-#elif defined(RW_GL3) || defined(RW_WGPU)
-		glfwSetCursorPos(PSGLOBAL(window), SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
-#endif
-
-		PSGLOBAL(lastMousePos.x) = SCREEN_WIDTH / 2;
-		PSGLOBAL(lastMousePos.y) = SCREEN_HEIGHT / 2;
+		RwV2d centre = { SCREEN_WIDTH * 0.5f, SCREEN_HEIGHT * 0.5f };
+		RsMouseSetPos(&centre);
 	}
 }
 
@@ -1783,30 +1800,20 @@ for(int i = 0; i < NUM_MENUROWS; ++i) {
 	}
 
 #ifdef SCROLLABLE_PAGES
-#define SCROLLBAR_BOTTOM_Y 105.0f // only for background, scrollbar's itself is calculated
-#define SCROLLBAR_RIGHT_X 26.0f
-#define SCROLLBAR_WIDTH 9.5f
-#define SCROLLBAR_TOP_Y 84
-
 	if(activeScreen && SCREEN_HAS_AUTO_SCROLLBAR) {
+		const MenuScrollbarGeometry scrollbar = GetMenuScrollbarGeometry(m_nTotalListRow, m_nFirstVisibleRowOnList);
 		// Scrollbar background
-		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 2), MENU_Y(SCROLLBAR_TOP_Y),
-		                          MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 2 - SCROLLBAR_WIDTH), SCREEN_SCALE_FROM_BOTTOM(SCROLLBAR_BOTTOM_Y)),
+		CSprite2d::DrawRect(CRect(scrollbar.left, MENU_Y(SCROLLBAR_TOP_Y), scrollbar.right, SCREEN_SCALE_FROM_BOTTOM(SCROLLBAR_BOTTOM_Y)),
 		                    CRGBA(30, 30, 30, FadeIn(150)));
 
-		float scrollbarHeight = SCROLLBAR_MAX_HEIGHT / (m_nTotalListRow / (float)MAX_VISIBLE_OPTION);
-		float scrollbarBottom, scrollbarTop;
-
-		scrollbarBottom = MENU_Y(SCROLLBAR_TOP_Y - 6 + m_nScrollbarTopMargin + scrollbarHeight);
-		scrollbarTop = MENU_Y(SCROLLBAR_TOP_Y + 2 + m_nScrollbarTopMargin);
 		// Scrollbar shadow
-		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 4), scrollbarTop,
-		                          MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 1 - SCROLLBAR_WIDTH), scrollbarBottom + MENU_Y(1.0f)),
+		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 4), scrollbar.top,
+		                          MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 1 - SCROLLBAR_WIDTH), scrollbar.bottom + MENU_Y(1.0f)),
 		                    CRGBA(50, 50, 50, FadeIn(255)));
 
 		// Scrollbar
-		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 4), scrollbarTop, MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - SCROLLBAR_WIDTH),
-		                          scrollbarBottom),
+		CSprite2d::DrawRect(CRect(MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - 4), scrollbar.top, MENU_X_RIGHT_ALIGNED(SCROLLBAR_RIGHT_X - SCROLLBAR_WIDTH),
+		                          scrollbar.bottom),
 		                    CRGBA(SCROLLBAR_COLOR.r, SCROLLBAR_COLOR.g, SCROLLBAR_COLOR.b, FadeIn(255)));
 	}
 #endif
@@ -3426,7 +3433,7 @@ CMenuManager::LoadAllTextures()
 	if(m_bSpritesLoaded) return;
 
 	// First icon is hidden behind arrow
-	m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE);
+	m_LeftMostRadioX = MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE;
 	CTimer::Stop();
 
 	CStreaming::MakeSpaceFor(350 * CDSTREAM_SECTOR_SIZE); // twice of it in mobile
@@ -4402,6 +4409,9 @@ void
 CMenuManager::PrintRadioSelector(void)
 {
 	static uint32 lastRadioChange = 0;
+	// Keep the animation in logical menu units. Cached screen pixels become
+	// stale when the resolution, aspect ratio or window mode changes.
+	const float leftMostRadioX = MENU_X_LEFT_ALIGNED(m_LeftMostRadioX);
 
 	CSprite2d::Draw2DPolygon(MENU_X_LEFT_ALIGNED(418.f), MENU_Y(MENURADIO_SELECTOR_START_Y + MENURADIO_SELECTOR_HEIGHT), MENU_X_LEFT_ALIGNED(228.f),
 	                         MENU_Y(MENURADIO_SELECTOR_START_Y + MENURADIO_SELECTOR_HEIGHT), MENU_X_LEFT_ALIGNED(428.f), MENU_Y(MENURADIO_SELECTOR_START_Y),
@@ -4422,15 +4432,15 @@ CMenuManager::PrintRadioSelector(void)
 	if(m_ScrollRadioBy == 1) {
 		if(m_PrefsRadioStation == 1) {
 			m_aFrontEndSprites[rightMostSprite].Draw(
-			    m_LeftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+			    leftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else if(m_PrefsRadioStation == 0) {
 			m_aFrontEndSprites[rightMostSprite - 1].Draw(
-			    m_LeftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+			    leftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else {
 			m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE - 2].Draw(
-			    m_LeftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+			    leftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		}
 	}
@@ -4438,11 +4448,11 @@ CMenuManager::PrintRadioSelector(void)
 	// Second
 	if(m_PrefsRadioStation == 0) {
 		m_aFrontEndSprites[rightMostSprite].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	} else {
 		m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE - 1].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	}
 
@@ -4450,15 +4460,15 @@ CMenuManager::PrintRadioSelector(void)
 	int prevStation = m_PrefsRadioStation - 1;
 	if(prevStation == rightMostStation) {
 		m_aFrontEndSprites[MENUSPRITE_WILDSTYLE + 1].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	} else if(prevStation == rightMostStation - 1) {
 		m_aFrontEndSprites[MENUSPRITE_WILDSTYLE].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	} else {
 		m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE + 1].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	}
 
@@ -4467,22 +4477,22 @@ CMenuManager::PrintRadioSelector(void)
 		int prevStation = m_PrefsRadioStation - 1;
 		if(prevStation == rightMostStation) {
 			m_aFrontEndSprites[MENUSPRITE_WILDSTYLE + 4].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else if(prevStation == rightMostStation - 1) {
 			m_aFrontEndSprites[MENUSPRITE_WILDSTYLE + 1].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else if(prevStation == rightMostStation - 2) {
 			m_aFrontEndSprites[MENUSPRITE_WILDSTYLE].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else {
 			m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE + 2].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		}
@@ -4491,17 +4501,17 @@ CMenuManager::PrintRadioSelector(void)
 	// Fourth
 	if(m_ScrollRadioBy == 0) {
 		m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2 - 10.f), MENU_Y(MENURADIO_ICON_Y - 10.f), MENU_X(MENURADIO_ICON_SIZE) + MENU_X(20.f),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2 - 10.f), MENU_Y(MENURADIO_ICON_Y - 10.f), MENU_X(MENURADIO_ICON_SIZE) + MENU_X(20.f),
 		    MENU_Y(MENURADIO_ICON_SIZE) + MENU_Y(20.f), CRGBA(255, 255, 255, FadeIn(255)));
 	} else {
 		if(m_PrefsRadioStation - 1 == rightMostStation) {
 			m_aFrontEndSprites[MENUSPRITE_WILDSTYLE].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		} else {
 			m_aFrontEndSprites[m_PrefsRadioStation + MENUSPRITE_WILDSTYLE].Draw(
-			    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
+			    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE),
 			    MENU_Y(MENURADIO_ICON_SIZE),
 			    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 		}
@@ -4516,24 +4526,24 @@ CMenuManager::PrintRadioSelector(void)
 	// First one is only drawn on transition to next
 	if(m_ScrollRadioBy == 1) {
 		m_aFrontEndSprites[first + MENUSPRITE_WILDSTYLE].Draw(
-		    m_LeftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX, MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	}
 
 	// Second
 	m_aFrontEndSprites[second + MENUSPRITE_WILDSTYLE].Draw(
-	    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+	    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 	    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 
 	// Fourth
 	m_aFrontEndSprites[fourth + MENUSPRITE_WILDSTYLE].Draw(
-	    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+	    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 3), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 	    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 
 	// Fifth one is only drawn on transition to prev.
 	if(m_ScrollRadioBy == -1) {
 		m_aFrontEndSprites[fifth + MENUSPRITE_WILDSTYLE].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 4), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	}
 
@@ -4541,10 +4551,10 @@ CMenuManager::PrintRadioSelector(void)
 	// If not in transition then this icon indicates selected radio, and should be on top of all icons. thus drawn last
 	if(m_ScrollRadioBy != 0) {
 		m_aFrontEndSprites[third + MENUSPRITE_WILDSTYLE].Draw(
-		    m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
+		    leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2), MENU_Y(MENURADIO_ICON_Y), MENU_X(MENURADIO_ICON_SIZE), MENU_Y(MENURADIO_ICON_SIZE),
 		    CRGBA(INACTIVE_RADIO_COLOR.r, INACTIVE_RADIO_COLOR.g, INACTIVE_RADIO_COLOR.b, FadeIn(INACTIVE_RADIO_COLOR.a)));
 	} else {
-		m_aFrontEndSprites[third + MENUSPRITE_WILDSTYLE].Draw(m_LeftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2 - 10.f),
+		m_aFrontEndSprites[third + MENUSPRITE_WILDSTYLE].Draw(leftMostRadioX + MENU_X(MENURADIO_ICON_SIZE * 2 - 10.f),
 		                                                      MENU_Y(MENURADIO_ICON_Y - 10.f), MENU_X(MENURADIO_ICON_SIZE) + MENU_X(20.f),
 		                                                      MENU_Y(MENURADIO_ICON_SIZE) + MENU_Y(20.f), CRGBA(255, 255, 255, FadeIn(255)));
 	}
@@ -4554,18 +4564,20 @@ CMenuManager::PrintRadioSelector(void)
 	static uint32 lastScrollCheck = 0;
 	if(CTimer::GetTimeInMillisecondsPauseMode() - lastScrollCheck > 17) {
 		if(m_ScrollRadioBy == 1) {
-			if(m_LeftMostRadioX > MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE)) {
-				m_LeftMostRadioX -= MENU_X(6.f);
+			if(m_LeftMostRadioX > MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE) {
+				m_LeftMostRadioX -= 6;
 			} else {
+				m_LeftMostRadioX = MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE;
 				m_ScrollRadioBy = 0;
 				lastRadioChange = CTimer::GetTimeInMillisecondsPauseMode();
 				radioChangeRequested = true;
 			}
 		}
 		if(m_ScrollRadioBy == -1) {
-			if(m_LeftMostRadioX < MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE)) {
-				m_LeftMostRadioX += MENU_X(6.f);
+			if(m_LeftMostRadioX < MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE) {
+				m_LeftMostRadioX += 6;
 			} else {
+				m_LeftMostRadioX = MENURADIO_ICON_FIRST_X - MENURADIO_ICON_SIZE;
 				m_ScrollRadioBy = 0;
 				lastRadioChange = CTimer::GetTimeInMillisecondsPauseMode();
 				radioChangeRequested = true;
@@ -4856,6 +4868,64 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 	}
 }
 
+bool
+CMenuManager::ProcessMenuScrollbar()
+{
+#ifdef SCROLLABLE_PAGES
+	static int32 draggingScreen = MENUPAGE_NONE;
+	static int32 capturedScreen = MENUPAGE_NONE;
+	static float grabOffset = 0.0f;
+	if(!SCREEN_HAS_AUTO_SCROLLBAR || !m_AllowNavigation || m_nMenuFadeAlpha != 255 || m_bWaitingForNewKeyBind) {
+		draggingScreen = MENUPAGE_NONE;
+		capturedScreen = MENUPAGE_NONE;
+		return false;
+	}
+
+	const MenuScrollbarGeometry scrollbar = GetMenuScrollbarGeometry(m_nTotalListRow, m_nFirstVisibleRowOnList);
+	const bool overTrack = m_nMousePosX >= scrollbar.left - MENU_X(3.0f) && m_nMousePosX <= scrollbar.right + MENU_X(3.0f) &&
+	                       m_nMousePosY >= MENU_Y(SCROLLBAR_TOP_Y) && m_nMousePosY <= SCREEN_SCALE_FROM_BOTTOM(SCROLLBAR_BOTTOM_Y);
+	const bool wasCaptured = capturedScreen == m_nCurrScreen;
+	if(!CPad::GetPad(0)->GetLeftMouse()) {
+		draggingScreen = MENUPAGE_NONE;
+		capturedScreen = MENUPAGE_NONE;
+		// A thumb drag or page click must not activate a menu row on release.
+		return wasCaptured || overTrack;
+	}
+
+	if(CPad::GetPad(0)->GetLeftMouseJustDown()) {
+		draggingScreen = MENUPAGE_NONE;
+		capturedScreen = MENUPAGE_NONE;
+		if(overTrack) {
+			capturedScreen = m_nCurrScreen;
+			m_bShowMouse = true;
+			m_nSelectedListRow = m_nCurrOption;
+			if(m_nMousePosY >= scrollbar.top && m_nMousePosY <= scrollbar.bottom) {
+				draggingScreen = m_nCurrScreen;
+				grabOffset = m_nMousePosY - scrollbar.top;
+			} else if(m_nMousePosY < scrollbar.top) {
+				PageUpList(true);
+			} else {
+				PageDownList(true);
+			}
+			m_nCurrOption = m_nSelectedListRow;
+		}
+	}
+
+	if(draggingScreen == m_nCurrScreen && scrollbar.travel > 0.0f) {
+		const int32 maxFirstRow = m_nTotalListRow - MAX_VISIBLE_OPTION;
+		const float offset = Clamp(m_nMousePosY - grabOffset - scrollbar.trackTop, 0.0f, scrollbar.travel);
+		m_nFirstVisibleRowOnList = Clamp((int32)(offset / scrollbar.travel * maxFirstRow + 0.5f), 0, maxFirstRow);
+		m_nCurrOption = Clamp(m_nCurrOption, m_nFirstVisibleRowOnList, m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION - 1);
+		if(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action == MENUACTION_LABEL) ++m_nCurrOption;
+		m_nSelectedListRow = m_nCurrOption;
+		m_nScrollbarTopMargin = SCROLLBAR_MAX_HEIGHT * m_nFirstVisibleRowOnList / m_nTotalListRow;
+	}
+	return overTrack || wasCaptured || capturedScreen == m_nCurrScreen;
+#else
+	return false;
+#endif
+}
+
 void
 CMenuManager::UserInput(void)
 {
@@ -4870,12 +4940,14 @@ CMenuManager::UserInput(void)
 
 	static int oldOption = -99;
 	oldOption = m_nCurrOption;
+	const bool usingScrollbar = ProcessMenuScrollbar();
+	if(usingScrollbar || m_nHoverOption == HOVEROPTION_RANDOM_ITEM) m_nHoverOption = HOVEROPTION_NOT_HOVERING;
 #ifdef SCROLLABLE_PAGES
 	int firstOption = SCREEN_HAS_AUTO_SCROLLBAR ? m_nFirstVisibleRowOnList : 0;
 	int scrollOffset = aScreens[m_nCurrScreen].m_aEntries[firstOption].m_Y - aScreens[m_nCurrScreen].m_aEntries[0].m_Y;
-	for(int rowToCheck = firstOption; rowToCheck < firstOption + MAX_VISIBLE_OPTION && rowToCheck < NUM_MENUROWS; ++rowToCheck) {
+	for(int rowToCheck = firstOption; !usingScrollbar && rowToCheck < firstOption + MAX_VISIBLE_OPTION && rowToCheck < NUM_MENUROWS; ++rowToCheck) {
 #else
-	for(int rowToCheck = 0; rowToCheck < NUM_MENUROWS; ++rowToCheck) {
+	for(int rowToCheck = 0; !usingScrollbar && rowToCheck < NUM_MENUROWS; ++rowToCheck) {
 #endif
 		if(aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_Action == MENUACTION_NOTHING ||
 		   aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_Action == MENUACTION_LABEL)
@@ -4884,12 +4956,18 @@ CMenuManager::UserInput(void)
 		// unused: CFont::GetStringWidth(TheText.Get(aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_EntryName), true);
 		// So they also wanted the compare X, but they abandoned the idea later on
 
-		if(m_nMousePosY > MENU_Y(aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_Y MINUS_SCROLL_OFFSET) &&
-		   m_nMousePosY < MENU_Y(aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_Y MINUS_SCROLL_OFFSET PLUS_LINE_HEIGHT_ON_SCREEN)) {
+		const float rowTop = aScreens[m_nCurrScreen].m_aEntries[rowToCheck].m_Y;
+		float rowBottom = rowTop PLUS_LINE_HEIGHT_ON_SCREEN;
+		// Explicitly positioned custom entries may be closer than the default line height.
+		if(rowToCheck + 1 < NUM_MENUROWS && aScreens[m_nCurrScreen].m_aEntries[rowToCheck + 1].m_Action != MENUACTION_NOTHING &&
+		   aScreens[m_nCurrScreen].m_aEntries[rowToCheck + 1].m_Y > rowTop)
+			rowBottom = Min(rowBottom, (float)aScreens[m_nCurrScreen].m_aEntries[rowToCheck + 1].m_Y);
+		if(m_nMousePosY >= MENU_Y(rowTop MINUS_SCROLL_OFFSET) && m_nMousePosY < MENU_Y(rowBottom MINUS_SCROLL_OFFSET)) {
 			static int oldScreen = m_nCurrScreen;
 
 			m_nOptionMouseHovering = rowToCheck;
-			if(m_nMouseOldPosX != m_nMousePosX || m_nMouseOldPosY != m_nMousePosY) {
+			if(m_nMouseOldPosX != m_nMousePosX || m_nMouseOldPosY != m_nMousePosY ||
+			   CPad::GetPad(0)->GetLeftMouseJustDown() || CPad::GetPad(0)->GetLeftMouseJustUp()) {
 				m_nCurrOption = rowToCheck;
 				m_bShowMouse = true;
 			}
@@ -4974,7 +5052,7 @@ CMenuManager::UserInput(void)
 			}
 		}
 
-		if(CPad::GetPad(0)->GetLeftMouseJustUp() && m_nCurrScreen != MENUPAGE_MAP) {
+		if(!usingScrollbar && CPad::GetPad(0)->GetLeftMouseJustUp() && m_nCurrScreen != MENUPAGE_MAP) {
 			if(m_nHoverOption == HOVEROPTION_RANDOM_ITEM)
 				optionSelected = true;
 			else if(m_nHoverOption == HOVEROPTION_NEXT_RADIO)
@@ -4983,7 +5061,7 @@ CMenuManager::UserInput(void)
 				ChangeRadioStation(-1);
 		}
 
-		if(CPad::GetPad(0)->GetLeftMouse()) {
+		if(!usingScrollbar && CPad::GetPad(0)->GetLeftMouse()) {
 			switch(m_nHoverOption) {
 			case HOVEROPTION_INCREASE_BRIGHTNESS:
 			case HOVEROPTION_INCREASE_MP3BOOST:
@@ -5491,23 +5569,38 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 		case MENUACTION_DONTCANCEL: SwitchToNewScreen(-2); break;
 		case MENUACTION_SCREENRES:
 			if(m_nDisplayVideoMode != m_nPrefsVideoMode) {
+				const int32 currOption = m_nCurrOption;
+#ifdef UNLOCK_MENU_OPTIONS_INGAME
+				const int32 previousMode = m_nPrefsVideoMode;
+				const int32 previousWidth = m_nPrefsWidth;
+				const int32 previousHeight = m_nPrefsHeight;
+				const int32 previousDepth = m_nPrefsDepth;
+				const int32 previousWindowed = m_nPrefsWindowed;
+				const int32 previousScreenMode = m_nSelectedScreenMode;
+#endif
 				m_nPrefsVideoMode = m_nDisplayVideoMode;
 #ifdef UNLOCK_MENU_OPTIONS_INGAME
 				{
-					// Live apply: just resize/move the existing GLFW window without
-					// tearing down the rw engine (which would crash via the static
-					// CRadar::WaypointSprite's atexit destructor — even in main menu,
-					// once the user has at least once started a game and loaded
-					// textures, the atexit chain still fires on X errors).
-					//
-					// Sync the dimension prefs from the new video mode so the windowed
-					// apply path uses the right framebuffer size.
-					RwVideoMode newVm;
-					RwEngineGetVideoModeInfo(&newVm, m_nPrefsVideoMode);
-					m_nPrefsWidth  = newVm.width;
-					m_nPrefsHeight = newVm.height;
-					m_nPrefsDepth  = newVm.depth;
-					psApplyWindowModeLive();
+					// Keep the current renderer and its textures alive while applying the mode.
+					const bool validMode = m_nPrefsVideoMode >= 0 && m_nPrefsVideoMode < RwEngineGetNumVideoModes();
+					if(validMode) {
+						RwVideoMode newVm;
+						RwEngineGetVideoModeInfo(&newVm, m_nPrefsVideoMode);
+						m_nPrefsWidth = newVm.width;
+						m_nPrefsHeight = newVm.height;
+						m_nPrefsDepth = newVm.depth;
+					}
+					if(!validMode || !psApplyWindowModeLive()) {
+						m_nDisplayVideoMode = m_nPrefsVideoMode = previousMode;
+						m_nPrefsWidth = previousWidth;
+						m_nPrefsHeight = previousHeight;
+						m_nPrefsDepth = previousDepth;
+						m_nPrefsWindowed = previousWindowed;
+						m_nSelectedScreenMode = previousScreenMode;
+						m_nCurrOption = currOption;
+						SetHelperText(3);
+						break;
+					}
 				}
 #else
 				_psSelectScreenVM(m_nPrefsVideoMode);
@@ -5516,7 +5609,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				DMAudio.Service();
 				CentreMousePointer();
 				m_bShowMouse = true;
-				m_nCurrOption = 5; // TODO(Miami): Because selected option is resetted after res. change. We'll need to revisit that.
+				m_nCurrOption = currOption;
 				m_nOptionHighlightTransitionBlend = 0;
 				SaveSettings();
 			}
@@ -6706,10 +6799,10 @@ CMenuManager::ChangeRadioStation(int8 increaseBy)
 	m_ScrollRadioBy = increaseBy;
 	if(m_ScrollRadioBy == 1) {
 		DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
-		m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X);
+		m_LeftMostRadioX = MENURADIO_ICON_FIRST_X;
 	} else {
 		DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
-		m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - (2 * MENURADIO_ICON_SIZE));
+		m_LeftMostRadioX = MENURADIO_ICON_FIRST_X - (2 * MENURADIO_ICON_SIZE);
 	}
 
 	if(DMAudio.IsMP3RadioChannelAvailable()) {

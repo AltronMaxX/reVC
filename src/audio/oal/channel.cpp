@@ -270,4 +270,40 @@ CChannel::UpdateReverb(ALuint slot)
 	alSource3i(alSources[id], AL_AUXILIARY_SEND_FILTER, slot, 0, alFilters[id]);
 }
 
+void
+CChannel::ProviderTerm()
+{
+	SavedState = AL_STOPPED;
+	SavedOffset = 0;
+	SavedLooping = AL_FALSE;
+	SavedMix = Mix;
+	if(!HasSource()) return;
+	alGetSourcei(alSources[id], AL_SOURCE_STATE, &SavedState);
+	alGetSourcei(alSources[id], AL_SAMPLE_OFFSET, &SavedOffset);
+	alGetSourcei(alSources[id], AL_LOOPING, &SavedLooping);
+	alGetSourcef(alSources[id], AL_PITCH, &Pitch);
+	alGetSourcef(alSources[id], AL_GAIN, &Gain);
+	alGetSourcefv(alSources[id], AL_POSITION, Position);
+	alGetSourcef(alSources[id], AL_MAX_DISTANCE, &Distances[0]);
+	alGetSourcef(alSources[id], AL_REFERENCE_DISTANCE, &Distances[1]);
+}
+
+void
+CChannel::ProviderInit(ALuint slot)
+{
+	if(!HasSource()) return;
+	alSourcef(alSources[id], AL_PITCH, Pitch);
+	alSourcef(alSources[id], AL_GAIN, Gain);
+	alSourcefv(alSources[id], AL_POSITION, Position);
+	alSourcef(alSources[id], AL_MAX_DISTANCE, Distances[0]);
+	alSourcef(alSources[id], AL_REFERENCE_DISTANCE, Distances[1]);
+	alSourcei(alSources[id], AL_LOOPING, SavedLooping);
+	SetReverbMix(slot, SavedMix);
+	if(SavedState == AL_PLAYING || SavedState == AL_PAUSED) {
+		Start();
+		alSourcei(alSources[id], AL_SAMPLE_OFFSET, SavedOffset);
+		if(SavedState == AL_PAUSED) alSourcePause(alSources[id]);
+	}
+}
+
 #endif

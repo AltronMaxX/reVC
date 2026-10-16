@@ -942,7 +942,8 @@ void CPad::UpdateMouse()
 	{
 		double xpos = 1.0f, ypos;
 		glfwGetCursorPos(PSGLOBAL(window), &xpos, &ypos);
-		if (xpos == 0.f)
+		// Zero is a valid menu position when the virtual cursor reaches the left edge.
+		if (xpos == 0.f && !FrontEndMenuManager.m_bMenuActive)
 			return;
 
 		int32 signX = 1;

@@ -22,6 +22,8 @@ class CChannel
 	float  Position[3];
 	float  Distances[2];
 	ALint  LoopPoints[2];
+	ALint  SavedState, SavedOffset, SavedLooping;
+	float  SavedMix;
 public:
 	static void InitChannels();
 	static void DestroyChannels();
@@ -48,6 +50,8 @@ public:
 	void ClearBuffer();
 	void SetReverbMix(ALuint slot, float mix);
 	void UpdateReverb(ALuint slot);
+	void ProviderTerm();
+	void ProviderInit(ALuint slot);
 };
 
 #endif

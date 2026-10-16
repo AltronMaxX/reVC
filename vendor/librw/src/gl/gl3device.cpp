@@ -15,6 +15,9 @@
 #include "rwgl3.h"
 #include "rwgl3shader.h"
 #include "rwgl3impl.h"
+#ifdef LIBRW_GLFW
+#include "../glfwvideomodes.h"
+#endif
 
 #define PLUGIN_ID 0
 
@@ -1193,6 +1196,106 @@ flushCache(void)
 	flushUniforms();
 }
 
+#ifdef LIBRW_GLFW
+// The game renders at its selected resolution; only this final target is
+// stretched to the actual window size. Multisampling belongs to this target,
+// not the native window, so resolving and scaling remain separate operations.
+static struct {
+	uint32 fbo, color, depth;
+	uint32 resolveFbo, resolveColor;
+	int width, height, samples;
+} gameFramebuffer;
+
+static void
+destroyGameFramebuffer(void)
+{
+	bindFramebuffer(0);
+	glDeleteFramebuffers(1, &gameFramebuffer.fbo);
+	glDeleteFramebuffers(1, &gameFramebuffer.resolveFbo);
+	glDeleteRenderbuffers(1, &gameFramebuffer.color);
+	glDeleteRenderbuffers(1, &gameFramebuffer.depth);
+	glDeleteRenderbuffers(1, &gameFramebuffer.resolveColor);
+	memset(&gameFramebuffer, 0, sizeof(gameFramebuffer));
+}
+
+static bool
+ensureGameFramebuffer(int width, int height)
+{
+	// Preserve the legacy GL 2 / GLES 2 path if framebuffer blits are absent.
+	if(gl3Caps.glversion < 30 || glBlitFramebuffer == nil || width <= 0 || height <= 0) return false;
+	int samples = glGlobals.numSamples > 1 ? glGlobals.numSamples : 1;
+	if(glRenderbufferStorageMultisample == nil) samples = 1;
+	if(samples > 1){
+		GLint maxSamples = 1;
+		glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
+		if(samples > maxSamples) samples = maxSamples;
+	}
+	if(gameFramebuffer.fbo && gameFramebuffer.width == width &&
+	   gameFramebuffer.height == height && gameFramebuffer.samples == samples)
+		return true;
+	destroyGameFramebuffer();
+	glGenFramebuffers(1, &gameFramebuffer.fbo);
+	bindFramebuffer(gameFramebuffer.fbo);
+	glGenRenderbuffers(1, &gameFramebuffer.color);
+	glBindRenderbuffer(GL_RENDERBUFFER, gameFramebuffer.color);
+	if(samples > 1)
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_RGBA8, width, height);
+	else
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, gameFramebuffer.color);
+	glGenRenderbuffers(1, &gameFramebuffer.depth);
+	glBindRenderbuffer(GL_RENDERBUFFER, gameFramebuffer.depth);
+	if(samples > 1)
+		glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, width, height);
+	else
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gameFramebuffer.depth);
+	bool complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	if(samples > 1){
+		glGenFramebuffers(1, &gameFramebuffer.resolveFbo);
+		bindFramebuffer(gameFramebuffer.resolveFbo);
+		glGenRenderbuffers(1, &gameFramebuffer.resolveColor);
+		glBindRenderbuffer(GL_RENDERBUFFER, gameFramebuffer.resolveColor);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, gameFramebuffer.resolveColor);
+		complete = complete && glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	}
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	if(!complete){
+		fprintf(stderr, "OpenGL: unable to allocate %dx%d game framebuffer\n", width, height);
+		destroyGameFramebuffer();
+		return false;
+	}
+	gameFramebuffer.width = width;
+	gameFramebuffer.height = height;
+	gameFramebuffer.samples = samples;
+	return true;
+}
+
+static uint32
+resolveGameFramebuffer(void)
+{
+	if(gameFramebuffer.samples <= 1) return gameFramebuffer.fbo;
+	GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+	if(scissor) glDisable(GL_SCISSOR_TEST);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gameFramebuffer.fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gameFramebuffer.resolveFbo);
+	glBlitFramebuffer(0, 0, gameFramebuffer.width, gameFramebuffer.height,
+	                  0, 0, gameFramebuffer.width, gameFramebuffer.height,
+	                  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	// Raw READ/DRAW binds above bypass the shared framebuffer cache.
+	glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer);
+	if(scissor) glEnable(GL_SCISSOR_TEST);
+	return gameFramebuffer.resolveFbo;
+}
+
+uint32
+getCameraReadFramebuffer(void)
+{
+	return gameFramebuffer.fbo ? resolveGameFramebuffer() : 0;
+}
+#endif
+
 static void
 setFrameBuffer(Camera *cam)
 {
@@ -1203,6 +1306,13 @@ setFrameBuffer(Camera *cam)
 	Gl3Raster *natfb = PLUGINOFFSET(Gl3Raster, fbuf, nativeRasterOffset);
 	Gl3Raster *natzb = PLUGINOFFSET(Gl3Raster, zbuf, nativeRasterOffset);
 	assert(fbuf->type == Raster::CAMERA || fbuf->type == Raster::CAMERATEXTURE);
+
+#ifdef LIBRW_GLFW
+	if(fbuf->type == Raster::CAMERA && ensureGameFramebuffer(fbuf->width, fbuf->height)){
+		bindFramebuffer(gameFramebuffer.fbo);
+		return;
+	}
+#endif
 
 	// Have to make sure depth buffer is attached to FB's fbo
 	bindFramebuffer(natfb->fbo);
@@ -1244,6 +1354,13 @@ getFramebufferRect(Raster *frameBuffer)
 	Rect r;
 	Raster *fb = frameBuffer->parent;
 	if(fb->type == Raster::CAMERA){
+#ifdef LIBRW_GLFW
+		if(gameFramebuffer.fbo){
+			r.w = fb->width;
+			r.h = fb->height;
+		}else
+#endif
+		{
 #ifdef LIBRW_SDL2
 		SDL_GetWindowSize(glGlobals.window, &r.w, &r.h);
 #elif defined(LIBRW_SDL3)
@@ -1253,6 +1370,7 @@ getFramebufferRect(Raster *frameBuffer)
 #else
 		missing implementation
 #endif
+		}
 	}else{
 		r.w = fb->width;
 		r.h = fb->height;
@@ -1407,6 +1525,23 @@ clearCamera(Camera *cam, RGBA *col, uint32 mode)
 static void
 showRaster(Raster *raster, uint32 flags)
 {
+#ifdef LIBRW_GLFW
+	if(gameFramebuffer.fbo){
+		int width, height;
+		glfwGetFramebufferSize(glGlobals.window, &width, &height);
+		if(width > 0 && height > 0){
+			uint32 source = resolveGameFramebuffer();
+			GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+			if(scissor) glDisable(GL_SCISSOR_TEST);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, source);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, gameFramebuffer.width, gameFramebuffer.height,
+			                  0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+			glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer);
+			if(scissor) glEnable(GL_SCISSOR_TEST);
+		}
+	}
+#endif
 //	glViewport(raster->offsetX, raster->offsetY,
 //		raster->width, raster->height);
 
@@ -1447,11 +1582,20 @@ rasterRenderFast(Raster *raster, int32 x, int32 y)
 	case Raster::CAMERATEXTURE:
 		switch(src->type){
 		case Raster::CAMERA:
+#ifdef LIBRW_GLFW
+			if(gameFramebuffer.fbo){
+				uint32 source = resolveGameFramebuffer();
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, source);
+			}
+#endif
 			setActiveTexture(0);
 			glBindTexture(GL_TEXTURE_2D, natdst->texid);
 			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, x, (dst->height-src->height)-y,
 				0, 0, src->width, src->height);
 			glBindTexture(GL_TEXTURE_2D, boundTexture[0]);
+#ifdef LIBRW_GLFW
+			if(gameFramebuffer.fbo) glBindFramebuffer(GL_FRAMEBUFFER, currentFramebuffer);
+#endif
 			return 1;
 		}
 		break;
@@ -1816,7 +1960,8 @@ makeVideoModeList(GLFWmonitor *monitor)
 
 	modes = glfwGetVideoModes(monitor, &num);
 	rwFree(glGlobals.modes);
-	glGlobals.modes = rwNewT(DisplayMode, num+1, ID_DRIVER | MEMDUR_EVENT);
+	const int numRenderModes = sizeof(glfwRenderResolutions)/sizeof(glfwRenderResolutions[0]);
+	glGlobals.modes = rwNewT(DisplayMode, num+numRenderModes+2, ID_DRIVER | MEMDUR_EVENT);
 
 	glGlobals.modes[0].mode = *glfwGetVideoMode(monitor);
 	glGlobals.modes[0].flags = 0;
@@ -1824,6 +1969,16 @@ makeVideoModeList(GLFWmonitor *monitor)
 
 	for(i = 0; i < num; i++)
 		addVideoMode(&modes[i]);
+	addVideoMode(&glGlobals.modes[0].mode);
+	for(i = 0; i < numRenderModes; i++){
+		GLFWvidmode renderMode = glGlobals.modes[0].mode;
+		if(glfwRenderResolutions[i][0] > renderMode.width ||
+		   glfwRenderResolutions[i][1] > renderMode.height)
+			continue;
+		renderMode.width = glfwRenderResolutions[i][0];
+		renderMode.height = glfwRenderResolutions[i][1];
+		addVideoMode(&renderMode);
+	}
 
 	for(i = 0; i < glGlobals.numModes; i++){
 		num = glGlobals.modes[i].mode.redBits +
@@ -1895,16 +2050,16 @@ startGLFW(void)
 	glfwWindowHint(GLFW_BLUE_BITS, mode->mode.blueBits);
 	glfwWindowHint(GLFW_REFRESH_RATE, mode->mode.refreshRate);
 	
-	// GLX will round up to 2x or 4x if you ask for multisampling on with 1 sample
-	// So only apply the SAMPLES hint if we actually want multisampling
-	if (glGlobals.numSamples > 1)
-		glfwWindowHint(GLFW_SAMPLES, glGlobals.numSamples);
+	// MSAA is resolved in the game's offscreen target before presentation.
+	// A multisampled native window would make the final scaled blit invalid.
+	glfwWindowHint(GLFW_SAMPLES, 0);
 
 	int i;
 	for(i = 0; profiles[i].gl; i++){
 		glfwWindowHint(GLFW_CLIENT_API, profiles[i].gl);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, profiles[i].major);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, profiles[i].minor);
+		glfwWindowHint(GLFW_SAMPLES, profiles[i].major < 3 && glGlobals.numSamples > 1 ? glGlobals.numSamples : 0);
 
 		if(mode->flags & VIDEOMODEEXCLUSIVE)
 			win = glfwCreateWindow(mode->mode.width, mode->mode.height, glGlobals.winTitle, glGlobals.monitor, nil);
@@ -1944,6 +2099,8 @@ static int
 stopGLFW(void)
 {
 	glfwDestroyWindow(glGlobals.window);
+	glGlobals.window = nil;
+	if(glGlobals.pWindow) *glGlobals.pWindow = nil;
 	return 1;
 }
 #else
@@ -2080,6 +2237,9 @@ initOpenGL(void)
 static int
 termOpenGL(void)
 {
+#ifdef LIBRW_GLFW
+	destroyGameFramebuffer();
+#endif
 	closeIm3D();
 	closeIm2D();
 

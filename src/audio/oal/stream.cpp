@@ -1207,23 +1207,46 @@ void CStream::Initialise()
 #ifdef AUDIO_OAL_USE_MPG123
 	mpg123_init();
 #endif
-#ifdef MULTITHREADED_AUDIO
-	gAudioThread = std::thread(audioFileOpsThread);
-#endif
+	ResumeProcessing();
 }
 
 void CStream::Terminate()
 {
+	SuspendProcessing();
+#ifdef MULTITHREADED_AUDIO
+	// Close requests may still be queued when the worker is stopped. Dispose of
+	// them before mpg123_exit and do not retain stream pointers across a restart.
+	while(!gStreamsToClose.empty()) {
+		const auto stream = gStreamsToClose.front();
+		gStreamsToClose.pop();
+		delete stream.first;
+		free(stream.second);
+	}
+	std::queue<CStream *>().swap(gStreamsToProcess);
+#endif
 #ifdef AUDIO_OAL_USE_MPG123
 	mpg123_exit();
 #endif
+}
+
+void CStream::SuspendProcessing()
+{
 #ifdef MULTITHREADED_AUDIO
+	if(!gAudioThread.joinable()) return;
 	gAudioThreadQueueMutex.lock();
 	gAudioThreadTerm = true;
 	gAudioThreadQueueMutex.unlock();
 
 	gAudioThreadCv.notify_one();
 	gAudioThread.join();
+#endif
+}
+
+void CStream::ResumeProcessing()
+{
+#ifdef MULTITHREADED_AUDIO
+	gAudioThreadTerm = false;
+	gAudioThread = std::thread(audioFileOpsThread);
 #endif
 }
 
@@ -1511,9 +1534,10 @@ uint32 CStream::GetPosMS()
 
 	//std::lock_guard<std::mutex> lock(m_mutex);
 
-	return m_pSoundFile->Tell()
+	const int64 position = int64(m_pSoundFile->Tell())
 		- m_pSoundFile->samples2ms(m_pSoundFile->GetBufferSamples() * (NUM_STREAMBUFFERS/2-1)) / m_pSoundFile->GetChannels()
 		+ m_pSoundFile->samples2ms(offset/m_pSoundFile->GetSampleSize()) / m_pSoundFile->GetChannels();
+	return position > 0 ? uint32(position) : 0;
 }
 
 uint32 CStream::GetLengthMS()
@@ -1839,7 +1863,9 @@ void CStream::ProviderTerm()
 	m_bReset = true;
 	m_nPosBeforeReset = GetPosMS();
 
+	const bool wasActive = m_bActive;
 	Stop();
+	m_bActive = wasActive;
 	ClearBuffers();
 }
 	

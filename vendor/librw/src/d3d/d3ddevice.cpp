@@ -22,6 +22,7 @@ namespace d3d {
 #ifdef RW_D3D9
 
 D3d9Globals d3d9Globals;
+static uint32 windowedRenderWidth, windowedRenderHeight;
 
 // Keep track of rasters exclusively in video memory
 // as they need special treatment sometimes
@@ -1061,10 +1062,8 @@ recreateVidmemRasters(void)
 
 		case Raster::ZBUFFER:
 			if(natras->texture){
-				RECT rect;
-				GetClientRect(d3d9Globals.window, &rect);
-				raster->width = rect.right;
-				raster->height = rect.bottom;
+				raster->width = d3d9Globals.present.BackBufferWidth;
+				raster->height = d3d9Globals.present.BackBufferHeight;
 				natras->texture = d3d9Globals.defaultDepthSurf;
 				natras->format = d3d9Globals.present.AutoDepthStencilFormat;
 				raster->depth = findFormatDepth(natras->format);
@@ -1187,7 +1186,7 @@ releaseVideoMemory(void)
 	d3ddevice->SetPixelShader(nil);
 	d3ddevice->SetIndices(nil);
 	for(i = 0; i < MAXNUMSTREAMS; i++)
-		d3ddevice->SetStreamSource(0, nil, 0, 0);
+		d3ddevice->SetStreamSource(i, nil, 0, 0);
 
 	setRenderTarget(0, d3d9Globals.defaultRenderTarget);
 	for(i = 1; i < MAXNUMRENDERTARGETS; i++)
@@ -1216,6 +1215,32 @@ restoreVideoMemory(void)
 	recreateVidmemRasters();
 
 	restoreD3d9Device();
+}
+
+bool32
+setWindowedRenderSize(uint32 width, uint32 height)
+{
+	if((width == 0) != (height == 0))
+		return 0;
+	if(d3ddevice && width && height &&
+	   (width != d3d9Globals.present.BackBufferWidth || height != d3d9Globals.present.BackBufferHeight)){
+		if(!d3d9Globals.present.Windowed || d3ddevice->TestCooperativeLevel() != D3D_OK)
+			return 0;
+		D3DPRESENT_PARAMETERS previous = d3d9Globals.present;
+		d3d9Globals.present.BackBufferWidth = width;
+		d3d9Globals.present.BackBufferHeight = height;
+		releaseVideoMemory();
+		if(FAILED(d3ddevice->Reset(&d3d9Globals.present))){
+			d3d9Globals.present = previous;
+			if(SUCCEEDED(d3ddevice->Reset(&d3d9Globals.present)))
+				restoreVideoMemory();
+			return 0;
+		}
+		restoreVideoMemory();
+	}
+	windowedRenderWidth = width;
+	windowedRenderHeight = height;
+	return 1;
 }
 
 static void
@@ -1298,11 +1323,13 @@ beginUpdate(Camera *cam)
 	RECT r;
 	GetClientRect(d3d9Globals.window, &r);
 	BOOL icon = IsIconic(d3d9Globals.window);
-	if(!icon &&
-	   (r.right != d3d9Globals.present.BackBufferWidth || r.bottom != d3d9Globals.present.BackBufferHeight)){
+	const uint32 width = windowedRenderWidth ? windowedRenderWidth : r.right;
+	const uint32 height = windowedRenderHeight ? windowedRenderHeight : r.bottom;
+	if(!icon && width && height &&
+	   (width != d3d9Globals.present.BackBufferWidth || height != d3d9Globals.present.BackBufferHeight)){
 
-		d3d9Globals.present.BackBufferWidth = r.right;
-		d3d9Globals.present.BackBufferHeight = r.bottom;
+		d3d9Globals.present.BackBufferWidth = width;
+		d3d9Globals.present.BackBufferHeight = height;
 
 		releaseVideoMemory();
 		d3d::d3ddevice->Reset(&d3d9Globals.present);
@@ -1575,6 +1602,10 @@ startD3D(void)
 		GetClientRect(d3d9Globals.window, &rect);
 		width = rect.right - rect.left;
 		height = rect.bottom - rect.top;
+		if(windowedRenderWidth && windowedRenderHeight){
+			width = windowedRenderWidth;
+			height = windowedRenderHeight;
+		}
 	}else{
 		// this will be much better for restoring after iconification
 		SetWindowLong(d3d9Globals.window, GWL_STYLE, WS_POPUP);

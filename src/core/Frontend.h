@@ -731,7 +731,7 @@ public:
 	int32 m_firstStartCounter;
 	CSprite2d m_aFrontEndSprites[NUM_MENU_SPRITES];
 	bool m_bSpritesLoaded;
-	int32 m_LeftMostRadioX;
+	int32 m_LeftMostRadioX; // Logical menu coordinate, scaled only when drawing.
 	int32 m_ScrollRadioBy;
 	int32 m_nCurrScreen;
 	int32 m_nPrevScreen;
@@ -934,6 +934,7 @@ CONTROLLER_DUALSENSE,
 	void PrintStats();
 	void Process();
 	void ProcessList(bool &optionSelected, bool &goBack);
+	bool ProcessMenuScrollbar();
 	void UserInput();
 	void ProcessUserInput(uint8, uint8, uint8, uint8, int8);
 	void ChangeRadioStation(int8);

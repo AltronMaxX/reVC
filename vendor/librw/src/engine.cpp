@@ -237,7 +237,9 @@ Engine::init(MemoryFunctions *memfuncs)
 	d3d9::registerPlatformPlugins();
 	wdgl::registerPlatformPlugins();
 	gl3::registerPlatformPlugins();
+#ifdef RW_WGPU
 	wgpu::registerPlatformPlugins();
+#endif
 
 	Engine::state = Initialized;
 	return 1;
