@@ -5681,6 +5681,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				m_PrefsShowLegends = true;
 				m_PrefsVsyncDisp = true;
 				m_PrefsFrameLimiter = false;
+				RsGlobal.maxFPS = 30;
 				m_PrefsRadarMode = 0;
 				m_PrefsShowHud = true;
 				m_nDisplayVideoMode = m_nPrefsVideoMode;

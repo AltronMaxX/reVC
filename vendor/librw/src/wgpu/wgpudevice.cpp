@@ -38,6 +38,17 @@ namespace rw
         FrameState s_frame = {};
         RenderState s_renderState = {};
 
+#ifdef _WIN32
+        bool pollFrameReady(void)
+        {
+            if (!wgpuGlobals.device) return true;
+            const bool idle = wgpuDevicePoll(wgpuGlobals.device, false, nullptr) != 0;
+            // Offscreen passes can interrupt one display frame. Let its existing
+            // encoder finish; only throttle the start of a new display frame.
+            return s_frame.inFrame || idle;
+        }
+#endif
+
         // The acquired swapchain texture, held across mid-frame submits. A frame can be
         // interrupted by offscreen render-to-texture passes (e.g. the neo env map):
         // the main frame's commands are submitted so the offscreen target can take
@@ -2257,6 +2268,20 @@ struct VSOut {
 
         static int termWGPU(void)
         {
+            // Closing can interrupt a display frame. Do not submit more GPU work
+            // while shutting down, and release encoder-held texture references
+            // before destroying the pipelines and persistent attachments.
+            if (s_frame.inRenderPass && s_frame.renderPass)
+                wgpuRenderPassEncoderEnd(s_frame.renderPass);
+            if (s_frame.renderPass) wgpuRenderPassEncoderRelease(s_frame.renderPass);
+            if (s_frame.encoder) wgpuCommandEncoderRelease(s_frame.encoder);
+            if (s_frame.isOffscreen)
+            {
+                if (s_frame.depthView) wgpuTextureViewRelease(s_frame.depthView);
+                if (s_frame.depthTexture) wgpuTextureRelease(s_frame.depthTexture);
+            }
+            s_frame = {};
+
             closeAtomic();
             closeIm3D();
             closeIm2DText();
@@ -2309,8 +2334,8 @@ struct VSOut {
                 s_backbuffer.resolveTexture = nullptr;
             }
             s_backbuffer = {};
-            if (s_swap.texture) { wgpuTextureRelease(s_swap.texture); }
             if (s_swap.view) { wgpuTextureViewRelease(s_swap.view); }
+            if (s_swap.texture) { wgpuTextureRelease(s_swap.texture); }
             s_swap.view = nullptr;
             s_swap.texture = nullptr;
             s_swap.acquired = false;
