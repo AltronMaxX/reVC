@@ -428,11 +428,29 @@ ScreenModeAfterChange(int8 before, int8 after)
         const bool showMouse = FrontEndMenuManager.m_bShowMouse;
 
 #ifdef UNLOCK_MENU_OPTIONS_INGAME
-        // Always use the live apply path — the destructive _psSelectScreenVM would
-        // tear down the rw engine and crash via CRadar::WaypointSprite's atexit
-        // destructor after the rw texture world is destroyed (even in main menu,
-        // once the user has at least once started a game and loaded textures).
-        psApplyWindowModeLive();
+        const int32 previousWidth = FrontEndMenuManager.m_nPrefsWidth;
+        const int32 previousHeight = FrontEndMenuManager.m_nPrefsHeight;
+        const int32 previousDepth = FrontEndMenuManager.m_nPrefsDepth;
+        const int32 previousVideoMode = FrontEndMenuManager.m_nPrefsVideoMode;
+        const int32 previousScreenMode = FrontEndMenuManager.m_nSelectedScreenMode;
+        // Apply on the existing renderer; failed changes must not become saved preferences.
+        if(!psApplyWindowModeLive()) {
+                FrontEndMenuManager.m_nPrefsWindowed = before;
+                FrontEndMenuManager.m_nSelectedScreenMode = previousScreenMode;
+                FrontEndMenuManager.m_nPrefsWidth = previousWidth;
+                FrontEndMenuManager.m_nPrefsHeight = previousHeight;
+                FrontEndMenuManager.m_nPrefsDepth = previousDepth;
+                FrontEndMenuManager.m_nPrefsVideoMode = previousVideoMode;
+                FrontEndMenuManager.m_nCurrOption = currOption;
+                FrontEndMenuManager.m_bShowMouse = showMouse;
+                CMenuScreenCustom::CMenuEntry &option = aScreens[FrontEndMenuManager.m_nCurrScreen].m_aEntries[currOption];
+                if(option.m_Action == MENUACTION_CFO_SELECT && option.m_CFOSelect->changeFunc == ScreenModeAfterChange)
+                        option.m_CFOSelect->displayedValue = option.m_CFOSelect->lastSavedValue = before;
+                FrontEndMenuManager.SetHelperText(3);
+                // The generic custom-option handler saves before invoking this callback.
+                FrontEndMenuManager.SaveSettings();
+                return;
+        }
 #else
         _psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
 #endif

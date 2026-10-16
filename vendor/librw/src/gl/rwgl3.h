@@ -218,6 +218,9 @@ bool32 getAlphaBlend(void);
 bool32 getAlphaTest(void);
 
 void bindFramebuffer(uint32 fbo);
+#ifdef LIBRW_GLFW
+uint32 getCameraReadFramebuffer(void);
+#endif
 uint32 bindTexture(uint32 texid);
 
 void flushCache(void);
