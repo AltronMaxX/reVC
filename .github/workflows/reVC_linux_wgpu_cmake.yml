@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -18,7 +18,7 @@ jobs:
     name: "WGPU | ${{ matrix.buildtype }}${{ matrix.discord == 'ON' && ' | discord' || '' }}"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -64,7 +64,7 @@ jobs:
           find build -name reVC -type f -exec cp {} ./gamefiles/ \;
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.artname.outputs.name }}
           path: ./gamefiles/*
