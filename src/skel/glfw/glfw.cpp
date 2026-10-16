@@ -2,6 +2,9 @@
 #include "MoviePlayer.h"
 
 #ifdef _WIN32
+// WinMM and shell headers require the base Windows types first.
+#define NOMINMAX
+#include <windows.h>
 #include <basetsd.h>
 #include <mmsystem.h>
 #include <regstr.h>
