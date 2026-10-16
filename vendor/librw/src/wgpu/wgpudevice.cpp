@@ -17,6 +17,7 @@
 #ifdef RW_WGPU
 
 #include "wgpu_internal.h"
+#include "../glfwvideomodes.h"
 
 #if defined(_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -425,11 +426,15 @@ struct VSOut {
             wgpuShaderModuleRelease(sm);
         }
 
-        // (Re)create the offscreen backbuffer at the current window size.
+        // The swapchain follows the physical window, while camera rasters follow
+        // the resolution selected in the game. Keep them separate so fullscreen
+        // scaling also works on Wayland without changing the desktop mode.
+        static uint32 s_renderWidth = 0, s_renderHeight = 0;
+
         static void ensureBackbuffer(void)
         {
-            uint32 w = (uint32)wgpuGlobals.winWidth;
-            uint32 h = (uint32)wgpuGlobals.winHeight;
+            uint32 w = s_renderWidth ? s_renderWidth : (uint32)wgpuGlobals.winWidth;
+            uint32 h = s_renderHeight ? s_renderHeight : (uint32)wgpuGlobals.winHeight;
             if (w == 0 || h == 0) return;
             // Recreate when size OR sample count changed. The sample-count check is
             // the safety net for paths that bump wgpuGlobals.numSamples without
@@ -616,6 +621,22 @@ struct VSOut {
             s_mainDepth.sampleCount = wgpuGlobals.numSamples;
         }
 
+#ifdef _WIN32
+        static bool windowSurfaceSuspendedWin32()
+        {
+            if (!wgpuGlobals.window) return true;
+            HWND window = glfwGetWin32Window(wgpuGlobals.window);
+            RECT client;
+            if (IsIconic(window) || !GetClientRect(window, &client) ||
+                client.right <= 0 || client.bottom <= 0)
+                return true;
+            // Native focus may change while a GPU call is processing messages,
+            // before the application's next GLFW event-loop iteration. Hidden
+            // windows are still allowed for offscreen tools and renderer tests.
+            return IsWindowVisible(window) && GetForegroundWindow() != window;
+        }
+#endif
+
         bool acquireFrame()
         {
             if (s_frame.inFrame) return true;
@@ -624,6 +645,11 @@ struct VSOut {
             // (after an offscreen interruption) keeps rendering onto the same texture.
             if (!s_swap.acquired)
             {
+#ifdef _WIN32
+                // A minimized/occluded Win32 swapchain must not block the UI
+                // thread, which also handles Alt+Tab, restore and close messages.
+                if (windowSurfaceSuspendedWin32()) return false;
+#endif
                 reconfigureSurfaceIfResized();
 
                 WGPUSurfaceTexture surfTex = {};
@@ -631,6 +657,17 @@ struct VSOut {
                 if (surfTex.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal &&
                     surfTex.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal)
                 {
+#ifdef _WIN32
+                    if (windowSurfaceSuspendedWin32() ||
+                        surfTex.status == WGPUSurfaceGetCurrentTextureStatus_Timeout)
+                        return false;
+                    // Only a stale or lost surface requires recreation. Retrying
+                    // an occluded/temporarily unavailable surface can wait for
+                    // the very window messages that this thread must dispatch.
+                    if (surfTex.status == WGPUSurfaceGetCurrentTextureStatus_Outdated ||
+                        surfTex.status == WGPUSurfaceGetCurrentTextureStatus_Lost)
+                    {
+#endif
                     // Self-heal ONCE before giving up. A failed acquire is otherwise
                     // silently catastrophic: Camera::beginUpdate (librw) cannot report
                     // failure — the void Device callback just returns — so the game
@@ -647,6 +684,9 @@ struct VSOut {
                     wgpuSurfaceUnconfigure(wgpuGlobals.surface);
                     wgpuSurfaceConfigure(wgpuGlobals.surface, &wgpuGlobals.surfaceConfig);
                     wgpuSurfaceGetCurrentTexture(wgpuGlobals.surface, &surfTex);
+#ifdef _WIN32
+                    }
+#endif
                 }
                 if (surfTex.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal &&
                     surfTex.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal)
@@ -683,8 +723,8 @@ struct VSOut {
             s_frame.texture = s_backbuffer.texture;
             s_frame.view = s_backbuffer.view;
 
-            uint32 fbw = (uint32_t)wgpuGlobals.winWidth;
-            uint32 fbh = (uint32_t)wgpuGlobals.winHeight;
+            uint32 fbw = s_backbuffer.width;
+            uint32 fbh = s_backbuffer.height;
             ensureMainDepth(fbw, fbh);
             s_frame.depthTexture = s_mainDepth.texture;
             s_frame.depthView = s_mainDepth.view;
@@ -829,6 +869,24 @@ struct VSOut {
         // still-open encoder) before submitFrame().
         static void presentFrame()
         {
+#ifdef _WIN32
+            if (windowSurfaceSuspendedWin32())
+            {
+                // Focus can be lost after acquisition. Finish encoded work but
+                // discard the surface image instead of presenting it on top of
+                // the task switcher or waiting on a minimized swapchain.
+                submitFrame();
+                if (s_swap.acquired)
+                {
+                    if (s_swap.view) wgpuTextureViewRelease(s_swap.view);
+                    if (s_swap.texture) wgpuTextureRelease(s_swap.texture);
+                    s_swap.view = nullptr;
+                    s_swap.texture = nullptr;
+                    s_swap.acquired = false;
+                }
+                return;
+            }
+#endif
             if (s_frame.inFrame && !s_frame.isOffscreen)
             {
                 endRenderPassIfOpen();
@@ -1001,6 +1059,10 @@ struct VSOut {
             Raster* parent = (fb && fb->parent) ? fb->parent : fb;
             bool offscreen = parent && parent->type == Raster::CAMERATEXTURE;
             Raster* target = offscreen ? parent : nullptr;
+            if (!offscreen && parent && parent->width > 0 && parent->height > 0) {
+                s_renderWidth = (uint32)parent->width;
+                s_renderHeight = (uint32)parent->height;
+            }
 
             if (s_frame.inFrame && s_frame.currentFrameBuffer != target)
                 submitFrame();
@@ -1108,6 +1170,10 @@ struct VSOut {
             Raster* parent = (fb && fb->parent) ? fb->parent : fb;
             bool offscreen = parent && parent->type == Raster::CAMERATEXTURE;
             Raster* target = offscreen ? parent : nullptr;
+            if (!offscreen && parent && parent->width > 0 && parent->height > 0) {
+                s_renderWidth = (uint32)parent->width;
+                s_renderHeight = (uint32)parent->height;
+            }
 
             // A non-offscreen camera whose framebuffer is a sub-raster (e.g. the
             // mini-view inset) renders into a sub-rectangle of its parent's frame. We
@@ -2175,6 +2241,7 @@ struct VSOut {
                 glfwDestroyWindow(wgpuGlobals.window);
                 wgpuGlobals.window = nullptr;
             }
+            if (wgpuGlobals.pWindow) *wgpuGlobals.pWindow = nullptr;
             return 1;
         }
 
@@ -2301,7 +2368,7 @@ struct VSOut {
         // (VIDEOMODEEXCLUSIVE). re3/reVC's device selection REQUIRES at least one
         // EXCLUSIVE mode that fits the requested resolution, otherwise it aborts with
         // "Cannot find desired video mode, selecting device cancelled".
-        static VideoMode s_videoModes[64];
+        static VideoMode s_videoModes[128];
         static int s_numVideoModes = 0;
         static int s_currentVideoMode = 0;
 
@@ -2325,7 +2392,9 @@ struct VSOut {
             }
             s_videoModes[0].depth = 32;
             s_videoModes[0].flags = 0;
-            s_numVideoModes = 1;
+            s_videoModes[1] = s_videoModes[0];
+            s_videoModes[1].flags = VIDEOMODEEXCLUSIVE;
+            s_numVideoModes = 2;
 
             // Modes 1..: the monitor's fullscreen modes, flags = VIDEOMODEEXCLUSIVE.
             int count = 0;
@@ -2345,6 +2414,23 @@ struct VSOut {
                 s_videoModes[s_numVideoModes].depth = 32;
                 s_videoModes[s_numVideoModes].flags = VIDEOMODEEXCLUSIVE;
                 s_numVideoModes++;
+            }
+            // Add render sizes even when the compositor exposes no lower output
+            // modes. These sizes affect the backbuffer, never the monitor itself.
+            for (int i = 0; i < (int)(sizeof(glfwRenderResolutions) / sizeof(glfwRenderResolutions[0])) &&
+                            s_numVideoModes < MAXMODES; i++)
+            {
+                int width = glfwRenderResolutions[i][0], height = glfwRenderResolutions[i][1];
+                if (width > s_videoModes[0].width || height > s_videoModes[0].height) continue;
+                bool duplicate = false;
+                for (int j = 1; j < s_numVideoModes; j++)
+                    if (s_videoModes[j].width == width && s_videoModes[j].height == height)
+                        duplicate = true;
+                if (duplicate) continue;
+                s_videoModes[s_numVideoModes] = s_videoModes[0];
+                s_videoModes[s_numVideoModes].width = width;
+                s_videoModes[s_numVideoModes].height = height;
+                s_videoModes[s_numVideoModes++].flags = VIDEOMODEEXCLUSIVE;
             }
             // Guarantee at least one EXCLUSIVE mode (matching the desktop) so selection
             // never fails even without a monitor mode list.

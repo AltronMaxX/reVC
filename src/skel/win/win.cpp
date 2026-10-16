@@ -62,6 +62,7 @@ static RwBool		  WindowPlatformPaused = FALSE;
 static RwInt32		  WindowActivePollCount = 2;
 
 static RwBool		  RwInitialised = FALSE;
+static bool WindowModeChangeInProgress;
 
 static RwSubSystemInfo GsubSysInfo[MAX_SUBSYSTEMS];
 static RwInt32		GnumSubSystems = 0;
@@ -99,6 +100,10 @@ static psGlobalType PsGlobal;
 #include "PCSave.h"
 #include "AnimViewer.h"
 #include "MemoryMgr.h"
+
+#ifdef IMPROVED_VIDEOMODE
+static void ApplyWindowPlacement(const RwVideoMode &vm);
+#endif
 
 static RwBool
 IsFullscreenLikeWindowMode(void)
@@ -503,6 +508,13 @@ psMouseSetPos(RwV2d *pos)
 
 	point.x = (RwInt32) pos->x;
 	point.y = (RwInt32) pos->y;
+#ifdef IMPROVED_VIDEOMODE
+	RECT client;
+	if(GetClientRect(PSGLOBAL(window), &client) && RsGlobal.width > 0 && RsGlobal.height > 0){
+		point.x = MulDiv(point.x, client.right, RsGlobal.width);
+		point.y = MulDiv(point.y, client.bottom, RsGlobal.height);
+	}
+#endif
 
 	ClientToScreen(PSGLOBAL(window), &point);
 
@@ -1102,12 +1114,30 @@ void _psSelectScreenVM(RwInt32 videoMode)
 		FrontEndMenuManager.LoadAllTextures();
 }
 
-// Live window-mode apply is not implemented on the Windows/D3D backend; tell the
-// caller to fall back to the destructive _psSelectScreenVM path (only safe when
-// no game is loaded, i.e. in main frontend).
 bool psApplyWindowModeLive()
 {
+#if defined IMPROVED_VIDEOMODE && defined LIBRW && defined RW_D3D9
+	RwVideoMode vm;
+	const int32 mode = FrontEndMenuManager.m_nPrefsVideoMode;
+	if(mode < 0 || mode >= RwEngineGetNumVideoModes())
+		return false;
+	RwEngineGetVideoModeInfo(&vm, mode);
+	if(vm.width <= 0 || vm.height <= 0 || PSGLOBAL(window) == nil)
+		return false;
+	if(!rw::d3d::setWindowedRenderSize(vm.width, vm.height))
+		return false;
+	FrontEndMenuManager.m_nPrefsWidth = vm.width;
+	FrontEndMenuManager.m_nPrefsHeight = vm.height;
+	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
+	ApplyWindowPlacement(vm);
+	RwRect rect = { 0, 0, vm.width, vm.height };
+	RsEventHandler(rsCAMERASIZE, &rect);
+	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
+	psRestoreFocusAfterPause();
+	return true;
+#else
 	return false;
+#endif
 }
 
 /*
@@ -1218,10 +1248,16 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			r.w = LOWORD(lParam);
 			r.h = HIWORD(lParam);
 
-			if (RwInitialised && r.h > 0 && r.w > 0)
+			if (RwInitialised && !WindowModeChangeInProgress && r.h > 0 && r.w > 0)
 			{
+#ifdef IMPROVED_VIDEOMODE
+				// Window dimensions are presentation size, not render resolution.
+				r.w = FrontEndMenuManager.m_nPrefsWidth;
+				r.h = FrontEndMenuManager.m_nPrefsHeight;
+#endif
 				RsEventHandler(rsCAMERASIZE, &r);
 
+#ifndef IMPROVED_VIDEOMODE
 				if (r.w != LOWORD(lParam) && r.h != HIWORD(lParam))
 				{
 					WINDOWPLACEMENT		wp;
@@ -1243,6 +1279,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 				{
 					noMemory = FALSE;
 				}
+#endif
 
 			}
 
@@ -1310,6 +1347,13 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 			FrontEndMenuManager.m_nMouseTempPosX = points.x;
 			FrontEndMenuManager.m_nMouseTempPosY = points.y;
+#ifdef IMPROVED_VIDEOMODE
+			RECT client;
+			if(GetClientRect(window, &client) && client.right > 0 && client.bottom > 0){
+				FrontEndMenuManager.m_nMouseTempPosX = MulDiv(points.x, RsGlobal.width, client.right);
+				FrontEndMenuManager.m_nMouseTempPosY = MulDiv(points.y, RsGlobal.height, client.bottom);
+			}
+#endif
 
 			return 0L;
 		}
@@ -1692,6 +1736,36 @@ GetSelectedMonitorRects(RECT *monitorRect, RECT *workRect)
 		monitorRect->bottom = workRect->bottom = GetSystemMetrics(SM_CYSCREEN);
 	}
 }
+
+static void
+ApplyWindowPlacement(const RwVideoMode &vm)
+{
+	RECT monitorRect, workRect;
+	GetSelectedMonitorRects(&monitorRect, &workRect);
+	const int32 mode = FrontEndMenuManager.m_nPrefsWindowed;
+	const bool windowed = mode == WINDOWMODE_WINDOWED;
+	const DWORD style = WS_VISIBLE | (windowed ? WS_OVERLAPPEDWINDOW : WS_POPUP | WS_MINIMIZEBOX);
+	RECT outer = { 0, 0, vm.width, vm.height };
+	int x = monitorRect.left, y = monitorRect.top;
+	int width = monitorRect.right - monitorRect.left;
+	int height = monitorRect.bottom - monitorRect.top;
+	if(windowed){
+		AdjustWindowRectEx(&outer, style, FALSE, GetWindowLong(PSGLOBAL(window), GWL_EXSTYLE));
+		width = outer.right - outer.left;
+		height = outer.bottom - outer.top;
+		x = workRect.left + Max(0, (workRect.right - workRect.left - width) / 2);
+		y = workRect.top + Max(0, (workRect.bottom - workRect.top - height) / 2);
+	}
+	WindowModeChangeInProgress = true;
+	ShowWindow(PSGLOBAL(window), SW_RESTORE);
+	SetWindowLong(PSGLOBAL(window), GWL_STYLE, style);
+	SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST, x, y, width, height,
+		SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
+	WindowModeChangeInProgress = false;
+	RsGlobal.maximumWidth = RsGlobal.width = vm.width;
+	RsGlobal.maximumHeight = RsGlobal.height = vm.height;
+	PSGLOBAL(fullScreen) = mode == WINDOWMODE_FULLSCREEN;
+}
 #endif
 
 /*
@@ -1838,8 +1912,16 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
+#if defined LIBRW && defined RW_D3D9
+	// All modes use desktop presentation. The selected mode controls the game's
+	// backbuffer; exclusive D3D fullscreen would also change the desktop mode.
+	GcurSelVM = bestWndMode;
+	if(!rw::d3d::setWindowedRenderSize(vm.width, vm.height))
+		return FALSE;
+#else
 	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN)
 		GcurSelVM = bestWndMode;
+#endif
 
 	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
@@ -1858,6 +1940,7 @@ psSelectDevice()
 		return FALSE;
 	}
 
+#if !(defined IMPROVED_VIDEOMODE && defined LIBRW && defined RW_D3D9)
 #ifdef IMPROVED_VIDEOMODE
 	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN)
 #else
@@ -1874,6 +1957,7 @@ psSelectDevice()
 			RwD3D8EngineSetRefreshRate((RwUInt32)refresh);
 		}
 	}
+#endif
 	
 #ifndef IMPROVED_VIDEOMODE
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
@@ -1886,55 +1970,7 @@ psSelectDevice()
 		PSGLOBAL(fullScreen) = TRUE;
 	}
 #else
-	RECT monitorRect, workRect;
-	GetSelectedMonitorRects(&monitorRect, &workRect);
-
-	if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN) {
-		ShowWindow(PSGLOBAL(window), SW_RESTORE);
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP);
-		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
-			monitorRect.left, monitorRect.top, vm.width, vm.height,
-			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
-
-		RsGlobal.maximumWidth = vm.width;
-		RsGlobal.maximumHeight = vm.height;
-		RsGlobal.width = vm.width;
-		RsGlobal.height = vm.height;
-		PSGLOBAL(fullScreen) = TRUE;
-	} else if (FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
-		const int width = monitorRect.right - monitorRect.left;
-		const int height = monitorRect.bottom - monitorRect.top;
-
-		ShowWindow(PSGLOBAL(window), SW_RESTORE);
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_POPUP | WS_MINIMIZEBOX);
-		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
-			monitorRect.left, monitorRect.top, width, height,
-			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER | SWP_NOACTIVATE);
-
-		RsGlobal.maximumWidth = width;
-		RsGlobal.maximumHeight = height;
-		RsGlobal.width = width;
-		RsGlobal.height = height;
-		PSGLOBAL(fullScreen) = FALSE;
-	} else {
-		const int workWidth = workRect.right - workRect.left;
-		const int workHeight = workRect.bottom - workRect.top;
-
-		ShowWindow(PSGLOBAL(window), SW_RESTORE);
-		SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
-		SetWindowPos(PSGLOBAL(window), HWND_NOTOPMOST,
-			workRect.left, workRect.top, workWidth, workHeight,
-			SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOOWNERZORDER);
-		ShowWindow(PSGLOBAL(window), SW_MAXIMIZE);
-
-		RECT windowRect;
-		GetClientRect(PSGLOBAL(window), &windowRect);
-		RsGlobal.maximumWidth = windowRect.right;
-		RsGlobal.maximumHeight = windowRect.bottom;
-		RsGlobal.width = windowRect.right;
-		RsGlobal.height = windowRect.bottom;
-		PSGLOBAL(fullScreen) = FALSE;
-	}
+	ApplyWindowPlacement(vm);
 #endif
 #ifdef MULTISAMPLING
 	RwD3D8EngineSetMultiSamplingLevels(1 << FrontEndMenuManager.m_nPrefsMSAALevel);

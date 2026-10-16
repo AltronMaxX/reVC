@@ -165,6 +165,8 @@ public:
 //public:
 	static void Initialise();
 	static void Terminate();
+	static void SuspendProcessing();
+	static void ResumeProcessing();
 	
 	CStream(ALuint *sources, ALuint (&buffers)[NUM_STREAMBUFFERS]);
 	~CStream();

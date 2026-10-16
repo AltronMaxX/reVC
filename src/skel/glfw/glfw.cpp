@@ -85,6 +85,7 @@ static RwBool RwInitialised = FALSE;
 static RwSubSystemInfo GsubSysInfo[MAX_SUBSYSTEMS];
 static RwInt32 GnumSubSystems = 0;
 static RwInt32 GcurSel = 0, GcurSelVM = 0;
+static RwInt32 PendingRenderWidth = 0, PendingRenderHeight = 0;
 
 static RwBool useDefault;
 
@@ -396,11 +397,20 @@ psTimer(void)
 void
 psMouseSetPos(RwV2d *pos)
 {
-	glfwSetCursorPos(PSGLOBAL(window), pos->x, pos->y);
-
-	PSGLOBAL(lastMousePos.x) = (RwInt32)pos->x;
-
-	PSGLOBAL(lastMousePos.y) = (RwInt32)pos->y;
+	int width, height;
+	glfwGetWindowSize(PSGLOBAL(window), &width, &height);
+	double x = RsGlobal.maximumWidth > 0 ? pos->x * (double)width / RsGlobal.maximumWidth : pos->x;
+	double y = RsGlobal.maximumHeight > 0 ? pos->y * (double)height / RsGlobal.maximumHeight : pos->y;
+#ifdef GLFW_PLATFORM_WAYLAND
+	// Wayland cannot warp an unlocked pointer. Disabled cursor mode already
+	// handles relative motion without a compositor-wide pointer warp.
+	if(glfwGetPlatform() == GLFW_PLATFORM_WAYLAND && glfwGetInputMode(PSGLOBAL(window), GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
+		glfwGetCursorPos(PSGLOBAL(window), &x, &y);
+	else
+#endif
+		glfwSetCursorPos(PSGLOBAL(window), x, y);
+	PSGLOBAL(lastMousePos.x) = (RwInt32)x;
+	PSGLOBAL(lastMousePos.y) = (RwInt32)y;
 
 	return;
 }
@@ -843,11 +853,22 @@ GetSelectedMonitorInfo(int *x, int *y, int *width, int *height, RwBool workArea)
 	*height = FrontEndMenuManager.m_nPrefsHeight;
 }
 
-static void
+static bool
 ApplyGLFWWindowMode(const RwVideoMode &vm)
 {
+	if(vm.width <= 0 || vm.height <= 0) return false;
 	GLFWwindow *window = PSGLOBAL(window);
-	if(window == nil) return;
+	if(window == nil) {
+		PendingRenderWidth = PendingRenderHeight = 0;
+		RsGlobal.maximumWidth = RsGlobal.width = vm.width;
+		RsGlobal.maximumHeight = RsGlobal.height = vm.height;
+		return true;
+	}
+	glfwGetError(nil);
+	bool wayland = false;
+#ifdef GLFW_PLATFORM_WAYLAND
+	wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
+#endif
 
 	GLFWmonitor *monitor = GetSelectedMonitor();
 	const GLFWvidmode *monitorMode = monitor == nil ? nil : glfwGetVideoMode(monitor);
@@ -855,12 +876,12 @@ ApplyGLFWWindowMode(const RwVideoMode &vm)
 	if(FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_FULLSCREEN && monitor != nil) {
 		glfwRestoreWindow(window);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
-		glfwSetWindowMonitor(window, monitor, 0, 0, vm.width, vm.height, monitorMode == nil ? GLFW_DONT_CARE : monitorMode->refreshRate);
-
-		RsGlobal.maximumWidth = vm.width;
-		RsGlobal.maximumHeight = vm.height;
-		RsGlobal.width = vm.width;
-		RsGlobal.height = vm.height;
+		// Keep the output's desktop mode. The renderer scales the selected game
+		// resolution into this native-size window, including on Wayland where
+		// fullscreen dimensions are controlled by the compositor.
+		const int width = monitorMode == nil ? vm.width : monitorMode->width;
+		const int height = monitorMode == nil ? vm.height : monitorMode->height;
+		glfwSetWindowMonitor(window, monitor, 0, 0, width, height, monitorMode == nil ? GLFW_DONT_CARE : monitorMode->refreshRate);
 		PSGLOBAL(fullScreen) = TRUE;
 	} else if(FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_BORDERLESS) {
 		int x, y, width, height;
@@ -868,38 +889,43 @@ ApplyGLFWWindowMode(const RwVideoMode &vm)
 
 		glfwRestoreWindow(window);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
-		glfwSetWindowMonitor(window, nil, x, y, width, height, GLFW_DONT_CARE);
-		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
+		// Wayland does not allow positioning a regular window over an output.
+		// Use a native-size fullscreen surface for borderless there as well.
+		glfwSetWindowMonitor(window, wayland ? monitor : nil, x, y, width, height,
+		                     wayland && monitorMode != nil ? monitorMode->refreshRate : GLFW_DONT_CARE);
+		if(!wayland) glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
 
-		RsGlobal.maximumWidth = width;
-		RsGlobal.maximumHeight = height;
-		RsGlobal.width = width;
-		RsGlobal.height = height;
 		PSGLOBAL(fullScreen) = FALSE;
 	} else {
 		int x, y, width, height;
 		GetSelectedMonitorInfo(&x, &y, &width, &height, TRUE);
-		const int windowWidth = FrontEndMenuManager.m_nPrefsWidth;
-		const int windowHeight = FrontEndMenuManager.m_nPrefsHeight;
+		const int windowWidth = vm.width;
+		const int windowHeight = vm.height;
 
 		glfwRestoreWindow(window);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
 		glfwSetWindowMonitor(window, nil, x + (width - windowWidth) / 2, y + (height - windowHeight) / 2, windowWidth, windowHeight, GLFW_DONT_CARE);
-		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
-		glfwMaximizeWindow(window);
-
-		glfwGetFramebufferSize(window, &width, &height);
-		RsGlobal.maximumWidth = width;
-		RsGlobal.maximumHeight = height;
-		RsGlobal.width = width;
-		RsGlobal.height = height;
+		if(!wayland) glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
 		PSGLOBAL(fullScreen) = FALSE;
 	}
+
+	if(glfwGetError(nil) != GLFW_NO_ERROR) return false;
+	if(RwInitialised) {
+		// Camera rasters may still be in use by this frame. Resize at the next
+		// event-loop boundary, never from GLFW's native resize callback.
+		PendingRenderWidth = vm.width;
+		PendingRenderHeight = vm.height;
+	} else {
+		PendingRenderWidth = PendingRenderHeight = 0;
+		RsGlobal.maximumWidth = RsGlobal.width = vm.width;
+		RsGlobal.maximumHeight = RsGlobal.height = vm.height;
+	}
+	return true;
 }
 
 // Live (in-place) window-mode / resolution change without tearing down the rw engine.
 // Safe to call from gameplay; uses ApplyGLFWWindowMode on the existing GLFW window
-// and lets resizeCB propagate the new framebuffer size via rsCAMERASIZE.
+// and queues the selected render size for the next frame boundary.
 // Returns false when the GLFW window isn't initialised yet; callers should then
 // fall back to the destructive _psSelectScreenVM path (only safe in main menu).
 bool psApplyWindowModeLive()
@@ -912,31 +938,19 @@ bool psApplyWindowModeLive()
 	// handler updates m_nPrefsVideoMode before calling us; the ScreenMode toggle
 	// handler leaves it unchanged. Either way, m_nPrefsVideoMode is the source
 	// of truth for the desired rw engine video mode.
-	if (FrontEndMenuManager.m_nPrefsVideoMode >= 0 &&
-	    FrontEndMenuManager.m_nPrefsVideoMode < RwEngineGetNumVideoModes()) {
-		GcurSelVM = FrontEndMenuManager.m_nPrefsVideoMode;
-	}
-
-	// Sync GcurSelVM with the user's current preference. The SCREENRES Select
-	// handler updates m_nPrefsVideoMode before calling us; the ScreenMode toggle
-	// handler leaves it unchanged. Either way, m_nPrefsVideoMode is the source
-	// of truth for the desired rw engine video mode.
-	if (FrontEndMenuManager.m_nPrefsVideoMode >= 0 &&
-	    FrontEndMenuManager.m_nPrefsVideoMode < RwEngineGetNumVideoModes()) {
-		GcurSelVM = FrontEndMenuManager.m_nPrefsVideoMode;
-	}
+	if(FrontEndMenuManager.m_nPrefsVideoMode < 0 ||
+	   FrontEndMenuManager.m_nPrefsVideoMode >= RwEngineGetNumVideoModes()) return false;
+	const RwInt32 videoMode = FrontEndMenuManager.m_nPrefsVideoMode;
 
 	// Build a RwVideoMode describing the desired size.
 	RwVideoMode vm;
-	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
-	// For windowed modes the actual framebuffer size is the user-selected
-	// m_nPrefsWidth / m_nPrefsHeight, not the fullscreen video mode.
-	if (FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN) {
-		vm.width  = FrontEndMenuManager.m_nPrefsWidth;
-		vm.height = FrontEndMenuManager.m_nPrefsHeight;
-	}
+	RwEngineGetVideoModeInfo(&vm, videoMode);
+	if(!ApplyGLFWWindowMode(vm)) return false;
+	GcurSelVM = videoMode;
+	FrontEndMenuManager.m_nPrefsWidth = vm.width;
+	FrontEndMenuManager.m_nPrefsHeight = vm.height;
+	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
 
-	ApplyGLFWWindowMode(vm);
 	FrontEndMenuManager.m_nSelectedScreenMode = FrontEndMenuManager.m_nPrefsWindowed;
 
 	if (!CGame::ShouldPreserveWindowPauseMusicMode())
@@ -1112,9 +1126,13 @@ psSelectDevice()
 	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 
 #ifdef IMPROVED_VIDEOMODE
-	if(FrontEndMenuManager.m_nPrefsWindowed) GcurSelVM = bestWndMode;
+	// Create a regular window first, even for fullscreen. Attaching an
+	// exclusive selected mode here would briefly change the desktop before
+	// psPostRWinit applies the native-size fullscreen window.
+	const RwInt32 engineVideoMode = bestWndMode;
 
-	// Now GcurSelVM is 0 but vm has sizes(and fullscreen flag) of the video mode we want, that's why we changed the rwVIDEOMODEEXCLUSIVE conditions below
+	// GcurSelVM keeps the user's render-resolution selection; the engine's
+	// non-exclusive mode is only responsible for creating the initial window.
 	FrontEndMenuManager.m_nPrefsWidth = vm.width;
 	FrontEndMenuManager.m_nPrefsHeight = vm.height;
 	FrontEndMenuManager.m_nPrefsDepth = vm.depth;
@@ -1130,7 +1148,11 @@ psSelectDevice()
 	glfwWindowHint(GLFW_DECORATED, FrontEndMenuManager.m_nPrefsWindowed == WINDOWMODE_WINDOWED ? GLFW_TRUE : GLFW_FALSE);
 	glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
 #endif
+#ifdef IMPROVED_VIDEOMODE
+	if(!RwEngineSetVideoMode(engineVideoMode)) { return FALSE; }
+#else
 	if(!RwEngineSetVideoMode(GcurSelVM)) { return FALSE; }
+#endif
 	/*
 	TODO
 	if (vm.flags & rwVIDEOMODEEXCLUSIVE)
@@ -1280,12 +1302,15 @@ _InputMouseNeedsExclusive()
 {
 	// That was the cause of infamous mouse bug on Win.
 
-	RwVideoMode vm;
-	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
-
 	// If windowed, free the cursor on menu(where this func. is called and DISABLED-HIDDEN transition is done accordingly)
 	// If it's fullscreen, be sure that it didn't stuck on HIDDEN.
+#ifdef IMPROVED_VIDEOMODE
+	return FrontEndMenuManager.m_nPrefsWindowed != WINDOWMODE_FULLSCREEN || lastCursorMode == GLFW_CURSOR_HIDDEN;
+#else
+	RwVideoMode vm;
+	RwEngineGetVideoModeInfo(&vm, GcurSelVM);
 	return !(vm.flags & rwVIDEOMODEEXCLUSIVE) || lastCursorMode == GLFW_CURSOR_HIDDEN;
+#endif
 }
 
 void
@@ -1588,30 +1613,32 @@ dummyHandler(int sig)
 void
 resizeCB(GLFWwindow *window, int width, int height)
 {
-	/*
-	 * Handle event to ensure window contents are displayed during re-size
-	 * as this can be disabled by the user, then if there is not enough
-	 * memory things don't work.
-	 */
-	/* redraw window */
-
-	if(RwInitialised && gGameState == GS_PLAYING_GAME) { RsEventHandler(rsIDLE, (void *)TRUE); }
-
-	if(RwInitialised && height > 0 && width > 0) {
-		RwRect r;
-
-		// TODO fix artifacts of resizing with mouse
-		RsGlobal.maximumHeight = height;
-		RsGlobal.maximumWidth = width;
-
-		r.x = 0;
-		r.y = 0;
-		r.w = width;
-		r.h = height;
-
-		RsEventHandler(rsCAMERASIZE, &r);
+	// The physical framebuffer may differ from the game's selected resolution
+	// (fullscreen scaling, HiDPI or a window-manager resize). Presentation tracks
+	// it in the renderer; it must not overwrite the camera size or render
+	// recursively while GLFW is dispatching native messages.
+#ifndef IMPROVED_VIDEOMODE
+	if(width > 0 && height > 0) {
+		PendingRenderWidth = width;
+		PendingRenderHeight = height;
 	}
-	//	glfwSetWindowPos(window, 0, 0);
+#endif
+}
+
+static void
+ApplyPendingRenderSize(void)
+{
+	if(!RwInitialised || PendingRenderWidth <= 0 || PendingRenderHeight <= 0) return;
+	RwRect r = {0, 0, PendingRenderWidth, PendingRenderHeight};
+	PendingRenderWidth = PendingRenderHeight = 0;
+	RsGlobal.maximumWidth = r.w;
+	RsGlobal.maximumHeight = r.h;
+	RsEventHandler(rsCAMERASIZE, &r);
+	if(FrontEndMenuManager.m_bMenuActive && PSGLOBAL(window) != nil) {
+		double x, y;
+		glfwGetCursorPos(PSGLOBAL(window), &x, &y);
+		cursorCB(PSGLOBAL(window), x, y);
+	}
 }
 
 void
@@ -2032,16 +2059,27 @@ _InputTranslateShiftKeyUpDown(RsKeyCodes *rs)
 	RsKeyboardEventHandler(rshiftStatus ? rsKEYDOWN : rsKEYUP, &(*rs = rsRSHIFT));
 }
 
-// TODO this only works in frontend(and luckily only frontend use this). Fun fact: if I get pos manually in game, glfw reports that it's > 32000
+// Only the frontend uses absolute cursor coordinates; gameplay uses relative motion.
 void
 cursorCB(GLFWwindow *window, double xpos, double ypos)
 {
 	if(!FrontEndMenuManager.m_bMenuActive) return;
 
 	int winw, winh;
-	glfwGetWindowSize(PSGLOBAL(window), &winw, &winh);
-	FrontEndMenuManager.m_nMouseTempPosX = xpos * (RsGlobal.maximumWidth / winw);
-	FrontEndMenuManager.m_nMouseTempPosY = ypos * (RsGlobal.maximumHeight / winh);
+	glfwGetWindowSize(window, &winw, &winh);
+	if(winw <= 0 || winh <= 0) return;
+	if(glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+		// Fullscreen menus may retain the game's unbounded virtual cursor.
+		// Bound that position too, so reversing at an edge responds immediately.
+		const double boundedX = Clamp(xpos, 0.0, (double)winw);
+		const double boundedY = Clamp(ypos, 0.0, (double)winh);
+		if(boundedX != xpos || boundedY != ypos)
+			glfwSetCursorPos(window, boundedX, boundedY);
+		xpos = boundedX;
+		ypos = boundedY;
+	}
+	FrontEndMenuManager.m_nMouseTempPosX = xpos * (double)RsGlobal.maximumWidth / winw;
+	FrontEndMenuManager.m_nMouseTempPosY = ypos * (double)RsGlobal.maximumHeight / winh;
 }
 
 void
@@ -2361,6 +2399,7 @@ main(int argc, char *argv[])
 #endif
 		{
 			glfwPollEvents();
+			ApplyPendingRenderSize();
 			// Callbacks above only latch raw state. Apply the transition here,
 			// outside GLFW's native message-dispatch stack.
 			psRefreshAndGetWindowMinimizedPause();

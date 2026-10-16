@@ -508,8 +508,25 @@ assert(natras->format == GL_RGBA);
 		px = (uint8*)rwMalloc(allocSz, MEMDUR_EVENT | ID_DRIVER);
 		assert(raster->pixels == nil);
 		raster->pixels = px;
+		{
+		GLint packAlignment;
+		glGetIntegerv(GL_PACK_ALIGNMENT, &packAlignment);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+#ifdef LIBRW_GLFW
+		GLint previousFramebuffer;
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFramebuffer);
+		uint32 framebuffer = getCameraReadFramebuffer();
+		bindFramebuffer(framebuffer);
+		glReadBuffer(framebuffer ? GL_COLOR_ATTACHMENT0 : GL_BACK);
+#else
 		glReadBuffer(GL_BACK);
+#endif
 		glReadPixels(0, 0, raster->width, raster->height, GL_RGB, GL_UNSIGNED_BYTE, px);
+		glPixelStorei(GL_PACK_ALIGNMENT, packAlignment);
+#ifdef LIBRW_GLFW
+		bindFramebuffer(previousFramebuffer);
+#endif
+		}
 
 		raster->privateFlags = lockMode;
 		break;

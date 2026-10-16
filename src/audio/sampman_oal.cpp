@@ -2,6 +2,7 @@
 
 #ifdef AUDIO_OAL
 #include <time.h>
+#include <string>
 
 #include "eax-util.h"
 #include "eax.h"
@@ -76,6 +77,9 @@ int usingEAX3 = 0;
 // int         speaker_type=0;
 ALCdevice *ALDevice = NULL;
 ALCcontext *ALContext = NULL;
+static ALCint deviceAttributes[16];
+static std::string lastDefaultDevice;
+static uint32 lastDeviceCheck;
 unsigned int _maxSamples;
 float _fPrevEaxRatioDestination;
 bool _effectsSupported = false;
@@ -256,7 +260,7 @@ set_new_provider(int index)
 		_usingEFX = false;
 
 		if(!strcmp(&providers[index].name[strlen(providers[index].name) - strlen(" EAX3")], " EAX3") &&
-		   alcIsExtensionPresent(ALDevice, (ALCchar *)ALC_EXT_EFX_NAME)) {
+		   IsFXSupported()) {
 
 			usingEAX = 1;
 			usingEAX3 = 1;
@@ -264,7 +268,7 @@ set_new_provider(int index)
 			EAX_SetAll(&FinishEAX3);
 
 			DEV("EAX3\n");
-		} else if(alcIsExtensionPresent(ALDevice, (ALCchar *)ALC_EXT_EFX_NAME)) {
+		} else if(IsFXSupported()) {
 
 			if(!strcmp(&providers[index].name[strlen(providers[index].name) - strlen(" EAX")], " EAX")) {
 				usingEAX = 1;
@@ -305,6 +309,126 @@ set_new_provider(int index)
 static bool8
 IsThisTrackAt16KHz(uint32 track)
 { return track == STREAMED_SOUND_RADIO_KCHAT || track == STREAMED_SOUND_RADIO_VCPR || track == STREAMED_SOUND_RADIO_POLICE; }
+
+static std::string
+GetDefaultAudioDevice()
+{
+	if(alcIsExtensionPresent(NULL, "ALC_ENUMERATE_ALL_EXT")) {
+		// Refresh the enumeration first: OpenAL Soft caches the default name.
+		alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+		const char *name = alcGetString(NULL, ALC_DEFAULT_ALL_DEVICES_SPECIFIER);
+		return name ? name : "";
+	}
+	const char *name = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER);
+	return name ? name : "";
+}
+
+static void
+CreateOpenALResources()
+{
+	alListenerf(AL_GAIN, 1.0f);
+	alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
+	alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
+	// OpenAL's canonical frame is forward -Z, up +Y (also used by HRTF).
+	const ALfloat orientation[6] = {0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f};
+	alListenerfv(AL_ORIENTATION, orientation);
+	alDistanceModel(AL_EXPONENT_DISTANCE_CLAMPED);
+
+	_effectsSupported = alcIsExtensionPresent(ALDevice, ALC_EXT_EFX_NAME) && providers[0].bSupportsFx;
+	ALEffect = AL_EFFECT_NULL;
+	ALEffectSlot = AL_EFFECTSLOT_NULL;
+	if(IsFXSupported()) {
+		alGenAuxiliaryEffectSlots(1, &ALEffectSlot);
+		alGenEffects(1, &ALEffect);
+	}
+
+	alGenSources(MAX_STREAMS * 2, ALStreamSources[0]);
+	for(int32 i = 0; i < MAX_STREAMS; i++) {
+		alGenBuffers(NUM_STREAMBUFFERS, ALStreamBuffers[i]);
+		for(int j = 0; j < 2; j++) {
+			alSourcei(ALStreamSources[i][j], AL_SOURCE_RELATIVE, AL_TRUE);
+			alSource3f(ALStreamSources[i][j], AL_POSITION, 0.0f, 0.0f, 0.0f);
+			alSourcef(ALStreamSources[i][j], AL_GAIN, 1.0f);
+		}
+	}
+	CChannel::InitChannels();
+	for(int32 i = 0; i < MAXCHANNELS; i++) aChannel[i].Init(i);
+	for(int32 i = 0; i < MAX2DCHANNELS; i++) aChannel[MAXCHANNELS + i].Init(MAXCHANNELS + i, true);
+	if(IsFXSupported()) {
+		alAuxiliaryEffectSloti(ALEffectSlot, AL_EFFECTSLOT_EFFECT, ALEffect);
+		for(int32 i = 0; i < MAXCHANNELS; i++) aChannel[i].SetReverbMix(ALEffectSlot, 0.0f);
+	}
+}
+
+static bool
+SwitchAudioDevice()
+{
+	// Modern OpenAL Soft can keep all sources, queued buffers and playback offsets.
+	typedef ALCboolean (ALC_APIENTRY *ReopenDeviceProc)(ALCdevice *, const ALCchar *, const ALCint *);
+	if(alcIsExtensionPresent(ALDevice, "ALC_SOFT_reopen_device")) {
+		ReopenDeviceProc reopenDevice = (ReopenDeviceProc)alcGetProcAddress(ALDevice, "alcReopenDeviceSOFT");
+		if(reopenDevice && reopenDevice(ALDevice, NULL, deviceAttributes)) return true;
+	}
+
+	// The bundled OpenAL 1.21 needs new resources. Open the replacement first so
+	// a transient Bluetooth connection failure leaves the current output usable.
+	ALCdevice *newDevice = alcOpenDevice(NULL);
+	if(!newDevice) return false;
+	ALCcontext *newContext = alcCreateContext(newDevice, deviceAttributes);
+	if(!newContext) {
+		alcCloseDevice(newDevice);
+		return false;
+	}
+	CStream::SuspendProcessing();
+	ALCdevice *oldDevice = ALDevice;
+	ALCcontext *oldContext = ALContext;
+	if(!alcMakeContextCurrent(newContext)) {
+		alcDestroyContext(newContext);
+		alcCloseDevice(newDevice);
+		CStream::ResumeProcessing();
+		return false;
+	}
+	alcMakeContextCurrent(oldContext);
+	for(int32 i = 0; i < MAX_STREAMS; i++) aStream[i]->ProviderTerm();
+	for(int32 i = 0; i < NUM_CHANNELS; i++) aChannel[i].ProviderTerm();
+	CChannel::DestroyChannels();
+	alDeleteSources(MAX_STREAMS * 2, ALStreamSources[0]);
+	for(int32 i = 0; i < MAX_STREAMS; i++) alDeleteBuffers(NUM_STREAMBUFFERS, ALStreamBuffers[i]);
+	if(IsFXSupported()) {
+		alDeleteAuxiliaryEffectSlots(1, &ALEffectSlot);
+		alDeleteEffects(1, &ALEffect);
+	}
+	alcMakeContextCurrent(newContext);
+	alcDestroyContext(oldContext);
+	alcCloseDevice(oldDevice);
+	ALDevice = newDevice;
+	ALContext = newContext;
+	CreateOpenALResources();
+	const int provider = curprovider;
+	curprovider = -1;
+	set_new_provider(provider);
+	for(int32 i = 0; i < NUM_CHANNELS; i++) aChannel[i].ProviderInit(ALEffectSlot);
+	for(int32 i = 0; i < MAX_STREAMS; i++) aStream[i]->ProviderInit();
+	CStream::ResumeProcessing();
+	return true;
+}
+
+static void
+ServiceAudioDevice()
+{
+	if(!ALDevice || !_bSampmanInitialised) return;
+	const uint32 now = CTimer::GetTimeInMillisecondsPauseMode();
+	if(now - lastDeviceCheck < 1000) return;
+	lastDeviceCheck = now;
+	const std::string defaultDevice = GetDefaultAudioDevice();
+	ALCint connected = ALC_TRUE;
+	if(alcIsExtensionPresent(ALDevice, "ALC_EXT_disconnect")) alcGetIntegerv(ALDevice, ALC_CONNECTED, 1, &connected);
+	if(connected && (defaultDevice.empty() || defaultDevice == lastDefaultDevice)) return;
+	if(SwitchAudioDevice()) {
+		lastDefaultDevice = defaultDevice;
+		DEV("OpenAL output switched to the system default device\n");
+	}
+}
 
 cSampleManager::cSampleManager(void) { ; }
 
@@ -769,14 +893,13 @@ cSampleManager::Initialise(void)
 
 		// Build attribute list dynamically so we can optionally include
 		// ALC_HRTF_SOFT if the runtime OpenAL supports it.
-		ALCint attr[16];
 		int attr_i = 0;
-		attr[attr_i++] = ALC_FREQUENCY;
-		attr[attr_i++] = MAX_FREQ;
-		attr[attr_i++] = ALC_MONO_SOURCES;
-		attr[attr_i++] = MAX_DIGITAL_MIXER_CHANNELS - MAX2DCHANNELS;
-		attr[attr_i++] = ALC_STEREO_SOURCES;
-		attr[attr_i++] = MAX2DCHANNELS;
+		deviceAttributes[attr_i++] = ALC_FREQUENCY;
+		deviceAttributes[attr_i++] = MAX_FREQ;
+		deviceAttributes[attr_i++] = ALC_MONO_SOURCES;
+		deviceAttributes[attr_i++] = MAX_DIGITAL_MIXER_CHANNELS - MAX2DCHANNELS;
+		deviceAttributes[attr_i++] = ALC_STEREO_SOURCES;
+		deviceAttributes[attr_i++] = MAX2DCHANNELS;
 
 		if(alcIsExtensionPresent(NULL, "ALC_SOFT_HRTF")) {
 			ALCint hrtfValue = ALC_DONT_CARE_SOFT; // Auto
@@ -784,15 +907,15 @@ cSampleManager::Initialise(void)
 				hrtfValue = ALC_TRUE;
 			else if(FrontEndMenuManager.m_PrefsHRTF == 2)
 				hrtfValue = ALC_FALSE;
-			attr[attr_i++] = ALC_HRTF_SOFT;
-			attr[attr_i++] = hrtfValue;
+			deviceAttributes[attr_i++] = ALC_HRTF_SOFT;
+			deviceAttributes[attr_i++] = hrtfValue;
 		}
-		attr[attr_i++] = 0; // terminator
+		deviceAttributes[attr_i++] = 0; // terminator
 
-		ALDevice = alcOpenDevice(providers[index].id);
+		ALDevice = alcOpenDevice(NULL);
 		ASSERT(ALDevice != NULL);
 
-		ALContext = alcCreateContext(ALDevice, attr);
+		ALContext = alcCreateContext(ALDevice, deviceAttributes);
 		ASSERT(ALContext != NULL);
 
 		alcMakeContextCurrent(ALContext);
@@ -804,47 +927,9 @@ cSampleManager::Initialise(void)
 			return FALSE;
 		}
 
-		alListenerf(AL_GAIN, 1.0f);
-		alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
-		alListener3f(AL_VELOCITY, 0.0f, 0.0f, 0.0f);
-		// OpenAL canonical: forward = -Z (into screen), up = +Y.
-		// This makes HRTF impulse-response tables apply correctly (they assume
-		// the canonical frame). The -fX sign in SetChannel3DPosition still
-		// compensates Camera.cpp:552 "mat.GetRight() actually stores LEFT".
-		ALfloat orientation[6] = {0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f};
-		alListenerfv(AL_ORIENTATION, orientation);
-
-		alDistanceModel(AL_EXPONENT_DISTANCE_CLAMPED);
-
-		if(alcIsExtensionPresent(ALDevice, (ALCchar *)ALC_EXT_EFX_NAME)) {
-			_effectsSupported = providers[index].bSupportsFx;
-			alGenAuxiliaryEffectSlots(1, &ALEffectSlot);
-			alGenEffects(1, &ALEffect);
-		}
-
-		alGenSources(MAX_STREAMS * 2, ALStreamSources[0]);
-		for(int32 i = 0; i < MAX_STREAMS; i++) {
-			alGenBuffers(NUM_STREAMBUFFERS, ALStreamBuffers[i]);
-			alSourcei(ALStreamSources[i][0], AL_SOURCE_RELATIVE, AL_TRUE);
-			alSource3f(ALStreamSources[i][0], AL_POSITION, 0.0f, 0.0f, 0.0f);
-			alSourcef(ALStreamSources[i][0], AL_GAIN, 1.0f);
-			alSourcei(ALStreamSources[i][1], AL_SOURCE_RELATIVE, AL_TRUE);
-			alSource3f(ALStreamSources[i][1], AL_POSITION, 0.0f, 0.0f, 0.0f);
-			alSourcef(ALStreamSources[i][1], AL_GAIN, 1.0f);
-		}
-
-		CChannel::InitChannels();
-
-		for(int32 i = 0; i < MAXCHANNELS; i++) aChannel[i].Init(i);
-		for(int32 i = 0; i < MAX2DCHANNELS; i++) aChannel[MAXCHANNELS + i].Init(MAXCHANNELS + i, true);
-
-		if(IsFXSupported()) {
-			/**/
-			alAuxiliaryEffectSloti(ALEffectSlot, AL_EFFECTSLOT_EFFECT, ALEffect);
-			/**/
-
-			for(int32 i = 0; i < MAXCHANNELS; i++) aChannel[i].SetReverbMix(ALEffectSlot, 0.0f);
-		}
+		CreateOpenALResources();
+		lastDefaultDevice = GetDefaultAudioDevice();
+		lastDeviceCheck = CTimer::GetTimeInMillisecondsPauseMode();
 	}
 
 	{
@@ -1826,6 +1911,7 @@ cSampleManager::IsStreamPlaying(uint8 nStream)
 void
 cSampleManager::Service(void)
 {
+	ServiceAudioDevice();
 	for(int32 i = 0; i < MAX_STREAMS; i++) {
 		CStream *stream = aStream[i];
 

@@ -32,6 +32,10 @@ extern bool32 isP8supported;
 extern Device renderdevice;
 
 #ifdef RW_D3D9
+// Render at this resolution and let Present scale to the client area. Zero
+// restores automatic sizing to the window; this does not change display modes.
+bool32 setWindowedRenderSize(uint32 width, uint32 height);
+
 #ifdef _D3D9_H_
 extern IDirect3DDevice9 *d3ddevice;
 void setD3dMaterial(D3DMATERIAL9 *mat9);
