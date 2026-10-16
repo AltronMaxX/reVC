@@ -77,7 +77,6 @@
 #include "main.h"
 #include "postfx.h"
 #include "screendroplets.h"
-#include "src/wgpu/wgpu_internal.h"
 #include "timebars.h"
 #ifdef USE_OUR_VERSIONING
 #include "GitSHA1.h"
