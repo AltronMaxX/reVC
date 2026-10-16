@@ -49,6 +49,9 @@
 #include "rwcore.h"
 #include "resource.h"
 #include "skeleton.h"
+#include "framepacing.h"
+#include "framewait.h"
+#include "windowssession.h"
 #include "platform.h"
 #include "crossplatform.h"
 
@@ -60,6 +63,7 @@ static RwBool		  WindowMinimized = FALSE;
 static RwBool		  WindowFocusLostLatch = FALSE;
 static RwBool		  WindowPlatformPaused = FALSE;
 static RwInt32		  WindowActivePollCount = 2;
+static RsFramePacer FramePacer;
 
 static RwBool		  RwInitialised = FALSE;
 static bool WindowModeChangeInProgress;
@@ -172,6 +176,7 @@ ApplyWindowMinimizedPause(RwBool paused)
 
 	WindowPlatformPaused = paused;
 	ForegroundApp = !paused;
+	FramePacer.Reset();
 	CTimer::SetWindowMinimizedPause(!!paused);
 
 	if (paused) {
@@ -401,56 +406,13 @@ psCameraShowRaster(RwCamera *camera)
 }
 
 static bool
-IsFrameReady(float maxFPS)
+IsFrameReady(int targetFPS)
 {
-	if (maxFPS <= 0.0f)
-		return true;
-
-	const double elapsed = (double)CTimer::GetCurrentTimeInCycles() / (double)CTimer::GetCyclesPerMillisecond();
-	const double remaining = 1000.0 / (double)maxFPS - elapsed;
+	const double remaining = FramePacer.RemainingSeconds(RsFramePacer::CurrentTimeSeconds(), targetFPS);
 	if (remaining <= 0.0)
 		return true;
 
-	// Yield between frames, but wake immediately for input or focus changes.
-	// Recheck those messages in the main loop before starting another frame.
-	struct MenuFrameTimer {
-		HANDLE handle;
-		MenuFrameTimer() : handle(nil)
-		{
-			typedef HANDLE (WINAPI *CreateTimerFn)(LPSECURITY_ATTRIBUTES, LPCWSTR, DWORD, DWORD);
-			CreateTimerFn createTimer = (CreateTimerFn)GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "CreateWaitableTimerExW");
-			if (createTimer)
-				// CREATE_WAITABLE_TIMER_HIGH_RESOLUTION (Windows 10 1803+).
-				handle = createTimer(nil, nil, 0x00000002, SYNCHRONIZE | TIMER_MODIFY_STATE);
-		}
-		~MenuFrameTimer()
-		{
-			if (handle) {
-				CancelWaitableTimer(handle);
-				CloseHandle(handle);
-			}
-		}
-	};
-	static MenuFrameTimer timer;
-	if (timer.handle) {
-		LARGE_INTEGER dueTime;
-		dueTime.QuadPart = -(LONGLONG)ceil(remaining * 10000.0);
-		if (SetWaitableTimer(timer.handle, &dueTime, 0, nil, nil, FALSE)) {
-			DWORD result = MsgWaitForMultipleObjectsEx(1, &timer.handle, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
-			CancelWaitableTimer(timer.handle);
-			if (result != WAIT_FAILED)
-				return false;
-		}
-	}
-
-	// Older Windows versions lack high-resolution waitable timers. Request a
-	// finer timeout only for this wait, and release it before returning.
-	const DWORD waitMs = (DWORD)ceil(remaining);
-	const bool raisedTimerResolution = timeBeginPeriod(1) == TIMERR_NOERROR;
-	if (MsgWaitForMultipleObjectsEx(0, nil, waitMs, QS_ALLINPUT, MWMO_INPUTAVAILABLE) == WAIT_FAILED)
-		Sleep(waitMs);
-	if (raisedTimerResolution)
-		timeEndPeriod(1);
+	RsWaitForFrameWin32(remaining);
 	return false;
 }
 
@@ -1216,6 +1178,10 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		case WM_SYSCOMMAND:
 		{
+			// Keep this active game window awake without changing the desktop's
+			// screensaver/power policy (and broadcasting changes to other apps).
+			if (((wParam & 0xFFF0) == SC_SCREENSAVE || (wParam & 0xFFF0) == SC_MONITORPOWER) && IsWindowActuallyActive())
+				return 0L;
 			if ((wParam & 0xFFF0) == SC_KEYMENU && lParam == 0)
 				return 0L;
 			break;
@@ -2355,7 +2321,6 @@ WinMain(HINSTANCE instance,
 	RwV2d pos;
 	RwInt32 argc, i;
 	RwChar **argv;
-	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, nil, SPIF_SENDCHANGE);
 
 #ifndef MASTER
 	if (strstr(cmdLine, "-console"))
@@ -2474,21 +2439,7 @@ WinMain(HINSTANCE instance,
 		RsEventHandler(rsCAMERASIZE, &r);
 	}
 	
-	SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, FALSE, nil, SPIF_SENDCHANGE);
-	
-
-	STICKYKEYS SavedStickyKeys;
-	SavedStickyKeys.cbSize = sizeof(STICKYKEYS);
-	
-	SystemParametersInfo(SPI_GETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
-	
-	STICKYKEYS NewStickyKeys;
-	NewStickyKeys.cbSize = sizeof(STICKYKEYS);
-	NewStickyKeys.dwFlags = SKF_TWOKEYSOFF;
-	
-	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &NewStickyKeys, SPIF_SENDCHANGE);
+	RsWindowsSession windowsSession;
 	
 
 	/*
@@ -2562,6 +2513,7 @@ WinMain(HINSTANCE instance,
 	while ( TRUE )
 	{
 		RwInitialised = TRUE;
+		FramePacer.Reset();
 		
 		/* 
 		* Set the initial mouse position...
@@ -2766,7 +2718,8 @@ WinMain(HINSTANCE instance,
 					
 					case GS_FRONTEND:
 					{
-						if (!IsFrameReady(60.0f))
+						if (!IsFrameReady(RsFramePacer::GetTargetFPS(FrontEndMenuManager.m_PrefsFrameLimiter,
+						                                               RsGlobal.maxFPS, true)))
 							break;
 
 						GetWindowPlacement(PSGLOBAL(window), &wp);
@@ -2843,16 +2796,10 @@ WinMain(HINSTANCE instance,
 					{
 						if ( RwInitialised )
 						{
-							if (FrontEndMenuManager.m_bMenuActive || CGame::IsWindowPauseMenuActive()) {
-								float maxFPS = FrontEndMenuManager.m_PrefsFrameLimiter ? (float)RsGlobal.maxFPS : 0.0f;
-								maxFPS = maxFPS > 0.0f ? Min(maxFPS, 60.0f) : 60.0f;
-								if (IsFrameReady(maxFPS))
-									RsEventHandler(rsIDLE, (void *)TRUE);
-							} else {
-								float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
-								if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
-									RsEventHandler(rsIDLE, (void *)TRUE);
-							}
+							const int targetFPS = RsFramePacer::GetTargetFPS(FrontEndMenuManager.m_PrefsFrameLimiter,
+							    RsGlobal.maxFPS, FrontEndMenuManager.m_bMenuActive || CGame::IsWindowPauseMenuActive());
+							if (IsFrameReady(targetFPS))
+								RsEventHandler(rsIDLE, (void *)TRUE);
 						}
 						break;
 					}
@@ -2987,11 +2934,6 @@ WinMain(HINSTANCE instance,
 	
 	ShowCursor(TRUE);
 	
-	SystemParametersInfo(SPI_SETSTICKYKEYS, sizeof(STICKYKEYS), &SavedStickyKeys, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETPOWEROFFACTIVE, TRUE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETLOWPOWERACTIVE, TRUE, nil, SPIF_SENDCHANGE);
-	SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, TRUE, nil, SPIF_SENDCHANGE);
-
 	SetErrorMode(0);
 
 	return message.wParam;

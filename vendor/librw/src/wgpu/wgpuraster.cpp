@@ -15,6 +15,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <thread>
 
 #include "wgpu_internal.h"
 
@@ -338,30 +339,55 @@ namespace rw
             struct UD
             {
                 std::atomic<bool> done{false};
-            } ud;
+                std::atomic<unsigned> references{2}; // caller and map callback
+                WGPUMapAsyncStatus status = WGPUMapAsyncStatus_Error;
+
+                void release()
+                {
+                    if (references.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                        delete this;
+                }
+            };
+            // Map callbacks can run after a timeout (including cancellation).
+            // Their userdata must outlive this stack frame until they return.
+            UD* ud = new UD;
             auto cb = [](WGPUMapAsyncStatus s, WGPUStringView msg, void* u1, void* u2)
             {
-                (void)s;
                 (void)msg;
-                ((UD*)u1)->done.store(true, std::memory_order_release);
+                (void)u2;
+                UD* state = (UD*)u1;
+                state->status = s;
+                state->done.store(true, std::memory_order_release);
+                state->release();
             };
             WGPUBufferMapCallbackInfo ci = {};
             ci.mode = WGPUCallbackMode_AllowSpontaneous;
             ci.callback = cb;
-            ci.userdata1 = &ud;
+            ci.userdata1 = ud;
             wgpuBufferMapAsync(buf, WGPUMapMode_Read, 0, size, ci);
             auto t0 = std::chrono::steady_clock::now();
-            while (!ud.done.load(std::memory_order_acquire))
+            while (!ud->done.load(std::memory_order_acquire))
             {
+                // Native backends need device polling to retire submissions and
+                // deliver map callbacks. Poll without a blocking device wait.
+                wgpuDevicePoll(wgpuGlobals.device, false, nullptr);
                 wgpuInstanceProcessEvents(wgpuGlobals.instance);
+                if (ud->done.load(std::memory_order_acquire)) break;
                 if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(15))
                 {
                     fprintf(stderr, "[wgpu] mapBufferSync: no answer after 15s (driver hang?) — giving up\n");
+                    wgpuBufferUnmap(buf); // cancel a map that has not completed
+                    ud->release();
                     return nullptr;
                 }
+                // A stalled driver must not spin a CPU core for the whole timeout.
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
-            const WGPUBufferMapState mapState = wgpuBufferGetMapState(buf);
-            if (mapState != WGPUBufferMapState_Mapped) return nullptr;
+            const bool succeeded = ud->status == WGPUMapAsyncStatus_Success;
+            ud->release();
+            if (!succeeded) return nullptr;
+            // Success already guarantees mapped storage. Some supported native
+            // releases do not implement the optional map-state query.
             return (uint8_t*)wgpuBufferGetMappedRange(buf, 0, size);
         }
 
@@ -765,6 +791,14 @@ namespace rw
             Image* img = Image::create(w, h, depth);
             if (!img)
             {
+                wgpuBufferUnmap(staging);
+                wgpuBufferRelease(staging);
+                return nullptr;
+            }
+            img->allocate();
+            if (!img->pixels)
+            {
+                img->destroy();
                 wgpuBufferUnmap(staging);
                 wgpuBufferRelease(staging);
                 return nullptr;
