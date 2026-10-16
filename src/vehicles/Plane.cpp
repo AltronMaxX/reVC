@@ -151,127 +151,135 @@ CPlane::ProcessControl(void)
 		CPlaneBanners::RegisterPoint(GetPosition(), m_nPlaneId);
 
 	// Explosion
-	if(m_bHasBeenHit){
-		// BUG: since this is all based on frames, you can skip the explosion processing when you go into the menu
-		if(GetModelIndex() == MI_AIRTRAIN){
-			int frm = CTimer::GetFrameCounter() - m_nFrameWhenHit;
-			if(frm == 20){
-				static int nFrameGen;
-				CRGBA colors[8];
+	if(m_bHasBeenHit) {
+#ifdef FIX_HIGH_FPS_BUGS
+		// step through every 30 fps frame of game time, so none of the explosion stages is skipped or repeated
+		for(uint32 simFramesLeft = CTimer::GetSimFramesPassed(); simFramesLeft > 0; simFramesLeft--){
+			uint32 frameCounter = CTimer::GetSimFrameCounter() - (simFramesLeft - 1);
+#else
+		{
+			uint32 frameCounter = CTimer::GetFrameCounter();
+#endif
+			// BUG: since this is all based on frames, you can skip the explosion processing when you go into the menu
+			if(GetModelIndex() == MI_AIRTRAIN){
+				int frm = frameCounter - m_nFrameWhenHit;
+				if(frm == 20){
+					static int nFrameGen;
+					CRGBA colors[8];
 
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
+					CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
 
-				colors[0] = CRGBA(0, 0, 0, 255);
-				colors[1] = CRGBA(224, 230, 238, 255);
-				colors[2] = CRGBA(224, 230, 238, 255);
-				colors[3] = CRGBA(0, 0, 0, 255);
-				colors[4] = CRGBA(224, 230, 238, 255);
-				colors[5] = CRGBA(0, 0, 0, 255);
-				colors[6] = CRGBA(0, 0, 0, 255);
-				colors[7] = CRGBA(224, 230, 238, 255);
+					colors[0] = CRGBA(0, 0, 0, 255);
+					colors[1] = CRGBA(224, 230, 238, 255);
+					colors[2] = CRGBA(224, 230, 238, 255);
+					colors[3] = CRGBA(0, 0, 0, 255);
+					colors[4] = CRGBA(224, 230, 238, 255);
+					colors[5] = CRGBA(0, 0, 0, 255);
+					colors[6] = CRGBA(0, 0, 0, 255);
+					colors[7] = CRGBA(224, 230, 238, 255);
 
-				CVector dir;
-				for(i = 0; i < 40; i++){
-					dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
-					int rotSpeed = CGeneral::GetRandomNumberInRange(10, 30);
-					if(CGeneral::GetRandomNumber() & 1)
-						rotSpeed = -rotSpeed;
-					int f = ++nFrameGen & 3;
-					CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
-						nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
-						colors[nFrameGen&7], rotSpeed, 0, f, 0);
+					CVector dir;
+					for(i = 0; i < 40; i++){
+						dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
+						dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
+						dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
+						int rotSpeed = CGeneral::GetRandomNumberInRange(10, 30);
+						if(CGeneral::GetRandomNumber() & 1)
+							rotSpeed = -rotSpeed;
+						int f = ++nFrameGen & 3;
+						CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
+							nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
+							colors[nFrameGen&7], rotSpeed, 0, f, 0);
+					}
 				}
-			}
-			if(frm >= 40 && frm <= 80 && frm & 1){
-				if(frm & 1){
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.y = frm - 40;
-					pos = GetMatrix() * pos;
-				}else{
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.y = 40 - frm;
-					pos = GetMatrix() * pos;
+				if(frm >= 40 && frm <= 80 && frm & 1){
+					if(frm & 1){
+						pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+						pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+						pos.y = frm - 40;
+						pos = GetMatrix() * pos;
+					}else{
+						pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+						pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+						pos.y = 40 - frm;
+						pos = GetMatrix() * pos;
+					}
+					CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
 				}
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
-			}
-			if(frm == 60)
-				bRenderScorched = true;
-			if(frm == 82){
-				TheCamera.SetFadeColour(255, 255, 255);
-				TheCamera.Fade(0.0f, FADE_OUT);
-				TheCamera.ProcessFade();
-				TheCamera.Fade(1.0f, FADE_IN);
-				FlagToDestroyWhenNextProcessed();
-			}
-		}else{
-			int frm = CTimer::GetFrameCounter() - m_nFrameWhenHit;
-			if(frm == 20){
-				static int nFrameGen;
-				CRGBA colors[8];
+				if(frm == 60)
+					bRenderScorched = true;
+				if(frm == 82){
+					TheCamera.SetFadeColour(255, 255, 255);
+					TheCamera.Fade(0.0f, FADE_OUT);
+					TheCamera.ProcessFade();
+					TheCamera.Fade(1.0f, FADE_IN);
+					FlagToDestroyWhenNextProcessed();
+				}
+			}else{
+				int frm = frameCounter - m_nFrameWhenHit;
+				if(frm == 20){
+					static int nFrameGen;
+					CRGBA colors[8];
 
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
+					CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
 
-				colors[0] = CRGBA(0, 0, 0, 255);
-				colors[1] = CRGBA(224, 230, 238, 255);
-				colors[2] = CRGBA(224, 230, 238, 255);
-				colors[3] = CRGBA(0, 0, 0, 255);
-				colors[4] = CRGBA(252, 66, 66, 255);
-				colors[5] = CRGBA(0, 0, 0, 255);
-				colors[6] = CRGBA(0, 0, 0, 255);
-				colors[7] = CRGBA(252, 66, 66, 255);
+					colors[0] = CRGBA(0, 0, 0, 255);
+					colors[1] = CRGBA(224, 230, 238, 255);
+					colors[2] = CRGBA(224, 230, 238, 255);
+					colors[3] = CRGBA(0, 0, 0, 255);
+					colors[4] = CRGBA(252, 66, 66, 255);
+					colors[5] = CRGBA(0, 0, 0, 255);
+					colors[6] = CRGBA(0, 0, 0, 255);
+					colors[7] = CRGBA(252, 66, 66, 255);
 
-				CVector dir;
-				for(i = 0; i < 40; i++){
-					dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
-					int rotSpeed = CGeneral::GetRandomNumberInRange(30.0f, 20.0f);
-					if(CGeneral::GetRandomNumber() & 1)
-						rotSpeed = -rotSpeed;
-					int f = ++nFrameGen & 3;
-					CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
-						nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
-						colors[nFrameGen&7], rotSpeed, 0, f, 0);
+					CVector dir;
+					for(i = 0; i < 40; i++){
+						dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
+						dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
+						dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
+						int rotSpeed = CGeneral::GetRandomNumberInRange(30.0f, 20.0f);
+						if(CGeneral::GetRandomNumber() & 1)
+							rotSpeed = -rotSpeed;
+						int f = ++nFrameGen & 3;
+						CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
+							nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
+							colors[nFrameGen&7], rotSpeed, 0, f, 0);
+					}
 				}
-			}
-			if(frm >= 40 && frm <= 60 && frm & 1){
-				if(frm & 1){
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.y = (frm - 40)*0.3f;
-					pos = GetMatrix() * pos;
-				}else{
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.y = (40 - frm)*0.3f;
-					pos = GetMatrix() * pos;
+				if(frm >= 40 && frm <= 60 && frm & 1){
+					if(frm & 1){
+						pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+						pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+						pos.y = (frm - 40)*0.3f;
+						pos = GetMatrix() * pos;
+					}else{
+						pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+						pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+						pos.y = (40 - frm)*0.3f;
+						pos = GetMatrix() * pos;
+					}
+					CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
 				}
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
-			}
-			if(frm == 30)
-				bRenderScorched = true;
-			if(frm == 62){
-				TheCamera.SetFadeColour(200, 200, 200);
-				TheCamera.Fade(0.0f, FADE_OUT);
-				TheCamera.ProcessFade();
-				TheCamera.Fade(1.0f, FADE_IN);
-				if(m_bIsDrugRunCesna){
-					CesnaMissionStatus = CESNA_STATUS_DESTROYED;
-					pDrugRunCesna = nil;
+				if(frm == 30)
+					bRenderScorched = true;
+				if(frm == 62){
+					TheCamera.SetFadeColour(200, 200, 200);
+					TheCamera.Fade(0.0f, FADE_OUT);
+					TheCamera.ProcessFade();
+					TheCamera.Fade(1.0f, FADE_IN);
+					if(m_bIsDrugRunCesna){
+						CesnaMissionStatus = CESNA_STATUS_DESTROYED;
+						pDrugRunCesna = nil;
+					}
+					if(m_bIsDropOffCesna){
+						DropOffCesnaMissionStatus = CESNA_STATUS_DESTROYED;
+						pDropOffCesna = nil;
+					}
+					FlagToDestroyWhenNextProcessed();
 				}
-				if(m_bIsDropOffCesna){
-					DropOffCesnaMissionStatus = CESNA_STATUS_DESTROYED;
-					pDropOffCesna = nil;
-				}
-				FlagToDestroyWhenNextProcessed();
 			}
 		}
 	}
-
 	// Update plane position and speed
 	if(GetModelIndex() == MI_AIRTRAIN || !m_isFarAway || ((CTimer::GetFrameCounter() + m_randomSeed) & 7) == 0){
 		if(GetModelIndex() == MI_AIRTRAIN){
@@ -992,7 +1000,11 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 		   plane->GetModelIndex() != MI_AIRTRAIN && plane->GetModelIndex() == MI_DEADDODO &&	// strange check
 #endif
 		   !plane->m_bHasBeenHit && (*rocketPos - plane->GetPosition()).Magnitude() < 25.0f){
+#ifdef FIX_HIGH_FPS_BUGS
+			plane->m_nFrameWhenHit = CTimer::GetSimFrameCounter();
+#else
 			plane->m_nFrameWhenHit = CTimer::GetFrameCounter();
+#endif
 			plane->m_bHasBeenHit = true;
 			CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted->RegisterCrime_Immediately(CRIME_DESTROYED_CESSNA,
 				plane->GetPosition(), i+1983, false);

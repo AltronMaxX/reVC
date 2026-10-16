@@ -2542,7 +2542,7 @@ void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;
 	center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) : z;
-	CShadows::RenderIndicatorShadow(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
+	SCRIPT_DRAW(CShadows, RenderIndicatorShadow)(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
 }
 
 void CTheScripts::HighlightImportantAngledArea(uint32 id, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float z)
@@ -2574,7 +2574,7 @@ void CTheScripts::HighlightImportantAngledArea(uint32 id, float x1, float y1, fl
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;
 	center.z = (z <= MAP_Z_LOW_LIMIT) ? CWorld::FindGroundZForCoord(center.x, center.y) : z;
-	CShadows::RenderIndicatorShadow(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
+	SCRIPT_DRAW(CShadows, RenderIndicatorShadow)(id, 2, gpGoalTex, &center, supX - center.x, 0.0f, 0.0f, center.y - supY, 0);
 }
 
 #ifdef GTA_SCRIPT_COLLECTIVE

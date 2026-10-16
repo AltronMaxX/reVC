@@ -583,12 +583,23 @@ CAutomobile::ProcessControl(void)
 		m_vecMoveSpeedAvg = (m_vecMoveSpeedAvg + m_vecMoveSpeed)/2.0f;
 		m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
 
-		if(m_vecMoveSpeedAvg.MagnitudeSqr() <= sq(moveSpeedLimit*CTimer::GetTimeStep()) &&
-		   m_vecTurnSpeedAvg.MagnitudeSqr() <= sq(turnSpeedLimit*CTimer::GetTimeStep()) &&
+#ifdef FIX_HIGH_FPS_BUGS
+		// the limits are per frame distances, don't make them stricter above 30 fps
+		float staticStep = Max(CTimer::GetTimeStep(), CTimer::GetDefaultTimeStep());
+		distanceLimit *= Min(CTimer::GetTimeStepFix(), 1.0f);
+#else
+		float staticStep = CTimer::GetTimeStep();
+#endif
+		if(m_vecMoveSpeedAvg.MagnitudeSqr() <= sq(moveSpeedLimit*staticStep) &&
+		   m_vecTurnSpeedAvg.MagnitudeSqr() <= sq(turnSpeedLimit*staticStep) &&
 		   m_fDistanceTravelled < distanceLimit &&
 		   !(m_fDamageImpulse > 0.0f && m_pDamageEntity && m_pDamageEntity->IsPed()) ||
 		   makeStatic){
+#ifdef FIX_HIGH_FPS_BUGS
+			m_nStaticFrames += CTimer::GetSimFramesPassed();
+#else
 			m_nStaticFrames++;
+#endif
 
 			if(m_nStaticFrames > 10 || makeStatic)
 				if(!CCarCtrl::MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
@@ -856,7 +867,12 @@ CAutomobile::ProcessControl(void)
 
 			if((m_aSuspensionSpringRatio[0] < 1.0f || m_aSuspensionSpringRatio[2] < 1.0f) &&
 			   (m_aSuspensionSpringRatio[1] < 1.0f || m_aSuspensionSpringRatio[3] < 1.0f))
+#ifdef FIX_HIGH_FPS_BUGS
+				// applied every frame while changing gear, so it's a force and needs the time step
+				ApplyTurnForce(-GRAVITY*Min(m_fTurnMass, 2500.0f)*CTimer::GetTimeStepFix()*GetUp(), -1.0f*GetForward());
+#else
 				ApplyTurnForce(-GRAVITY*Min(m_fTurnMass, 2500.0f)*GetUp(), -1.0f*GetForward());
+#endif
 		}
 
 		brake = m_fBrakePedal * pHandling->fBrakeDeceleration * CTimer::GetTimeStep();
@@ -1029,7 +1045,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_FRONT_LEFT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_FRONT_LEFT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_FRONT_LEFT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_FRONT_LEFT] += m_aWheelSpeed[CARWHEEL_FRONT_LEFT];
 			}
@@ -1043,7 +1063,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_FRONT_RIGHT] += m_aWheelSpeed[CARWHEEL_FRONT_RIGHT];
 			}
@@ -1074,7 +1098,11 @@ CAutomobile::ProcessControl(void)
 				rearBrake = 0.0f;
 				rearTraction = 0.0f;
 				// BUG: missing timestep
+#ifdef FIX_HIGH_FPS_BUGS
+				ApplyTurnForce(contactPoints[CARWHEEL_REAR_LEFT], -0.001f*m_fTurnMass*m_fSteerAngle*CTimer::GetTimeStepFix()*GetRight());
+#else
 				ApplyTurnForce(contactPoints[CARWHEEL_REAR_LEFT], -0.001f*m_fTurnMass*m_fSteerAngle*GetRight());
+#endif
 			}else if(m_fTireTemperature > 1.0f){
 				rearTraction *= m_fTireTemperature;
 			}
@@ -1188,7 +1216,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_REAR_LEFT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_REAR_LEFT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_REAR_LEFT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_REAR_LEFT] += m_aWheelSpeed[CARWHEEL_REAR_LEFT];
 			}
@@ -1204,7 +1236,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_REAR_RIGHT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_REAR_RIGHT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_REAR_RIGHT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_REAR_RIGHT] += m_aWheelSpeed[CARWHEEL_REAR_RIGHT];
 			}
@@ -1319,7 +1355,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_FRONT_LEFT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_FRONT_LEFT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_FRONT_LEFT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_FRONT_LEFT] += m_aWheelSpeed[CARWHEEL_FRONT_LEFT];
 			}
@@ -1333,7 +1373,11 @@ CAutomobile::ProcessControl(void)
 							m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] += 0.1f;
 					}
 				}else{
+#ifdef FIX_HIGH_FPS_BUGS
+					m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 					m_aWheelSpeed[CARWHEEL_FRONT_RIGHT] *= 0.95f;
+#endif
 				}
 				m_aWheelRotation[CARWHEEL_FRONT_RIGHT] += m_aWheelSpeed[CARWHEEL_FRONT_RIGHT];
 			}
@@ -1347,7 +1391,11 @@ CAutomobile::ProcessControl(void)
 			if(GetModelIndex() == MI_VOODOO && bUsingSpecialColModel)
 				m_aWheelPosition[i] = wheelPos;
 			else
+#ifdef FIX_HIGH_FPS_BUGS
+				m_aWheelPosition[i] += (wheelPos - m_aWheelPosition[i])*CTimer::ScaleFrameLerp(0.75f);
+#else
 				m_aWheelPosition[i] += (wheelPos - m_aWheelPosition[i])*0.75f;
+#endif
 		}
 		for(i = 0; i < 4; i++)
 			m_aWheelState[i] = WheelState[i];
@@ -1372,7 +1420,12 @@ CAutomobile::ProcessControl(void)
 					else
 						m_nCarHornTimer = 0;
 				}else if(Pads[0].bHornHistory[(Pads[0].iCurrHornHistory+CPad::HORNHISTORY_SIZE-1) % CPad::HORNHISTORY_SIZE] &&
-				         !Pads[0].bHornHistory[(Pads[0].iCurrHornHistory+1) % CPad::HORNHISTORY_SIZE]){
+				!Pads[0].bHornHistory[(Pads[0].iCurrHornHistory+1) % CPad::HORNHISTORY_SIZE]
+#ifdef FIX_HIGH_FPS_BUGS
+				 // the horn history only moves on once per 30 fps frame, don't toggle again until it does
+				 && CTimer::GetLogicalFramesPassed() != 0
+#endif
+				 ){
 					m_nCarHornTimer = 0;
 					m_bSirenOrAlarm = !m_bSirenOrAlarm;
 				}else
@@ -1397,7 +1450,11 @@ CAutomobile::ProcessControl(void)
 		if(GetStatus() != STATUS_PLAYER && GetStatus() != STATUS_PLAYER_REMOTE && GetStatus() != STATUS_PHYSICS){
 			if(IsRealHeli()){
 				bEngineOn = false;
+#ifdef FIX_HIGH_FPS_BUGS
+				m_aWheelSpeed[1] = Max(m_aWheelSpeed[1]-0.0005f*CTimer::GetTimeStepFix(), 0.0f);
+#else
 				m_aWheelSpeed[1] = Max(m_aWheelSpeed[1]-0.0005f, 0.0f);
+#endif
 				if(GetModelIndex() != MI_RCRAIDER && GetModelIndex() != MI_RCGOBLIN)
 					if(m_aWheelSpeed[1] < 0.154f && m_aWheelSpeed[1] > 0.0044f)
 						playRotorSound = true;
@@ -1418,10 +1475,18 @@ CAutomobile::ProcessControl(void)
 			{
 				// Speed up rotor
 				if (m_aWheelSpeed[1] < 0.22f && !bIsInWater) {
+#ifdef FIX_HIGH_FPS_BUGS
+					// rotor has to reach 0.15 before the heli can take off
+					if (GetModelIndex() == MI_RCRAIDER || GetModelIndex() == MI_RCGOBLIN)
+						m_aWheelSpeed[1] += 0.003f*CTimer::GetTimeStepFix();
+					else
+						m_aWheelSpeed[1] += 0.001f*CTimer::GetTimeStepFix();
+#else
 					if (GetModelIndex() == MI_RCRAIDER || GetModelIndex() == MI_RCGOBLIN)
 						m_aWheelSpeed[1] += 0.003f;
 					else
 						m_aWheelSpeed[1] += 0.001f;
+#endif
 				}
 
 				// Fly
@@ -1556,6 +1621,7 @@ CAutomobile::ProcessControl(void)
 
 	if(m_fHealth < 250.0f && GetStatus() != STATUS_WRECKED){
 		// Car is on fire
+		CONTINUOUS_PARTICLE_EMITTER;
 
 		CParticle::AddParticle(PARTICLE_CARFLAME, damagePos,
 			CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.01125f, 0.09f)),
@@ -1578,7 +1644,11 @@ CAutomobile::ProcessControl(void)
 
 	// Decrease car health if engine is damaged badly
 	if(engineStatus > ENGINE_STATUS_ON_FIRE && m_fHealth > 250.0f)
+#ifdef FIX_HIGH_FPS_BUGS
+		m_fHealth -= 2.0f*CTimer::GetTimeStepFix();
+#else
 		m_fHealth -= 2.0f;
+#endif
 
 	ProcessDelayedExplosion();
 
@@ -1709,6 +1779,7 @@ CAutomobile::ProcessControl(void)
 	}
 
 	if(IsRealHeli() && bHeliDestroyed && !bRenderScorched){
+		CONTINUOUS_PARTICLE_EMITTER;
 		ApplyMoveForce(0.0f, 0.0f, -2.0f*CTimer::GetTimeStep());
 		m_vecTurnSpeed.z += -0.002f*CTimer::GetTimeStep();
 		m_vecTurnSpeed.x += -0.0002f*CTimer::GetTimeStep();
@@ -1746,6 +1817,7 @@ CAutomobile::Teleport(CVector pos)
 void
 CAutomobile::PreRender(void)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	int i, j, n;
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
 
@@ -3515,10 +3587,20 @@ CAutomobile::HydraulicControl(void)
 			m_hydraulicState = 20;
 			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
 			setPrevRatio = true;
-		}else{
+		}else
+#ifdef FIX_HIGH_FPS_BUGS
+			// the state counts 30 fps frames
+				if(CTimer::GetSimFramesPassed() != 0)
+#endif
+				{
 			m_hydraulicState++;
 		}
 	}else if(m_hydraulicState != 0){	// must always be true
+		if(m_hydraulicState < 21 && m_fVelocityChangeForAudio < 0.1f
+#ifdef FIX_HIGH_FPS_BUGS
+		   && CTimer::GetSimFramesPassed() != 0
+#endif
+		   )
 		if(m_hydraulicState < 21 && m_fVelocityChangeForAudio < 0.1f){
 			m_hydraulicState--;
 			if(m_hydraulicState == 0)
@@ -3638,7 +3720,11 @@ CAutomobile::HydraulicControl(void)
 				}
 			}
 		}else{
-			if(m_hydraulicState < 104)
+			if(m_hydraulicState < 104
+#ifdef FIX_HIGH_FPS_BUGS
+			   && CTimer::GetSimFramesPassed() != 0
+#endif
+			   )
 				m_hydraulicState++;
 
 			if(m_fVelocityChangeForAudio < 0.1f){
@@ -5272,10 +5358,16 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 											DMAudio.PlayOneShot(car->m_audioEntityId, SOUND_SPLATTER, 0.0f);
 										}
 										if (car->m_fMass > 500.f) {
-											car->ApplyMoveForce(CVector(0.0f, 0.0f, 50.0f * Min(1.0f, m_fMass * 0.001f)));
+#ifdef FIX_HIGH_FPS_BUGS
+											// applied every frame while the wheel is under the tank
+											float step = CTimer::GetTimeStepFix();
+#else
+											float step = 1.0f;
+#endif
+											car->ApplyMoveForce(CVector(0.0f, 0.0f, 50.0f * Min(1.0f, m_fMass * 0.001f) * step));
 
 											CVector vehAndWheelDist = wheelPos - car->GetPosition();
-											car->ApplyTurnForce(CVector(0.0f, 0.0f, 50.0f * Min(1.0f, m_fTurnMass * 0.0005f)), vehAndWheelDist);
+											car->ApplyTurnForce(CVector(0.0f, 0.0f, 50.0f * Min(1.0f, m_fTurnMass * 0.0005f) * step), vehAndWheelDist);
 											if (car == FindPlayerVehicle()) {
 #ifdef IMPROVED_MENU_AND_INPUT
 												CPad::GetPad(0)->StartShake(300, 0, 70);

@@ -145,7 +145,12 @@ CObject::ProcessControl(void)
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	}
 	if (mi == MI_RCBOMB) {
+#ifdef FIX_HIGH_FPS_BUGS
+		// turns the bomb into its direction of travel every frame, needs the time step
+		float fTurnForce = -(m_fTurnMass / 20.0f) * CTimer::GetTimeStepFix();
+#else
 		float fTurnForce = -(m_fTurnMass / 20.0f);
+#endif
 		CPhysical::ApplyTurnForce(m_vecMoveSpeed * fTurnForce, -GetForward());
 		float fScalar = 1.0f - m_vecMoveSpeed.MagnitudeSqr() / 5.0f;
 		float fScalarTimed = Pow(fScalar, CTimer::GetTimeStep());
@@ -243,6 +248,7 @@ CObject::Render(void)
 	RwRGBA color = { (uint8)red, (uint8)green, (uint8)blue, (uint8)alpha };
 
 	if (this->GetModelIndex() == MI_YT_MAIN_BODY) {
+		CONTINUOUS_PARTICLE_EMITTER;
 		float moveSpeedMagnitude = this->GetMoveSpeed().Magnitude();
 		if (moveSpeedMagnitude > 0.0f) {
 			float scaleMax = GetColModel()->boundingBox.max.y * 0.85f;

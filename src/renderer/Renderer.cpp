@@ -66,7 +66,7 @@ CEntity *CRenderer::ms_aVisibleBuildingPtrs[NUMVISIBLEENTITIES];
 CVUVECTOR CRenderer::ms_vecCameraPosition;
 CVehicle *CRenderer::m_pFirstPersonVehicle;
 bool CRenderer::m_loadingPriority;
-float CRenderer::ms_lodDistScale = 1.2f;
+float CRenderer::ms_lodDistScale = 1.8f; // default draw distance at maximum (was 1.2)
 
 // unused
 BlockedRange CRenderer::aBlockedRanges[16];

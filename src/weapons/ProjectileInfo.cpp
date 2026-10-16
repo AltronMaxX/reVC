@@ -294,6 +294,7 @@ CProjectileInfo::Update()
         	continue;
 		}
 		if ( gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_TEARGAS && CTimer::GetTimeInMilliseconds() > gaProjectileInfo[i].m_nExplosionTime - 19500 ) {
+			CONTINUOUS_PARTICLE_EMITTER;
 			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(0.2f, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);
 			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(-0.2f, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);
 			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(tearGasOffset, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);

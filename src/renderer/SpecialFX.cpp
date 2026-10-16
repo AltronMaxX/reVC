@@ -1464,6 +1464,7 @@ CSpecialParticleStuff::StartBoatFoamAnimation()
 void
 CSpecialParticleStuff::UpdateBoatFoamAnimation(CMatrix* pMatrix)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	static int32 FrameInAnimation = 0;
 	static float X, Y, Z, dX, dY, dZ;
 	CreateFoamAroundObject(pMatrix, 107.0f, 24.1f, 30.5f, 2);

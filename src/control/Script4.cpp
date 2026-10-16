@@ -488,7 +488,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			RADTODEG(Atan2(-pObject->GetForward().x, pObject->GetForward().y)));
 		float headingTarget = *(float*)&ScriptParams[1];
 #ifdef FIX_BUGS
-		float rotateBy = *(float*)&ScriptParams[2] * CTimer::GetTimeStepFix();
+		float rotateBy = *(float*)&ScriptParams[2] * SCRIPT_TIMESTEP_FIX;
 #else
 		float rotateBy = *(float*)&ScriptParams[2];
 #endif
@@ -547,7 +547,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		// assuming the slide will take exactly one frame, which is true
 		// only without accounting time step (which is a bug)
 		if (!IsSlideObjectUsedWrongByScript(posTarget, slideBy))
-			slideBy *= CTimer::GetTimeStepFix();
+			slideBy *= SCRIPT_TIMESTEP_FIX;
 #endif
 		if (posTarget == pos) { // using direct comparasion here is fine
 			UpdateCompareFlag(true);
@@ -1517,7 +1517,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		C3dMarkers::PlaceMarkerSet((uintptr)this + m_nIp, MARKERTYPE_CYLINDER, pos, *(float*)&ScriptParams[3],
+		SCRIPT_DRAW(C3dMarkers, PlaceMarkerSet)((uintptr)this + m_nIp, MARKERTYPE_CYLINDER, pos, *(float*)&ScriptParams[3],
 			SPHERE_MARKER_R, SPHERE_MARKER_G, SPHERE_MARKER_B, SPHERE_MARKER_A,
 			SPHERE_MARKER_PULSE_PERIOD, SPHERE_MARKER_PULSE_FRACTION, 0);
 		return 0;

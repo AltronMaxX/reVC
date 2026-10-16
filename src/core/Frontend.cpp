@@ -482,7 +482,7 @@ CMenuManager::CMenuManager()
 #endif
 	m_PrefsVsync = 0;
 	m_PrefsVsyncDisp = 1;
-	m_PrefsFrameLimiter = 1;
+	m_PrefsFrameLimiter = 0; // the game logic is frame rate independent now, don't cap it by default
 #ifdef RW_WGPU
 	m_PrefsWgpuBackend = 0;   // 0 = Automatic (see WGPU_BACKEND_SELECTOR)
 #endif
@@ -536,7 +536,7 @@ CMenuManager::CMenuManager()
 	DMAudio.SetEffectsMasterVolume(m_PrefsSfxVolume);
 
 #ifdef NO_ISLAND_LOADING
-	m_PrefsIslandLoading = ISLAND_LOADING_LOW;
+	m_PrefsIslandLoading = ISLAND_LOADING_HIGH; // no loading screens between islands by default
 #endif
 
 #ifdef GAMEPAD_MENU
@@ -5574,7 +5574,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				SaveSettings();
 			} else if(m_nCurrScreen == MENUPAGE_DISPLAY_SETTINGS) {
 				m_PrefsBrightness = 256;
-				m_PrefsLOD = 1.2f;
+				m_PrefsLOD = 1.8f;
 #ifdef LEGACY_MENU_OPTIONS
 				m_PrefsVsync = true;
 #endif
@@ -5587,7 +5587,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 #endif
 				m_PrefsShowLegends = true;
 				m_PrefsVsyncDisp = true;
-				m_PrefsFrameLimiter = true;
+				m_PrefsFrameLimiter = false;
 				m_PrefsRadarMode = 0;
 				m_PrefsShowHud = true;
 				m_nDisplayVideoMode = m_nPrefsVideoMode;
@@ -5621,9 +5621,9 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				MousePointerStateHelper.bInvertVertically = true;
 				TheCamera.m_bHeadBob = false;
 #ifdef FIX_BUGS
-				TheCamera.m_fMouseAccelVertical = 0.003f;
+				TheCamera.m_fMouseAccelVertical = 0.00175f;
 #endif
-				TheCamera.m_fMouseAccelHorzntl = 0.0025f;
+				TheCamera.m_fMouseAccelHorzntl = 0.00125f;
 				CVehicle::m_bDisableMouseSteering = true;
 				m_ControlMethod = CONTROL_STANDARD;
 #ifdef PC_PLAYER_CONTROLS

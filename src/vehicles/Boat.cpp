@@ -132,7 +132,11 @@ CBoat::ProcessControl(void)
 	PruneWakeTrail();
 
 	if(bRenderScorched)
+#ifdef FIX_HIGH_FPS_BUGS
+		m_fBuoyancy *= CTimer::ScaleFrameMultiplier(0.99f);
+#else
 		m_fBuoyancy *= 0.99f;
+#endif
 
 #ifdef FIX_BUGS
 	if(FindPlayerPed() && FindPlayerPed()->m_pWanted->GetWantedLevel() > 0 && GetModelIndex() == MI_PREDATOR && pDriver && IsPolicePedModel(pDriver->GetModelIndex())) {
@@ -266,6 +270,7 @@ CBoat::ProcessControl(void)
 	if(m_fHealth <= 460.0f && GetStatus() != STATUS_WRECKED &&
 	   Abs(GetPosition().x - TheCamera.GetPosition().x) < 200.0f &&
 	   Abs(GetPosition().y - TheCamera.GetPosition().y) < 200.0f){
+		CONTINUOUS_PARTICLE_EMITTER;
 		float speedSq = m_vecMoveSpeed.MagnitudeSqr();
 		CVector smokeDir = 0.8f*m_vecMoveSpeed;
 		CVector smokePos;
@@ -354,7 +359,12 @@ CBoat::ProcessControl(void)
 				ApplyTurnForce(turnImpulse*GetForward(), GetUp());
 				bBoatInWater = false;
 				//BUG? aren't we forgetting the timestep here?
+#ifdef FIX_HIGH_FPS_BUGS
+				// halves the forward speed every 30 fps frame
+				float moveImpulse = (CTimer::ScaleFrameMultiplier(0.5f) - 1.0f)*DotProduct(m_vecMoveSpeed, GetForward()) * m_fMass;
+#else
 				float moveImpulse = -0.5f*DotProduct(m_vecMoveSpeed, GetForward()) * m_fMass;
+#endif
 				ApplyMoveForce(moveImpulse*GetForward());
 				if(m_skimmerThingTimer == 0.0f)
 					m_skimmerThingTimer = CTimer::GetTimeInMilliseconds() + 300.0f;
@@ -432,6 +442,7 @@ CBoat::ProcessControl(void)
 					}
 
 					// Spray some particles
+					CONTINUOUS_PARTICLE_EMITTER;
 					CVector jetDir = -0.04f * force;
 					if(m_fGasPedal > 0.0f){
 						if(GetStatus() == STATUS_PLAYER){
@@ -513,7 +524,12 @@ CBoat::ProcessControl(void)
 			float fz = Pow(pBoatHandling->vecTurnRes.z, CTimer::GetTimeStep());
 			m_vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());	// invert - to local space
 			// TODO: figure this out
+#ifdef FIX_HIGH_FPS_BUGS
+			// the speed dependent part was applied once per frame without the time step
+			float magic = CTimer::ScaleFrameMultiplier(1.0f/(1000.0f * SQR(m_vecTurnSpeed.x) + 1.0f)) * fx;
+#else
 			float magic = 1.0f/(1000.0f * SQR(m_vecTurnSpeed.x) + 1.0f) * fx;
+#endif
 			m_vecTurnSpeed.y *= fy;
 			m_vecTurnSpeed.z *= fz;
 			float forceUp = (magic - 1.0f) * m_vecTurnSpeed.x * m_fTurnMass;
@@ -522,7 +538,12 @@ CBoat::ProcessControl(void)
 			ApplyTurnForce(forceUp*GetUp(), com + GetForward());
 		}
 
+#ifdef FIX_HIGH_FPS_BUGS
+		// change of volume per 30 fps frame, everything below was tuned for that
+		m_nDeltaVolumeUnderWater = Clamp((m_fVolumeUnderWater-m_fPrevVolumeUnderWater)*10000/Max(CTimer::GetTimeStepFix(), 0.01f), -32767.0f, 32767.0f);
+#else
 		m_nDeltaVolumeUnderWater = (m_fVolumeUnderWater-m_fPrevVolumeUnderWater)*10000;
+#endif
 
 		// Falling into water
 		if(!onLand && bBoatInWater && GetUp().z > 0.0f){
@@ -531,12 +552,18 @@ CBoat::ProcessControl(void)
 				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_SPLASH, splashVol);
 
 			if(m_nDeltaVolumeUnderWater > 200){
-				float speedUp = m_vecMoveSpeed.MagnitudeSqr() * m_nDeltaVolumeUnderWater * 0.001f;
+#ifdef FIX_HIGH_FPS_BUGS
+				// applied on every frame the boat sinks in, spread it over the frames of a 30 fps frame
+				float splashStep = Min(CTimer::GetTimeStepFix(), 1.0f);
+#else
+				float splashStep = 1.0f;
+#endif
+				float speedUp = m_vecMoveSpeed.MagnitudeSqr() * m_nDeltaVolumeUnderWater * 0.001f * splashStep;
 				if(speedUp + m_vecMoveSpeed.z > pHandling->fBrakeDeceleration)
 					speedUp = pHandling->fBrakeDeceleration - m_vecMoveSpeed.z;
 				if(speedUp < 0.0f) speedUp = 0.0f;
 				float speedFwd = DotProduct(m_vecMoveSpeed, GetForward());
-				speedFwd *= -m_nDeltaVolumeUnderWater * 0.01f * pHandling->fBrakeBias;
+				speedFwd *= -m_nDeltaVolumeUnderWater * 0.01f * pHandling->fBrakeBias * splashStep;
 				CVector speed = speedFwd*GetForward() + CVector(0.0f, 0.0f, speedUp);
 				CVector splashImpulse = speed * m_fMass;
 				ApplyMoveForce(splashImpulse);
@@ -548,6 +575,7 @@ CBoat::ProcessControl(void)
 		float speed = m_vecMoveSpeed.Magnitude();
 		if(speed > 0.05f && GetUp().x > 0.0f && !TheCamera.GetLookingForwardFirstPerson() && IsVisible() &&
 		   (AutoPilot.m_nCarMission != MISSION_CRUISE || (CTimer::GetFrameCounter()&2) == 0)){
+			CONTINUOUS_PARTICLE_EMITTER;
 			CVector splashPos, splashDir;
 			float splashSize, front, waterLevel;
 
@@ -684,6 +712,7 @@ CBoat::ProcessControl(void)
 		// Spray waterdrops on screen
 		if(TheCamera.GetLookingForwardFirstPerson() && FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() &&
 		   m_nDeltaVolumeUnderWater > 0 && numWaterDropOnScreen < 20){
+			CONTINUOUS_PARTICLE_EMITTER;
 			CVector dropPos;
 			CVector dropDir(CGeneral::GetRandomNumberInRange(-0.25f, 0.25f), CGeneral::GetRandomNumberInRange(1.0f, 0.75f), 0.0f);
 
@@ -770,17 +799,25 @@ CBoat::ProcessControlInputs(uint8 pad)
 	if(m_nPadID > 3)
 		m_nPadID = 3;
 
-	m_fBrake += (CPad::GetPad(pad)->GetBrake()/255.0f - m_fBrake)*0.1f;
+#ifdef FIX_HIGH_FPS_BUGS
+	// these smooth the input once per frame, keep the 30 fps response time
+	float pedalLerp = CTimer::ScaleFrameLerp(0.1f);
+	float steerLerp = CTimer::ScaleFrameLerp(0.2f);
+#else
+	float pedalLerp = 0.1f;
+	float steerLerp = 0.2f;
+#endif
+	m_fBrake += (CPad::GetPad(pad)->GetBrake()/255.0f - m_fBrake)*pedalLerp;
 	m_fBrake = Clamp(m_fBrake, 0.0f, 1.0f);
 
 	if(m_fBrake < 0.05f){
 		m_fBrake = 0.0f;
-		m_fAccelerate += (CPad::GetPad(pad)->GetAccelerate()/255.0f - m_fAccelerate)*0.1f;
+		m_fAccelerate += (CPad::GetPad(pad)->GetAccelerate()/255.0f - m_fAccelerate)*pedalLerp;
 		m_fAccelerate = Clamp(m_fAccelerate, 0.0f, 1.0f);
 	}else
 		m_fAccelerate = -m_fBrake*0.3f;
 
-	m_fSteeringLeftRight += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteeringLeftRight)*0.2f;
+	m_fSteeringLeftRight += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteeringLeftRight)*steerLerp;
 	m_fSteeringLeftRight = Clamp(m_fSteeringLeftRight, -1.0f, 1.0f);
 
 	float steeringSq = m_fSteeringLeftRight < 0.0f ? -SQR(m_fSteeringLeftRight) : SQR(m_fSteeringLeftRight);
@@ -816,7 +853,12 @@ CBoat::ApplyWaterResistance(void)
 	if(m_vecMoveSpeed.z > 0.0f)
 		m_vecMoveSpeed.z *= fz;
 	else
+#ifdef FIX_HIGH_FPS_BUGS
+		// blending with 0.5 once per frame isn't time step independent, use the 30 fps factor
+		m_vecMoveSpeed.z *= CTimer::ScaleFrameMultiplier(0.5f + 0.5f*Pow(pBoatHandling->vecMoveRes.z/magic, 0.5f*CTimer::GetDefaultTimeStep()));
+#else
 		m_vecMoveSpeed.z *= (1.0f - fz)*0.5f + fz;
+#endif
 }
 
 RwObject*

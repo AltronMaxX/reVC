@@ -531,7 +531,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
-		CVector vecAddition = *(CVector*)&ScriptParams[1] * CTimer::GetTimeStep() / GAME_SPEED_TO_METERS_PER_SECOND;
+		CVector vecAddition = *(CVector*)&ScriptParams[1] * SCRIPT_TIMESTEP / GAME_SPEED_TO_METERS_PER_SECOND;
 		if (!pObject->bIsStatic) {
 			CVector vecCurrSpeed = pObject->GetSpeed();
 			vecCurrSpeed.Normalise();

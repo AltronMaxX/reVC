@@ -475,11 +475,22 @@ CBike::ProcessControl(void)
 		m_vecMoveSpeedAvg = (m_vecMoveSpeedAvg + m_vecMoveSpeed)/2.0f;
 		m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
 
-		if(m_vecMoveSpeedAvg.MagnitudeSqr() <= sq(moveSpeedLimit*CTimer::GetTimeStep()) &&
-		   m_vecTurnSpeedAvg.MagnitudeSqr() <= sq(turnSpeedLimit*CTimer::GetTimeStep()) &&
+#ifdef FIX_HIGH_FPS_BUGS
+		// the limits are per frame distances, don't make them stricter above 30 fps
+		float staticStep = Max(CTimer::GetTimeStep(), CTimer::GetDefaultTimeStep());
+		distanceLimit *= Min(CTimer::GetTimeStepFix(), 1.0f);
+#else
+		float staticStep = CTimer::GetTimeStep();
+#endif
+		if(m_vecMoveSpeedAvg.MagnitudeSqr() <= sq(moveSpeedLimit*staticStep) &&
+		   m_vecTurnSpeedAvg.MagnitudeSqr() <= sq(turnSpeedLimit*staticStep) &&
 		   m_fDistanceTravelled < distanceLimit ||
 		   makeStatic){
+#ifdef FIX_HIGH_FPS_BUGS
+			m_nStaticFrames += CTimer::GetSimFramesPassed();
+#else
 			m_nStaticFrames++;
+#endif
 
 			if(m_nStaticFrames > 10 || makeStatic)
 				if(!CCarCtrl::MapCouldMoveInThisArea(GetPosition().x, GetPosition().y)){
@@ -862,7 +873,11 @@ CBike::ProcessControl(void)
 					WheelState[BIKEWHEEL_FRONT] = WHEEL_STATE_NORMAL;
 			}else{
 				// Wheel in the air
+#ifdef FIX_HIGH_FPS_BUGS
+				m_aWheelSpeed[BIKEWHEEL_FRONT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 				m_aWheelSpeed[BIKEWHEEL_FRONT] *= 0.95f;
+#endif
 				m_aWheelRotation[BIKEWHEEL_FRONT] += m_aWheelSpeed[BIKEWHEEL_FRONT];
 			}
 		}
@@ -1006,7 +1021,11 @@ CBike::ProcessControl(void)
 					WheelState[BIKEWHEEL_FRONT] = WHEEL_STATE_NORMAL;
 			}else{
 				// Wheel in the air
+#ifdef FIX_HIGH_FPS_BUGS
+				m_aWheelSpeed[BIKEWHEEL_FRONT] *= CTimer::ScaleFrameMultiplier(0.95f);
+#else
 				m_aWheelSpeed[BIKEWHEEL_FRONT] *= 0.95f;
+#endif
 				m_aWheelRotation[BIKEWHEEL_FRONT] += m_aWheelSpeed[BIKEWHEEL_FRONT];
 			}
 		}
@@ -1100,6 +1119,7 @@ CBike::ProcessControl(void)
 	}
 
 	if(m_fHealth < 250.0f && GetStatus() != STATUS_WRECKED){
+		CONTINUOUS_PARTICLE_EMITTER;
 		// Car is on fire
 
 		CVector damagePos, fireDir;
@@ -1291,6 +1311,7 @@ CBike::Teleport(CVector pos)
 void
 CBike::PreRender(void)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	int i;
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
 

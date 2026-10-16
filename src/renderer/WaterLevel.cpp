@@ -1815,6 +1815,7 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 		int32 nCamDirX, int32 nCamDirY, RwRGBA const&color)
 #endif
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 #ifndef PC_WATER
 	bool bRender = true;
 	if (m_nRenderWaterLayers != 0 && m_nRenderWaterLayers != 2 && m_nRenderWaterLayers != 3)
@@ -2296,6 +2297,7 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 		float fCamDirX, float fCamDirY,
 		RwRGBA const&color)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	CVector vecSectorPos(fX + (MAX_LARGE_SECTORS/2), fY + (MAX_LARGE_SECTORS/2), fZ + 2.0f);
 	
 	if ( COcclusion::IsAABoxOccluded(vecSectorPos, MAX_LARGE_SECTORS, MAX_LARGE_SECTORS, 4.0f) )

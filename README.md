@@ -45,7 +45,8 @@ Some of them can be toggled at runtime, some cannot.
   - Crouching like in San Andreas
   - Climbing like in San Andreas
   - Swimming like in San Andreas
-  - Shortcut from Airport to Sunshine Autos_
+  - Shortcut from Airport to Sunshine Autos
+* High-FPS physics fixes from https://github.com/Ogstra/reVC
 * Skip phone calls by using Enter/Exit car button
 * Autosaves after mission
 * Fixed the game running on Linux with Wayland
@@ -79,7 +80,6 @@ Some of them can be toggled at runtime, some cannot.
 
 The following things would be nice to have/do:
 
-* Backport swimming and wall climbing from San Andreas (Maybe)
 * Some additions to freeroam_main.scm
 * Fix flying objects on game map
 * Port modloader (Maybe)

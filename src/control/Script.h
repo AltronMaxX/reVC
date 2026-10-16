@@ -21,6 +21,17 @@ extern int32 ScriptParams[32];
 void FlushLog();
 #define script_assert(_Expression) FlushLog(); assert(_Expression);
 
+#ifdef FIX_HIGH_FPS_BUGS
+// draws a script command registers for one frame, recorded so they can be repeated until the next script tick
+#define SCRIPT_DRAW(cls, func) CTheScripts::func
+#define SCRIPT_TIMESTEP (CTheScripts::ScriptTimeStep)
+#define SCRIPT_TIMESTEP_FIX (CTheScripts::ScriptTimeStep / CTimer::GetDefaultTimeStep())
+#else
+#define SCRIPT_TIMESTEP (CTimer::GetTimeStep())
+#define SCRIPT_TIMESTEP_FIX (CTimer::GetTimeStepFix())
+#define SCRIPT_DRAW(cls, func) cls::func
+#endif
+
 #define PICKUP_PLACEMENT_OFFSET (0.5f)
 #define PED_FIND_Z_OFFSET (5.0f)
 #define COP_PED_FIND_Z_OFFSET (10.0f)
@@ -312,6 +323,10 @@ public:
 	void Init();
 	void Process();
 
+#ifdef FIX_HIGH_FPS_BUGS
+	void ProcessSkipWakeTime();
+#endif
+
 	void RemoveScriptFromList(CRunningScript**);
 	void AddScriptToList(CRunningScript**);
 
@@ -476,6 +491,28 @@ public:
 
 	static void Init();
 	static void Process();
+
+#ifdef FIX_HIGH_FPS_BUGS
+	// The scripts were written for 30 fps: many of them count frames or poll per frame state.
+	// They're only run once per 30 fps frame of game time, these keep the frames in between consistent.
+	static bool bForceScriptTick;
+	static uint32 TimeSinceLastScriptTick;
+	static float TimeStepSinceLastScriptTick;
+	static float ScriptTimeStep; // game time step covered by the current script tick
+	static int32 NumScriptDraws;
+	static void ProcessSkippedFrame();
+	static void LatchPerFrameFlags();
+	static void ClearPerFrameFlagLatches();
+	static bool HasVehicleCollidedSinceLastTick(CVehicle* pVehicle);
+	static bool HasObjectCollidedSinceLastTick(CObject* pObject);
+	static bool HasPedShotSinceLastTick(CPed* pPed);
+	static void ReplayScriptDraws();
+	static void RegisterCorona(uint32 id, uint8 red, uint8 green, uint8 blue, uint8 alpha, const CVector& coors, float size, float drawDist,
+		uint8 type, int8 flareType, uint8 reflection, uint8 LOScheck, uint8 drawStreak, float someAngle, bool useNearDist = false, float nearDist = 1.5f);
+	static void AddLight(uint8 type, CVector coors, CVector dir, float radius, float red, float green, float blue, uint8 fogType, bool castExtraShadows);
+	static void PlaceMarkerSet(uint32 id, uint16 type, CVector& pos, float size, uint8 r, uint8 g, uint8 b, uint8 a, uint16 pulsePeriod, float pulseFraction, int16 rotateRate);
+	static void RenderIndicatorShadow(uint32 id, uint8 shadowType, RwTexture* pTexture, CVector* pPos, float frontX, float frontY, float sideX, float sideY, int16 intensity);
+#endif
 
 	static CRunningScript* StartTestScript();
 	static bool IsPlayerOnAMission();

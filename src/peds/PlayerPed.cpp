@@ -2522,9 +2522,16 @@ CPlayerPed::ProcessControl(void)
 			bTryingToReachDryLand = false;
 	}
 
+#ifdef FIX_HIGH_FPS_BUGS
+	// fades one step per 30 fps frame
+	if (m_nFadeDrunkenness && CTimer::GetSimFramesPassed() != 0) {
+		if (m_nDrunkenness > CTimer::GetSimFramesPassed()) {
+			m_nDrunkenness -= CTimer::GetSimFramesPassed();
+#else
 	if (m_nFadeDrunkenness) {
 		if (m_nDrunkenness - 1 > 0) {
 			--m_nDrunkenness;
+#endif
 		} else {
 			m_nDrunkenness = 0;
 			CMBlur::ClearDrunkBlur();

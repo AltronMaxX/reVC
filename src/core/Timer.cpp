@@ -23,6 +23,11 @@ bool  CTimer::m_WindowMinimizedPause;
 uint32 CTimer::m_LogicalFrameCounter;
 uint32 CTimer::m_LogicalFramesPassed;
 #endif
+#ifdef FIX_HIGH_FPS_BUGS
+uint32 CTimer::m_SimFrameCounter;
+uint32 CTimer::m_SimFramesPassed;
+static float SimFrameTime;
+#endif
 
 uint32 _nCyclesPerMS = 1;
 
@@ -55,6 +60,11 @@ void CTimer::Initialise(void)
 #ifdef FIX_BUGS
 	m_LogicalFrameCounter = 0;
 	m_LogicalFramesPassed = 0;
+#endif
+#ifdef FIX_HIGH_FPS_BUGS
+	m_SimFrameCounter = 0;
+	m_SimFramesPassed = 0;
+	SimFrameTime = 0.0f;
 #endif
 	
 #ifdef _WIN32
@@ -182,6 +192,17 @@ void CTimer::Update(void)
 		ms_fTimeStep = 1.0f;
 		m_snTimeInMilliseconds = m_snPreviousTimeInMilliseconds + 16;
 	}
+
+#ifdef FIX_HIGH_FPS_BUGS
+	// count frames of game time as if we're running at 30 fps
+	m_SimFramesPassed = 0;
+	SimFrameTime += ms_fTimeStep;
+	while (SimFrameTime >= GetDefaultTimeStep()) {
+		SimFrameTime -= GetDefaultTimeStep();
+		m_SimFramesPassed++;
+	}
+	m_SimFrameCounter += m_SimFramesPassed;
+#endif
   
 	m_FrameCounter++;
 }

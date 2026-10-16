@@ -41,6 +41,7 @@ CFire::~CFire() {}
 void
 CFire::ProcessFire(void)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	float fDamagePlayer;
 	float fDamagePeds;
 	float fDamageVehicle;

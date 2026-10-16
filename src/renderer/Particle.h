@@ -108,4 +108,31 @@ extern RwRaster *gpRainDripDarkRaster[];
 
 VALIDATE_SIZE(CParticle, 0x58);
 
+#ifdef FIX_HIGH_FPS_BUGS
+// Effects that add particles every frame were made for 30 fps and got denser (and used up the particle pool)
+// at higher frame rates. Put this at the start of a scope that emits every frame: while it's alive particles
+// are only added once per 30 fps frame of game time. Never put it around one-shot effects (hits, explosions).
+class CContinuousParticleEmitter
+{
+public:
+	static int32 ms_nActive;
+	CContinuousParticleEmitter(void) { ms_nActive++; }
+	~CContinuousParticleEmitter(void) { ms_nActive--; }
+	static bool IsEmissionFrame(void);
+};
+// Put this at the start of one-shot effects that can be triggered from a continuous emitter (explosions)
+class COneShotParticleEmitter
+{
+	int32 m_nSavedActive;
+public:
+	COneShotParticleEmitter(void) { m_nSavedActive = CContinuousParticleEmitter::ms_nActive; CContinuousParticleEmitter::ms_nActive = 0; }
+	~COneShotParticleEmitter(void) { CContinuousParticleEmitter::ms_nActive = m_nSavedActive; }
+};
+#define CONTINUOUS_PARTICLE_EMITTER CContinuousParticleEmitter continuousParticleEmitter
+#define ONE_SHOT_PARTICLE_EMITTER COneShotParticleEmitter oneShotParticleEmitter
+#else
+#define CONTINUOUS_PARTICLE_EMITTER
+#define ONE_SHOT_PARTICLE_EMITTER
+#endif
+
 #endif // __GTA_PARTICLE_H__

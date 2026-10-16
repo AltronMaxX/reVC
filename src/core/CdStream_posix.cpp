@@ -200,7 +200,16 @@ CdStreamInit(int32 numChannels)
 {
 	struct statvfs fsInfo;
 
+#ifdef FIX_BUGS
+	// the file may be named MODELS/GTA3.IMG etc. on case sensitive file systems
+	char *realImgPath = casepath("models/gta3.img", false);
+	int statResult = statvfs(realImgPath ? realImgPath : "models/gta3.img", &fsInfo);
+	if(realImgPath)
+		free(realImgPath);
+	if(statResult < 0)
+#else
 	if((statvfs("models/gta3.img", &fsInfo)) < 0)
+#endif
 	{
 		CDTRACE("can't get filesystem info");
 		ASSERT(0);

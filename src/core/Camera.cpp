@@ -198,8 +198,9 @@ CCamera::Init(void)
 		m_bMusicFading = false;
 		m_fTimeToFadeMusic = 0.0f;
 		m_fFLOATingFadeMusic = 0.0f;
-		m_fMouseAccelVertical = 0.003f;
-		m_fMouseAccelHorzntl = 0.0025f;
+		// half the original mouse sensitivity by default (was 0.003 / 0.0025)
+		m_fMouseAccelVertical = 0.00175f;
+		m_fMouseAccelHorzntl = 0.00125f;
 	}
 	if(FrontEndMenuManager.m_bWantToRestart)
 		m_fTimeToFadeMusic = 0.0f;
@@ -527,7 +528,13 @@ CCamera::Process(void)
 		static float DrunkAngle;
 
 		int tableIndex = (int)(DEGTORAD(DrunkAngle)/TWOPI * CParticle::SIN_COS_TABLE_SIZE) & CParticle::SIN_COS_TABLE_SIZE-1;
+#ifdef FIX_HIGH_FPS_BUGS
+		DrunkAngle += 5.0f * CTimer::GetTimeStepFix();
+		if(DrunkAngle >= 360.0f)
+			DrunkAngle -= 360.0f;
+#else
 		DrunkAngle += 5.0f;
+#endif
 #ifndef FIX_BUGS
 		// This just messes up interpolation, probably not what they intended
 		// and multiplying the interpolated FOV is also a bit extreme
@@ -649,6 +656,20 @@ CCamera::Process(void)
 		m_PreviousCameraPosition = GetPosition();
 		m_bJustInitalised = false;
 	}
+#ifdef FIX_HIGH_FPS_BUGS
+	// The average speed is compared against thresholds made for the distance moved in one 30 fps frame
+	// (rain on the lens, ped chat, weather), so measure it in 30 fps frames of game time.
+	static float TimeSoFar = 0.0f;
+	m_CameraSpeedSoFar += (GetPosition() - m_PreviousCameraPosition).Magnitude();
+	TimeSoFar += CTimer::GetTimeStepFix();
+	m_iNumFramesSoFar++;
+	if(TimeSoFar >= m_iWorkOutSpeedThisNumFrames){
+		m_CameraAverageSpeed = m_CameraSpeedSoFar / TimeSoFar;
+		m_CameraSpeedSoFar = 0.0f;
+		m_iNumFramesSoFar = 0;
+		TimeSoFar = 0.0f;
+	}
+#else
 	m_CameraSpeedSoFar += (GetPosition() - m_PreviousCameraPosition).Magnitude();
 	m_iNumFramesSoFar++;
 	if(m_iNumFramesSoFar == m_iWorkOutSpeedThisNumFrames){
@@ -656,6 +677,7 @@ CCamera::Process(void)
 		m_CameraSpeedSoFar = 0.0f;
 		m_iNumFramesSoFar = 0;
 	}
+#endif
 	m_PreviousCameraPosition = GetPosition();
 
 	if(Cams[ActiveCam].DirectionWasLooking != LOOKING_FORWARD && Cams[ActiveCam].Mode != CCam::MODE_TOP_DOWN_PED){

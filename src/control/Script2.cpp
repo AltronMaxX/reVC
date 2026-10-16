@@ -1547,7 +1547,11 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
 		script_assert(pVehicle);
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(!CTheScripts::HasVehicleCollidedSinceLastTick(pVehicle));
+#else
 		UpdateCompareFlag(pVehicle->m_nCollisionRecords == 0);
+#endif
 		return 0;
 	}
 	default:

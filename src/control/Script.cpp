@@ -21,35 +21,38 @@
 #ifdef MISSION_REPLAY
 #include "GenericGameStorage.h"
 #endif
+#include "Bike.h"
+#include "ColStore.h"
+#include "Coronas.h"
+#include "Fluff.h"
+#include "GameLogic.h"
 #include "HandlingMgr.h"
 #include "Heli.h"
 #include "Hud.h"
 #include "Lines.h"
+#include "MBlur.h"
 #include "Messages.h"
 #include "Pad.h"
+#include "PedRoutes.h"
 #include "Pickups.h"
+#include "PointLights.h"
 #include "Pools.h"
 #include "Population.h"
 #include "Remote.h"
 #include "Replay.h"
+#include "RoadBlocks.h"
+#include "Ropes.h"
+#include "Shadows.h"
+#include "SpecialFX.h"
 #include "Stats.h"
 #include "Streaming.h"
+#include "Timecycle.h"
+#include "TxdStore.h"
 #include "User.h"
 #include "Wanted.h"
 #include "Weather.h"
 #include "Zones.h"
 #include "main.h"
-#include "Ropes.h"
-#include "ColStore.h"
-#include "Fluff.h"
-#include "GameLogic.h"
-#include "MBlur.h"
-#include "PedRoutes.h"
-#include "RoadBlocks.h"
-#include "SpecialFX.h"
-#include "Timecycle.h"
-#include "TxdStore.h"
-#include "Bike.h"
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 #include <stdarg.h>
 #endif
@@ -745,6 +748,15 @@ int CTheScripts::OpenScript()
 
 void CTheScripts::Init()
 {
+#ifdef FIX_HIGH_FPS_BUGS
+	bForceScriptTick = true;
+	TimeSinceLastScriptTick = 0;
+	TimeStepSinceLastScriptTick = 0.0f;
+	ScriptTimeStep = TimeStepSinceLastScriptTick;
+	TimeStepSinceLastScriptTick = 0.0f;
+	NumScriptDraws = 0;
+	ClearPerFrameFlagLatches();
+#endif
 	for (int i = 0; i < SIZE_SCRIPT_SPACE; i++)
 		ScriptSpace[i] = 0;
 	pActiveScripts = pIdleScripts = nil;
@@ -884,11 +896,29 @@ void CTheScripts::Process()
 		return;
 	CommandsExecuted = 0;
 	ScriptsUpdated = 0;
+#ifdef FIX_HIGH_FPS_BUGS
+	UpsideDownCars.UpdateTimers();
+	StuckCars.Process();
+	MissionCleanUp.CheckIfCollisionHasLoadedForMissionObjects();
+	DrawScriptSpheres();
+	LatchPerFrameFlags();
+	TimeSinceLastScriptTick += CTimer::GetTimeStepInMilliseconds();
+	TimeStepSinceLastScriptTick += CTimer::GetTimeStep();
+	if (CTimer::GetSimFramesPassed() == 0 && !bForceScriptTick) {
+		ProcessSkippedFrame();
+		return;
+	}
+	bForceScriptTick = false;
+	float timeStep = TimeSinceLastScriptTick;
+	TimeSinceLastScriptTick = 0;
+	NumScriptDraws = 0;
+#else
 	float timeStep = CTimer::GetTimeStepInMilliseconds();
 	UpsideDownCars.UpdateTimers();
 	StuckCars.Process();
 	MissionCleanUp.CheckIfCollisionHasLoadedForMissionObjects();
 	DrawScriptSpheres();
+#endif
 	if (FailCurrentMission)
 		--FailCurrentMission;
 	if (UseTextCommands){
@@ -966,6 +996,9 @@ void CTheScripts::Process()
 			script = nil;
 	}
 	DbgFlag = false;
+#ifdef FIX_HIGH_FPS_BUGS
+	ClearPerFrameFlagLatches();
+#endif
 
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 	LogAfterScriptProcessing();
@@ -976,6 +1009,225 @@ CRunningScript* CTheScripts::StartTestScript()
 {
 	return StartNewScript(0);
 }
+
+#ifdef FIX_HIGH_FPS_BUGS
+bool CTheScripts::bForceScriptTick;
+uint32 CTheScripts::TimeSinceLastScriptTick;
+float CTheScripts::TimeStepSinceLastScriptTick;
+float CTheScripts::ScriptTimeStep = 50.0f / 30.0f;
+
+// Coronas, lights, markers and indicator shadows only stay visible when they're registered every frame.
+// Scripts register them on their ticks, the frames in between repeat what the last tick registered.
+enum eScriptDrawType
+{
+	SCRIPT_DRAW_CORONA,
+	SCRIPT_DRAW_LIGHT,
+	SCRIPT_DRAW_MARKER,
+	SCRIPT_DRAW_INDICATOR_SHADOW
+};
+
+struct tScriptDraw
+{
+	uint8 type;
+	uint32 id;
+	CVector pos;
+	CVector dir;
+	float size;
+	float drawDist;
+	float red, green, blue;
+	uint8 alpha;
+	uint8 subType;
+	int8 flareType;
+	uint8 reflection;
+	uint8 LOScheck;
+	uint8 drawStreak;
+	float someAngle;
+	bool useNearDist;
+	float nearDist;
+	uint16 pulsePeriod;
+	float pulseFraction;
+	int16 rotateRate;
+	RwTexture* texture;
+	float frontX, frontY, sideX, sideY;
+	int16 intensity;
+};
+
+#define MAX_NUM_SCRIPT_DRAWS 64
+static tScriptDraw ScriptDraws[MAX_NUM_SCRIPT_DRAWS];
+int32 CTheScripts::NumScriptDraws;
+
+static tScriptDraw* NewScriptDraw(uint8 type)
+{
+	if (CTheScripts::NumScriptDraws >= MAX_NUM_SCRIPT_DRAWS)
+		return nil;
+	tScriptDraw* pDraw = &ScriptDraws[CTheScripts::NumScriptDraws++];
+	pDraw->type = type;
+	return pDraw;
+}
+
+void CTheScripts::RegisterCorona(uint32 id, uint8 red, uint8 green, uint8 blue, uint8 alpha, const CVector& coors, float size, float drawDist,
+	uint8 type, int8 flareType, uint8 reflection, uint8 LOScheck, uint8 drawStreak, float someAngle, bool useNearDist, float nearDist)
+{
+	CCoronas::RegisterCorona(id, red, green, blue, alpha, coors, size, drawDist, type, flareType, reflection, LOScheck, drawStreak, someAngle, useNearDist, nearDist);
+	tScriptDraw* pDraw = NewScriptDraw(SCRIPT_DRAW_CORONA);
+	if (!pDraw)
+		return;
+	pDraw->id = id;
+	pDraw->red = red;
+	pDraw->green = green;
+	pDraw->blue = blue;
+	pDraw->alpha = alpha;
+	pDraw->pos = coors;
+	pDraw->size = size;
+	pDraw->drawDist = drawDist;
+	pDraw->subType = type;
+	pDraw->flareType = flareType;
+	pDraw->reflection = reflection;
+	pDraw->LOScheck = LOScheck;
+	pDraw->drawStreak = drawStreak;
+	pDraw->someAngle = someAngle;
+	pDraw->useNearDist = useNearDist;
+	pDraw->nearDist = nearDist;
+}
+
+void CTheScripts::AddLight(uint8 type, CVector coors, CVector dir, float radius, float red, float green, float blue, uint8 fogType, bool castExtraShadows)
+{
+	CPointLights::AddLight(type, coors, dir, radius, red, green, blue, fogType, castExtraShadows);
+	tScriptDraw* pDraw = NewScriptDraw(SCRIPT_DRAW_LIGHT);
+	if (!pDraw)
+		return;
+	pDraw->subType = type;
+	pDraw->pos = coors;
+	pDraw->dir = dir;
+	pDraw->size = radius;
+	pDraw->red = red;
+	pDraw->green = green;
+	pDraw->blue = blue;
+	pDraw->flareType = fogType;
+	pDraw->reflection = castExtraShadows;
+}
+
+void CTheScripts::PlaceMarkerSet(uint32 id, uint16 type, CVector& pos, float size, uint8 r, uint8 g, uint8 b, uint8 a, uint16 pulsePeriod, float pulseFraction, int16 rotateRate)
+{
+	C3dMarkers::PlaceMarkerSet(id, type, pos, size, r, g, b, a, pulsePeriod, pulseFraction, rotateRate);
+	tScriptDraw* pDraw = NewScriptDraw(SCRIPT_DRAW_MARKER);
+	if (!pDraw)
+		return;
+	pDraw->id = id;
+	pDraw->subType = type;
+	pDraw->pos = pos;
+	pDraw->size = size;
+	pDraw->red = r;
+	pDraw->green = g;
+	pDraw->blue = b;
+	pDraw->alpha = a;
+	pDraw->pulsePeriod = pulsePeriod;
+	pDraw->pulseFraction = pulseFraction;
+	pDraw->rotateRate = rotateRate;
+}
+
+void CTheScripts::RenderIndicatorShadow(uint32 id, uint8 shadowType, RwTexture* pTexture, CVector* pPos, float frontX, float frontY, float sideX, float sideY, int16 intensity)
+{
+	CShadows::RenderIndicatorShadow(id, shadowType, pTexture, pPos, frontX, frontY, sideX, sideY, intensity);
+	tScriptDraw* pDraw = NewScriptDraw(SCRIPT_DRAW_INDICATOR_SHADOW);
+	if (!pDraw)
+		return;
+	pDraw->id = id;
+	pDraw->subType = shadowType;
+	pDraw->texture = pTexture;
+	pDraw->pos = *pPos;
+	pDraw->frontX = frontX;
+	pDraw->frontY = frontY;
+	pDraw->sideX = sideX;
+	pDraw->sideY = sideY;
+	pDraw->intensity = intensity;
+}
+
+void CTheScripts::ReplayScriptDraws()
+{
+	for (int i = 0; i < NumScriptDraws; i++) {
+		tScriptDraw* pDraw = &ScriptDraws[i];
+		switch (pDraw->type) {
+		case SCRIPT_DRAW_CORONA:
+			CCoronas::RegisterCorona(pDraw->id, pDraw->red, pDraw->green, pDraw->blue, pDraw->alpha, pDraw->pos, pDraw->size, pDraw->drawDist,
+				pDraw->subType, pDraw->flareType, pDraw->reflection, pDraw->LOScheck, pDraw->drawStreak, pDraw->someAngle, pDraw->useNearDist, pDraw->nearDist);
+			break;
+		case SCRIPT_DRAW_LIGHT:
+			CPointLights::AddLight(pDraw->subType, pDraw->pos, pDraw->dir, pDraw->size, pDraw->red, pDraw->green, pDraw->blue, pDraw->flareType, pDraw->reflection);
+			break;
+		case SCRIPT_DRAW_MARKER:
+			C3dMarkers::PlaceMarkerSet(pDraw->id, pDraw->subType, pDraw->pos, pDraw->size, pDraw->red, pDraw->green, pDraw->blue, pDraw->alpha,
+				pDraw->pulsePeriod, pDraw->pulseFraction, pDraw->rotateRate);
+			break;
+		case SCRIPT_DRAW_INDICATOR_SHADOW:
+			CShadows::RenderIndicatorShadow(pDraw->id, pDraw->subType, pDraw->texture, &pDraw->pos, pDraw->frontX, pDraw->frontY, pDraw->sideX, pDraw->sideY, pDraw->intensity);
+			break;
+		}
+	}
+}
+
+// Collision records and the shooting flag only describe the last frame.
+// Remember whether they were set on any frame since the last script tick, so the scripts don't miss them.
+static bool VehicleCollidedLatch[NUMVEHICLES];
+static bool ObjectCollidedLatch[NUMOBJECTS];
+static bool PedShotLatch[NUMPEDS];
+
+void CTheScripts::LatchPerFrameFlags()
+{
+	CVehiclePool* pVehiclePool = CPools::GetVehiclePool();
+	for (int i = Min(pVehiclePool->GetSize(), (int32)NUMVEHICLES) - 1; i >= 0; i--) {
+		CVehicle* pVehicle = pVehiclePool->GetSlot(i);
+		if (pVehicle && pVehicle->m_nCollisionRecords != 0)
+			VehicleCollidedLatch[i] = true;
+	}
+	CObjectPool* pObjectPool = CPools::GetObjectPool();
+	for (int i = Min(pObjectPool->GetSize(), (int32)NUMOBJECTS) - 1; i >= 0; i--) {
+		CObject* pObject = pObjectPool->GetSlot(i);
+		if (pObject && pObject->m_nCollisionRecords != 0)
+			ObjectCollidedLatch[i] = true;
+	}
+	CPedPool* pPedPool = CPools::GetPedPool();
+	for (int i = Min(pPedPool->GetSize(), (int32)NUMPEDS) - 1; i >= 0; i--) {
+		CPed* pPed = pPedPool->GetSlot(i);
+		if (pPed && pPed->bIsShooting)
+			PedShotLatch[i] = true;
+	}
+}
+
+void CTheScripts::ClearPerFrameFlagLatches()
+{
+	memset(VehicleCollidedLatch, 0, sizeof(VehicleCollidedLatch));
+	memset(ObjectCollidedLatch, 0, sizeof(ObjectCollidedLatch));
+	memset(PedShotLatch, 0, sizeof(PedShotLatch));
+}
+
+bool CTheScripts::HasVehicleCollidedSinceLastTick(CVehicle* pVehicle)
+{
+	int i = CPools::GetVehiclePool()->GetJustIndex_NoFreeAssert(pVehicle);
+	return pVehicle->m_nCollisionRecords != 0 || (i >= 0 && i < NUMVEHICLES && VehicleCollidedLatch[i]);
+}
+
+bool CTheScripts::HasObjectCollidedSinceLastTick(CObject* pObject)
+{
+	int i = CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pObject);
+	return pObject->m_nCollisionRecords != 0 || (i >= 0 && i < NUMOBJECTS && ObjectCollidedLatch[i]);
+}
+
+bool CTheScripts::HasPedShotSinceLastTick(CPed* pPed)
+{
+	int i = CPools::GetPedPool()->GetJustIndex_NoFreeAssert(pPed);
+	return pPed->bIsShooting || (i >= 0 && i < NUMPEDS && PedShotLatch[i]);
+}
+
+void CTheScripts::ProcessSkippedFrame()
+{
+	ReplayScriptDraws();
+	for (CRunningScript* script = pActiveScripts; script != nil; script = script->GetNext()) {
+		if (CTimer::GetTimeInMilliseconds() < script->m_nWakeTime)
+			script->ProcessSkipWakeTime();
+	}
+}
+#endif
 
 bool CTheScripts::IsPlayerOnAMission()
 {
@@ -999,6 +1251,13 @@ void CRunningScript::Process()
 			;
 		return;
 	}
+#ifdef FIX_HIGH_FPS_BUGS
+	ProcessSkipWakeTime();
+}
+
+void CRunningScript::ProcessSkipWakeTime()
+{
+#endif
 	if (!m_bSkipWakeTime)
 		return;
 	if (!CPad::GetPad(0)->GetCrossJustDown())
@@ -1894,19 +2153,19 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr += SCRIPT_TIMESTEP * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_ADD_TIMED_VAL_TO_FLOAT_LVAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr += SCRIPT_TIMESTEP * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_VAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 += SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
@@ -1914,7 +2173,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 += SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
@@ -1922,29 +2181,29 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 += SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_LVAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 += SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_VAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr -= SCRIPT_TIMESTEP * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_LVAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr -= SCRIPT_TIMESTEP * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_VAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 -= SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 #ifdef FIX_BUGS // in SA it was fixed by reversing their order in enum
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
@@ -1952,7 +2211,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 -= SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
@@ -1960,11 +2219,11 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 -= SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_LVAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 -= SCRIPT_TIMESTEP * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 	case COMMAND_SET_VAR_INT_TO_VAR_INT:
 	{

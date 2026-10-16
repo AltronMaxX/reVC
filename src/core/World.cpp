@@ -1876,7 +1876,10 @@ CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 				Abs(pPed->GetPosition().y - y) < radius) {
 				if (!pPed->IsPlayer())
 					pPed->SetFlee(CVector2D(x, y), 10000);
-#ifdef FIX_BUGS
+#if defined FIX_HIGH_FPS_BUGS
+				// called every frame while the gas lasts
+				pPed->InflictDamage(reason, WEAPONTYPE_TEARGAS, 1.0f*CTimer::GetTimeStepFix(), PEDPIECE_TORSO, 0);
+#elif defined FIX_BUGS
 				pPed->InflictDamage(reason, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);
 #else
 				pPed->InflictDamage(nil, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);

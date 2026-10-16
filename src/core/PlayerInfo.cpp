@@ -434,7 +434,12 @@ CPlayerInfo::Process(void)
 			}
 		}
 	}
+#ifdef FIX_HIGH_FPS_BUGS
+	// counts up every 32 frames and sets the car on fire at 7, so it has to be 30 fps frames
+	if (CTimer::IsSimFrameDue(32)) {
+#else
 	if (!(CTimer::GetFrameCounter() & 31)) {
+#endif
 		CVehicle *veh = FindPlayerVehicle();
 		if (veh && m_pPed->bInVehicle && veh->GetUp().z < 0.0f
 			&& veh->m_vecMoveSpeed.Magnitude() < 0.05f && (veh->IsCar() || veh->IsBoat()) && !veh->bIsInWater) {

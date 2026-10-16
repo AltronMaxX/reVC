@@ -520,7 +520,10 @@ CMemoryCard::LoadSavedGame(void)
 	
 	JustLoadedDontFadeInYet = true;
 	StillToFadeOut = true;
-	
+
+#ifdef FIX_HIGH_FPS_BUGS
+	CTheScripts::bForceScriptTick = true;
+#endif
 	CTheScripts::Process();
 	
 	printf("Game sucessfully loaded \n");

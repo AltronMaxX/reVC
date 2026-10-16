@@ -495,7 +495,12 @@ void CParticleObject::UpdateClose(void)
 		}
 	}
 	
+#ifdef FIX_HIGH_FPS_BUGS
+	CONTINUOUS_PARTICLE_EMITTER;
+	if ( CTimer::GetSimFramesPassed() != 0 && ++this->m_nFrameCounter >= this->m_nSkipFrames )
+#else
 	if ( ++this->m_nFrameCounter >= this->m_nSkipFrames )
+#endif
     {
 		this->m_nFrameCounter = 0;
 		

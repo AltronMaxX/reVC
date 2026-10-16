@@ -863,6 +863,15 @@ void CParticle::AddParticlesAlongLine(tParticleType type, CVector const &vecStar
 	}
 }
 
+#ifdef FIX_HIGH_FPS_BUGS
+int32 CContinuousParticleEmitter::ms_nActive;
+
+bool CContinuousParticleEmitter::IsEmissionFrame(void)
+{
+	return ms_nActive <= 0 || CTimer::GetSimFramesPassed() != 0;
+}
+#endif
+
 CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVector const &vecDir, CEntity *pEntity, float fSize, int32 nRotationSpeed, int32 nRotation, int32 nCurFrame, int32 nLifeSpan)
 {
 	CRGBA color(0, 0, 0, 0);
@@ -873,6 +882,11 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 {
 	if ( CTimer::GetIsPaused() )
 		return nil;
+
+#ifdef FIX_HIGH_FPS_BUGS
+	if ( !CContinuousParticleEmitter::IsEmissionFrame() )
+		return nil;
+#endif
 
 	if ( ( type == PARTICLE_ENGINE_SMOKE
 		|| type == PARTICLE_ENGINE_SMOKE2
@@ -1203,8 +1217,14 @@ void CParticle::Update()
 						{
 							if ( vecMoveStep.Magnitude() > 0.4f && vecMoveStep.Magnitude() < 0.8f )
 							{
+#ifdef FIX_HIGH_FPS_BUGS
+								// the average speed is per 30 fps frame
+								vecMoveStep.x += TheCamera.m_CameraAverageSpeed * 1.5f * CTimer::GetTimeStepFix();
+								vecMoveStep.y += TheCamera.m_CameraAverageSpeed * 1.5f * CTimer::GetTimeStepFix();
+#else
 								vecMoveStep.x += TheCamera.m_CameraAverageSpeed * 1.5f;
 								vecMoveStep.y += TheCamera.m_CameraAverageSpeed * 1.5f;
+#endif
 							}
 							else if ( vecMoveStep.Magnitude() != 0.0f )
 							{
@@ -1262,12 +1282,14 @@ void CParticle::Update()
 			
 			if ( psystem->m_Type == PARTICLE_FIREBALL )
 			{
+				CONTINUOUS_PARTICLE_EMITTER;
 				  AddParticle(PARTICLE_HEATHAZE, particle->m_vecPosition, CVector(0.0f, 0.0f, 0.0f),
 					nil, particle->m_fSize * 5.0f);
 			}
 			
 			if ( psystem->m_Type == PARTICLE_GUNSMOKE2 )
 			{
+				CONTINUOUS_PARTICLE_EMITTER;
 				if ( CTimer::GetFrameCounter() & 10 )
 				{
 #ifdef FIX_BUGS

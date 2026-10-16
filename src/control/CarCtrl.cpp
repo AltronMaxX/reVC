@@ -2644,7 +2644,11 @@ float CCarCtrl::FindMaxSteerAngle(CVehicle* pVehicle)
 void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* pHeli)
 {
 	if (pHeli->m_aWheelSpeed[1] < 0.22f)
+#ifdef FIX_HIGH_FPS_BUGS
+		pHeli->m_aWheelSpeed[1] += 0.001f*CTimer::GetTimeStepFix();
+#else
 		pHeli->m_aWheelSpeed[1] += 0.001f;
+#endif
 	if (pHeli->m_aWheelSpeed[1] < 0.15f)
 		return;
 	CVector2D vecToTarget = pHeli->AutoPilot.m_vecDestinationCoors - pHeli->GetPosition();

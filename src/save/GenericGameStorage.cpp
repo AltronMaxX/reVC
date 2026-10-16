@@ -479,6 +479,9 @@ DoGameSpecificStuffAfterSucessLoad()
 	StillToFadeOut = true;
 	JustLoadedDontFadeInYet = true;
 	TheCamera.Fade(0.0f, FADE_OUT);
+#ifdef FIX_HIGH_FPS_BUGS
+	CTheScripts::bForceScriptTick = true;
+#endif
 	CTheScripts::Process();
 }
 

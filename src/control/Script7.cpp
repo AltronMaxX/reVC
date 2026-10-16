@@ -305,7 +305,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CCoronas::RegisterCorona((uintptr)this + m_nIp, ScriptParams[6], ScriptParams[7], ScriptParams[8], 255, pos, *(float*)&ScriptParams[3],
+		SCRIPT_DRAW(CCoronas, RegisterCorona)((uintptr)this + m_nIp, ScriptParams[6], ScriptParams[7], ScriptParams[8], 255, pos, *(float*)&ScriptParams[3],
 			150.0f, ScriptParams[4], ScriptParams[5], 1, 0, 0, 0.0f, false, 0.2f);
 		return 0;
 	}
@@ -344,7 +344,11 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
 		script_assert(pObject);
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(CTheScripts::HasObjectCollidedSinceLastTick(pObject));
+#else
 		UpdateCompareFlag(pObject->m_nCollisionRecords != 0);
+#endif
 		return 0;
 	}
 	case COMMAND_REMOVE_RC_BUGGY:

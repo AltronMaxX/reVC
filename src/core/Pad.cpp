@@ -2182,10 +2182,19 @@ void CPad::Update(int16 pad)
 	if (NewState.CheckForInput())
 		LastTimeTouched = CTimer::GetTimeInMilliseconds();
 	
-	if ( ++iCurrHornHistory >= HORNHISTORY_SIZE )
-		iCurrHornHistory = 0;
+#ifdef FIX_HIGH_FPS_BUGS
+	// The history is used to tell a tap of the horn (toggles the siren) from holding it,
+	// by how many entries the button was down. Keep one entry per 30 fps frame.
+	if ( CTimer::GetLogicalFramesPassed() == 0 )
+		bHornHistory[iCurrHornHistory] = bHornHistory[iCurrHornHistory] || GetHorn();
+	else
+#endif
+	{
+		if ( ++iCurrHornHistory >= HORNHISTORY_SIZE )
+			iCurrHornHistory = 0;
 
-	bHornHistory[iCurrHornHistory] = GetHorn();
+		bHornHistory[iCurrHornHistory] = GetHorn();
+	}
 
 	for (int32 i = DRUNK_STEERING_BUFFER_SIZE - 2; i >= 0; i--) {
 		SteeringLeftRightBuffer[i + 1] = SteeringLeftRightBuffer[i];

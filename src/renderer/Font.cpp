@@ -9,6 +9,12 @@
 void
 AsciiToUnicode(const char *src, wchar *dst)
 {
+	if (dst == nil)
+		return;
+	if (src == nil) {
+		*dst = '\0';
+		return;
+	}
 	while((*dst++ = (unsigned char)*src++) != '\0');
 }
 

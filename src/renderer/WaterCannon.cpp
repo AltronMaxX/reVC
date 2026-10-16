@@ -188,6 +188,7 @@ void CWaterCannon::Render(void)
 
 void CWaterCannon::PushPeds(void)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	float minx = 10000.0f;
 	float maxx = -10000.0f;
 	float miny = 10000.0f;

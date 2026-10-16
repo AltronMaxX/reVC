@@ -406,7 +406,12 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		CVector vecStabilise = (GetUp().z > 0.0f) ? vecFRight : -vecFRight;
 		float fStabiliseDirection = (GetRight().z > 0.0f) ? -1.0f : 1.0f;
 		float fStabiliseSpeed = pFlyingHandling->fRollStab * fStabiliseDirection * (1.0f - DotProduct(GetRight(), vecStabilise)) * (1.0f - Abs(GetForward().z));
+#ifdef FIX_HIGH_FPS_BUGS
+		// applied every frame, so it's a force: scale it to keep the 30 fps strength
+		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * CTimer::GetTimeStepFix() * GetRight(), GetUp());
+#else
 		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * GetRight(), GetUp()); // no CTimer::GetTimeStep(), is it right?
+#endif
 
 		// up/down
 		float fTail = -DotProduct(GetSpeed(vecTail), GetUp());
@@ -435,7 +440,12 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		float rZ = Pow(vecResistance.z, CTimer::GetTimeStep());
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
 		vecTurnSpeed.x *= rX;
+#ifdef FIX_HIGH_FPS_BUGS
+		// the speed dependent part was applied once per frame without the time step
+		float fResistance = vecTurnSpeed.y * CTimer::ScaleFrameMultiplier(1.0f / (pFlyingHandling->vecSpeedRes.y * SQR(vecTurnSpeed.y) + 1.0f)) * rY - vecTurnSpeed.y;
+#else
 		float fResistance = vecTurnSpeed.y * (1.0f / (pFlyingHandling->vecSpeedRes.y * SQR(vecTurnSpeed.y) + 1.0f)) * rY - vecTurnSpeed.y;
+#endif
 		vecTurnSpeed.z *= rZ;
 		m_vecTurnSpeed = Multiply3x3(GetMatrix(), vecTurnSpeed);
 		ApplyTurnForce(-GetUp() * fResistance * m_fTurnMass, GetRight() + Multiply3x3(GetMatrix(), m_vecCentreOfMass));
@@ -540,7 +550,15 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		float rY = Pow(flyingHandling->vecTurnRes.y, CTimer::GetTimeStep());
 		float rZ = Pow(flyingHandling->vecTurnRes.z, CTimer::GetTimeStep());
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
+#ifdef FIX_HIGH_FPS_BUGS
+		// rZ already has the time step in its exponent, raising it to the time step again made the
+		// exponent quadratic in the time step, so yaw damping per second fell off sharply above 30 fps.
+		// Make the exponent linear in the time step, with the value it has at 30 fps.
+		float fResistanceMultiplier = Pow(1.0f / (flyingHandling->vecSpeedRes.z * SQR(vecTurnSpeed.z) + 1.0f) *
+			Pow(flyingHandling->vecTurnRes.z, CTimer::GetDefaultTimeStep()), CTimer::GetTimeStep());
+#else
 		float fResistanceMultiplier = Pow(1.0f / (flyingHandling->vecSpeedRes.z * SQR(vecTurnSpeed.z) + 1.0f) * rZ, CTimer::GetTimeStep());
+#endif
 		float fResistance = vecTurnSpeed.z * fResistanceMultiplier - vecTurnSpeed.z;
 		vecTurnSpeed.x *= rX;
 		vecTurnSpeed.y *= rY;
@@ -646,6 +664,7 @@ CVehicle::DoBladeCollision(CVector pos, CMatrix &matrix, int16 rotorType, float 
 bool
 CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &matrix, int16 rotorType, float damageMult)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	int i;
 	CVector axis;
 	CVector turnSpeed(0.0f, 0.0f, 0.0f);
@@ -2097,6 +2116,7 @@ CVehicle::UpdateClumpAlpha(void)
 void
 CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 {
+	CONTINUOUS_PARTICLE_EMITTER;
 	int i;
 	float angle;
 	CColPoint point;

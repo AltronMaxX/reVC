@@ -821,7 +821,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[0];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CCoronas::RegisterCorona((uintptr)this + m_nIp, ScriptParams[6], ScriptParams[7], ScriptParams[8],
+		SCRIPT_DRAW(CCoronas, RegisterCorona)((uintptr)this + m_nIp, ScriptParams[6], ScriptParams[7], ScriptParams[8],
 			255, pos, *(float*)&ScriptParams[3], 450.0f, ScriptParams[4], ScriptParams[5], 1, 0, 0, 0.0f);
 		return 0;
 	}
@@ -830,7 +830,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		CollectParameters(&m_nIp, 6);
 		CVector pos = *(CVector*)&ScriptParams[0];
 		CVector unused(0.0f, 0.0f, 0.0f);
-		CPointLights::AddLight(0, *(CVector*)&ScriptParams[0], CVector(0.0f, 0.0f, 0.0f), 12.0f,
+		SCRIPT_DRAW(CPointLights, AddLight)(0, *(CVector*)&ScriptParams[0], CVector(0.0f, 0.0f, 0.0f), 12.0f,
 			ScriptParams[3] / 255.0f, ScriptParams[4] / 255.0f, ScriptParams[5] / 255.0f, 0, true);
 		return 0;
 	}
@@ -1737,7 +1737,11 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		float y1 = *(float*)&ScriptParams[2];
 		float x2 = *(float*)&ScriptParams[3];
 		float y2 = *(float*)&ScriptParams[4];
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(CTheScripts::HasPedShotSinceLastTick(pPed) && pPed->IsWithinArea(x1, y1, x2, y2));
+#else
 		UpdateCompareFlag(pPed->bIsShooting && pPed->IsWithinArea(x1, y1, x2, y2));
+#endif
 		if (ScriptParams[5])
 			CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, x1, y1, x2, y2, MAP_Z_LOW_LIMIT);
 		if (CTheScripts::DbgFlag)
@@ -1753,7 +1757,11 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		float y1 = *(float*)&ScriptParams[2];
 		float x2 = *(float*)&ScriptParams[3];
 		float y2 = *(float*)&ScriptParams[4];
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(CTheScripts::HasPedShotSinceLastTick(pPed) && pPed->IsWithinArea(x1, y1, x2, y2));
+#else
 		UpdateCompareFlag(pPed->bIsShooting && pPed->IsWithinArea(x1, y1, x2, y2));
+#endif
 		if (ScriptParams[5])
 			CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, x1, y1, x2, y2, MAP_Z_LOW_LIMIT);
 		if (CTheScripts::DbgFlag)
@@ -1917,7 +1925,11 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(CTheScripts::HasPedShotSinceLastTick(pPed));
+#else
 		UpdateCompareFlag(pPed->bIsShooting);
+#endif
 		return 0;
 	}
 	case COMMAND_IS_CHAR_SHOOTING:
@@ -1925,7 +1937,11 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
 		script_assert(pPed);
+#ifdef FIX_HIGH_FPS_BUGS
+		UpdateCompareFlag(CTheScripts::HasPedShotSinceLastTick(pPed));
+#else
 		UpdateCompareFlag(pPed->bIsShooting);
+#endif
 		return 0;
 	}
 	case COMMAND_CREATE_MONEY_PICKUP:
