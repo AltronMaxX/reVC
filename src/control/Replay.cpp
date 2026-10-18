@@ -1051,8 +1051,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					CPed* new_p;
 					if (ph->pedtype != PEDTYPE_PLAYER1)
 						new_p = new(ph->index << 8) CCivilianPed((ePedType)ph->pedtype, ph->mi);
-					else
+					else {
 						new_p = new(ph->index << 8) CPlayerPed();
+						CWorld::Players[CWorld::PlayerInFocus].m_pPed = (CPlayerPed*)new_p;
+						new_p->RegisterReference((CEntity**)&CWorld::Players[CWorld::PlayerInFocus].m_pPed);
+					}
 					new_p->SetStatus(STATUS_PLAYER_PLAYBACKFROMBUFFER);
 					new_p->GetMatrix().SetUnity();
 					CWorld::Add(new_p);

@@ -925,7 +925,7 @@ void CGame::Process(void)
 
 		// Otherwise even on 30 fps most probably you won't see any peds around Ocean View Hospital
 #if defined FIX_BUGS && !defined SQUEEZE_PERFORMANCE
-		if (processTime > 2) {
+		if (processTime > 2 && !CDarkel::FrenzyOnGoing()) {
 #else
 		if (processTime >= 2) {
 #endif

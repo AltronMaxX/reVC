@@ -1587,10 +1587,10 @@ CPed::CalculateNewVelocity(void)
 	}
 
 #if defined IMPROVED_MENU_AND_INPUT && defined FIRST_PERSON && defined FIRING_AND_AIMING
-	if (((!TheCamera.Cams[0].Using3rdPersonMouseCam() && !FindPlayerPed()->bIsPlayerAiming) && !CPad::GetPad(0)->IsAffectedByController ||
-		(bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_REAL_1ST_PERSON)) ||
-		FindPlayerPed()->bIsPlayerAiming &&
-		GetWeapon()->m_eWeaponType == WEAPONTYPE_PYTHON
+	if ((!TheCamera.Cams[0].Using3rdPersonMouseCam() && !FindPlayerPed()->bIsPlayerAiming && !CPad::GetPad(0)->IsAffectedByController) ||
+		(bIsDucking && TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_REAL_1ST_PERSON) ||
+		(FindPlayerPed()->bIsPlayerAiming &&
+		GetWeapon()->m_eWeaponType == WEAPONTYPE_PYTHON)
 
 #else
 	if ((!TheCamera.Cams[TheCamera.ActiveCam].GetWeaponFirstPersonOn() && !TheCamera.Cams[0].Using3rdPersonMouseCam())
@@ -5193,7 +5193,7 @@ CPed::RemoveWeaponWhenEnteringVehicle(void)
 #ifdef FIRING_AND_AIMING
 	if (IsPlayer() && ((CPlayerPed*)this)->GetPlayerInfoForThisPlayerPed()->m_bDriveByAllowed) {
 		if (!CDarkel::FrenzyOnGoing() && HasWeaponSlot(3) && GetWeapon(3).m_nAmmoTotal > 0 &&
-			(GetWeapon()->m_eWeaponType == WEAPONTYPE_COLT45 || GetWeapon(5).m_nAmmoTotal <= 0)) {
+			(GetWeapon()->m_eWeaponType == WEAPONTYPE_COLT45 || GetWeapon(5).m_nAmmoTotal <= 0) && bEnableDriveByShooting) {
 
 			if (m_storedWeapon == WEAPONTYPE_UNIDENTIFIED)
 				m_storedWeapon = GetWeapon()->m_eWeaponType;
@@ -10200,7 +10200,10 @@ CPed::Dress(void)
 	int mi = GetModelIndex();
 	m_modelIndex = -1;
 	SetModelIndex(mi);
-	m_nPedState = PED_IDLE;
+	if (InVehicle())
+		m_nPedState = PED_DRIVING;
+	else
+		m_nPedState = PED_IDLE;
 	m_nLastPedState = PED_NONE;
 	m_objective = OBJECTIVE_NONE;
 	m_prevObjective = OBJECTIVE_NONE;
