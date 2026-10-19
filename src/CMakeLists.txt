@@ -159,10 +159,10 @@ set_target_properties(${EXECUTABLE}
         C_STANDARD 11
         C_EXTENSIONS ${${PROJECT}_C_CXX_EXTENSIONS}
         C_STANDARD_REQUIRED ON
-        CXX_STANDARD 11
         CXX_EXTENSIONS ${${PROJECT}_C_CXX_EXTENSIONS}
         CXX_STANDARD_REQUIRED ON
 )
+target_compile_features(${EXECUTABLE} PRIVATE cxx_std_23)
 
 if(${PROJECT}_INSTALL)
     install(

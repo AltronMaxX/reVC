@@ -1,5 +1,9 @@
-from conans import ConanFile, CMake, tools
-from conans.errors import ConanException, ConanInvalidConfiguration
+from conan import ConanFile
+from conan.errors import ConanException, ConanInvalidConfiguration
+from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
+import os
+import shutil
+import textwrap
 import os
 import shutil
 import textwrap
@@ -10,7 +14,7 @@ class ReVCConan(ConanFile):
     version = "master"
     license = "???"  # FIXME: https://github.com/GTAmodding/re3/issues/794
     settings = "os", "arch", "compiler", "build_type"
-    generators = "cmake", "cmake_find_package"
+    generators = "CMakeDeps", "CMakeToolchain"
     options = {
         "audio": ["openal", "miles"],
         "with_libsndfile": [True, False],
@@ -35,6 +39,9 @@ class ReVCConan(ConanFile):
         # "sdl2:sdl2main": True,
     }
     no_copy_source = True
+
+    def layout(self):
+        cmake_layout(self)
 
     @property
     def _os_is_playstation2(self):

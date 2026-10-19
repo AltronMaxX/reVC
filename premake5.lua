@@ -81,8 +81,7 @@ end
 
 workspace "reVC"
 	language "C++"
-	cppdialect "C++20"
-	defines { "_HAS_CXX23=0", "_HAS_CXX20=0" }
+	cppdialect "C++23"
 	configurations { "Debug", "Release" }
 	startproject "reVC"
 	location "build"
@@ -162,16 +161,16 @@ workspace "reVC"
 		architecture "ARM"
 
 	filter { "platforms:macosx-arm64-*", "files:**.cpp"}
-		buildoptions { "-target", "arm64-apple-macos11", "-std=gnu++14" }
+		buildoptions { "-target", "arm64-apple-macos14", "-std=gnu++23" }
 
 	filter { "platforms:macosx-arm64-*", "files:**.c"}
-		buildoptions { "-target", "arm64-apple-macos11" }
+		buildoptions { "-target", "arm64-apple-macos14" }
 
 	filter { "platforms:macosx-amd64-*", "files:**.cpp"}
-		buildoptions { "-target", "x86_64-apple-macos10.12", "-std=gnu++14" }
+		buildoptions { "-target", "x86_64-apple-macos14", "-std=gnu++23" }
 
 	filter { "platforms:macosx-amd64-*", "files:**.c"}
-		buildoptions { "-target", "x86_64-apple-macos10.12" }
+		buildoptions { "-target", "x86_64-apple-macos14" }
 
 	filter { "platforms:*librw_d3d9*" }
 		defines { "RW_D3D9" }
