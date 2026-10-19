@@ -1892,9 +1892,6 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 				else
 					TheCamera.Cams[TheCamera.ActiveCam].AimingFOV = 55.0f;
 			}
-			if (!TheCamera.Using1stPersonWeaponMode())
-				if (weapon == WEAPONTYPE_ROCKETLAUNCHER || weapon == WEAPONTYPE_SNIPERRIFLE || weapon == WEAPONTYPE_LASERSCOPE || weapon == WEAPONTYPE_CAMERA)
-					return;
 		} else {
 			bIsPlayerAiming = false;
 
