@@ -1884,6 +1884,11 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 			if (weapon == WEAPONTYPE_CAMERA || (weapon == WEAPONTYPE_LASERSCOPE && bIsPlayerAiming))
 				return;
 
+			if (!TheCamera.Using1stPersonWeaponMode() && !bIsPlayerAiming &&
+			    (weapon == WEAPONTYPE_ROCKETLAUNCHER || weapon == WEAPONTYPE_SNIPERRIFLE ||
+			     weapon == WEAPONTYPE_LASERSCOPE || weapon == WEAPONTYPE_CAMERA))
+				return;
+
 			float diff = DefaultFOV - TheCamera.Cams[TheCamera.ActiveCam].AimingFOV;
 
 			if (bIsPlayerAiming) {
@@ -2625,7 +2630,7 @@ CPlayerPed::ProcessControl(void)
 	if (bIsLanding)
 		RunningLand(padUsed);
 
-#ifndef FIRING_AND_AIMING
+//#ifndef FIRING_AND_AIMING
 	if (padUsed && padUsed->WeaponJustDown() && !TheCamera.Using1stPersonWeaponMode()) {
 		// ...Really?
 		eWeaponType playerWeapon = FindPlayerPed()->GetWeapon()->m_eWeaponType;
@@ -2635,7 +2640,7 @@ CPlayerPed::ProcessControl(void)
 			DMAudio.PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 0);
 		}
 	}
-#endif
+//#endif
 
 #ifdef CROUCH
 	if (m_nPedState == PED_ROLL && !bIsStanding) {
