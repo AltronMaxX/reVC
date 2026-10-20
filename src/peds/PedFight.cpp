@@ -294,6 +294,13 @@ CPed::SetAttack(CEntity *victim)
 	CWeaponInfo *curWeapon = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
 	CAnimBlendAssociation *animAssoc;
 
+	if (IsPlayer() && this == FindPlayerPed()) {
+		eWeaponType wt = GetWeapon()->m_eWeaponType;
+		if (wt == WEAPONTYPE_ROCKETLAUNCHER || wt == WEAPONTYPE_SNIPERRIFLE ||
+		    wt == WEAPONTYPE_LASERSCOPE || wt == WEAPONTYPE_CAMERA)
+			return;
+	}
+
 	if (victim && victim->IsPed())
 		victimPed = (CPed*)victim;
 
