@@ -909,6 +909,8 @@ void CTheScripts::Process()
 		return;
 	}
 	bForceScriptTick = false;
+	ScriptTimeStep = TimeStepSinceLastScriptTick;
+	TimeStepSinceLastScriptTick = 0.0f;
 	float timeStep = TimeSinceLastScriptTick;
 	TimeSinceLastScriptTick = 0;
 	NumScriptDraws = 0;

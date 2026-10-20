@@ -555,15 +555,21 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		}
 		CVector posDiff = pos - posTarget;
 		CVector newPosition;
-		if (posDiff.x < 0)
+		if (slideBy.x == 0.0f)
+			newPosition.x = posTarget.x;
+		else if (posDiff.x < 0)
 			newPosition.x = -posDiff.x < slideBy.x ? posTarget.x : pos.x + slideBy.x;
 		else
 			newPosition.x = posDiff.x < slideBy.x ? posTarget.x : pos.x - slideBy.x;
-		if (posDiff.y < 0)
+		if (slideBy.y == 0.0f)
+			newPosition.y = posTarget.y;
+		else if (posDiff.y < 0)
 			newPosition.y = -posDiff.y < slideBy.y ? posTarget.y : pos.y + slideBy.y;
 		else
 			newPosition.y = posDiff.y < slideBy.y ? posTarget.y : pos.y - slideBy.y;
-		if (posDiff.z < 0)
+		if (slideBy.z == 0.0f)
+			newPosition.z = posTarget.z;
+		else if (posDiff.z < 0)
 			newPosition.z = -posDiff.z < slideBy.z ? posTarget.z : pos.z + slideBy.z;
 		else
 			newPosition.z = posDiff.z < slideBy.z ? posTarget.z : pos.z - slideBy.z;
