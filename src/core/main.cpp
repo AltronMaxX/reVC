@@ -153,7 +153,11 @@ bool gbPrintMemoryUsage;
 #endif
 
 #ifdef NEW_RENDERER
+#ifdef RW_WGPU
+bool gbNewRenderer = true; //Enable by default
+#else
 bool gbNewRenderer;
+#endif
 #endif
 #ifdef FIX_BUGS
 // need to clear stencil for mblur fx. no idea why it works in the original game
