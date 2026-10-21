@@ -43,10 +43,11 @@ Some of them can be toggled at runtime, some cannot.
   - Improved menu and input
   - First person mode
   - Crouching like in San Andreas
-  - Climbing like in San Andreas
-  - Swimming like in San Andreas
-  - Shortcut from Airport to Sunshine Autos
+  - Climbing like in San Andreas (`Climbing` in config file. Disabled by default.)
+  - Swimming like in San Andreas (`Swimming` in config file. Disabled by default.)
 * High-FPS physics fixes from https://github.com/Ogstra/reVC
+* Ukrainian localisation by Andrulko, YALdysse
+* Config file for character spacing in a font, like FontSizeTool
 * Skip phone calls by using Enter/Exit car button
 * Autosaves after mission
 * Fixed the game running on Linux with Wayland
@@ -54,7 +55,7 @@ Some of them can be toggled at runtime, some cannot.
 * Discord Rich Presence
 * Fixed a lot of smaller and bigger bugs
 * User files (saves and settings) stored in GTA root directory
-* Settings stored in reVC.ini file instead of gta_vc.set
+* Settings stored in `reVC.ini` file instead of gta_vc.set
 * Debug menu to do and change various things (Ctrl-M to open)
 * Debug camera (Ctrl-B to toggle)
 * Rotatable camera
