@@ -251,6 +251,7 @@ CGameLogic::Update()
 				takeMoney = 1500;
 				break;
 			}
+			const bool bUsedOutOfJailFreeCard = pPlayerInfo.m_bGetOutOfJailFree;
 			if (pPlayerInfo.m_bGetOutOfJailFree) {
 				pPlayerInfo.m_bGetOutOfJailFree = false;
 			} else {
@@ -283,7 +284,14 @@ CGameLogic::Update()
 			PassTime(720);
 			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
 			AfterDeathArrestSetUpShortCutTaxi();
-			pPlayerInfo.m_pPed->ClearWeapons();
+#ifdef FIX_BUGS
+			// SilentPatch: do NOT call ClearWeapons() again if the player used
+			// their GetOutOfJailFree card - the early branch above already
+			// skipped it for that case, but this redundant call would wipe
+			// the weapons anyway, defeating the whole point of the card.
+			if (!bUsedOutOfJailFreeCard)
+#endif
+				pPlayerInfo.m_pPed->ClearWeapons();
 			SortOutStreamingAndMemory(pPlayerInfo.GetPos());
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);

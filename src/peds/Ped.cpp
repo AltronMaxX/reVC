@@ -1242,7 +1242,13 @@ CPed::MoveHeadToLook(void)
 		bool handFreeToMove = false;
 		AnimationId animToPlay = ANIM_STD_NUM;
 
-		if (!GetWeapon()->IsType2Handed() && GetWeapon()->m_eWeaponType != WEAPONTYPE_ROCKETLAUNCHER)
+		if (!GetWeapon()->IsType2Handed() && GetWeapon()->m_eWeaponType != WEAPONTYPE_ROCKETLAUNCHER
+#ifdef FIX_BUGS
+			// SilentPatch: the chainsaw sits in the 1-handed melee slot but it
+			// should not allow Tommy to shake his fist at traffic.
+			&& GetWeapon()->m_eWeaponType != WEAPONTYPE_CHAINSAW
+#endif
+		)
 			handFreeToMove = true;
 
 		if (IsPlayer() && handFreeToMove) {
@@ -5066,6 +5072,13 @@ CPed::GiveDelayedWeapon(eWeaponType weapon, uint32 ammo)
 int32
 CPed::GiveWeapon(eWeaponType weaponType, uint32 ammo, bool unused)
 {
+#ifdef FIX_BUGS
+	// SilentPatch: stock GiveWeapon can be called with ammo == 0 (e.g. by
+	// script code that didn't check) which results in a weapon with 0 ammo
+	// total that the game treats as "no weapon" while the model is already
+	// attached. Force at least 1 round so the player can actually use it.
+	ammo = Max(1u, ammo);
+#endif
 	int slot = GetWeaponSlot(weaponType);
 
 	if (m_weapons[slot].m_eWeaponType == weaponType) {

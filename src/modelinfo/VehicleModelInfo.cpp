@@ -236,6 +236,16 @@ CVehicleModelInfo::CreateInstance(void)
 	}else{
 		ms_compsUsed[0] = -1;
 		ms_compsUsed[1] = -1;
+#ifdef FIX_BUGS
+		// SilentPatch: this model has no extras at all, so we never call
+		// ChooseComponent()/ChooseSecondComponent() and therefore never
+		// reset ms_compsToUse. The next model that *does* have extras
+		// would then inherit the stale values left over by the previous
+		// vehicle. Reset both slots to -2 ("not requested") to match
+		// the behaviour of the consume path.
+		ms_compsToUse[0] = -2;
+		ms_compsToUse[1] = -2;
+#endif
 	}
 	return (RwObject*)clump;
 }

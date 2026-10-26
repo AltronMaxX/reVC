@@ -1065,6 +1065,15 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		} else
 			colorId = WeaponForModel(entity->GetModelIndex());
 
+#ifdef FIX_BUGS
+		// SilentPatch: MI_MINIGUN2 (the pickup barrel model for the Minigun)
+		// inherits WEAPONTYPE_MINIGUN via WeaponForModel, which maps to the
+		// orange "rocket launcher" glow color. The model is meant to use the
+		// same grey glow as the base minigun - force colorId=0 for it.
+		if (entity->GetModelIndex() == MI_MINIGUN2)
+			colorId = 0;
+#endif
+
 		const CVector& pos = pickup->m_vecPos;
 		if (doOuterGlow) {
 			bool corona1 = false;

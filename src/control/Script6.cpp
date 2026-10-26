@@ -1002,7 +1002,17 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		// PC shit
 		static int nCounter = 0;
 		nCounter = Max(0, nCounter - 1);
+#ifdef FIX_BUGS
+		// SilentPatch: in Classic controls (m_bUseMouse3rdPerson == true) the
+		// crosshair-position check would erroneously report targetting whenever
+		// the player is merely looking at a ped. Only do the screen-position
+		// check when the player is actually aiming - i.e. in 1st-person weapon
+		// mode, or when not using Classic controls at all.
+		if (!pPed->GetWeapon()->IsTypeMelee() && !bTargetting
+		    && (!CCamera::m_bUseMouse3rdPerson || TheCamera.Using1stPersonWeaponMode())) {
+#else
 		if (!pPed->GetWeapon()->IsTypeMelee() && !bTargetting) {
+#endif
 			if ((pTestedPed->GetPosition() - TheCamera.GetPosition()).Magnitude() < 10.0f) {
 				CVector vTestedPos(pTestedPed->GetPosition().x, pTestedPed->GetPosition().y, pTestedPed->GetPosition().z + 0.4);
 				CVector vScreenPos;
