@@ -365,3 +365,4 @@ vendor/librw1/
 /.direnv
 /build-wgpu
 /build-release
+/cmake-build-debug
