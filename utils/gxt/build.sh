@@ -1,0 +1,7 @@
+./gxt -i "american.txt" -o "../../gamefiles/TEXT/american.gxt"
+./gxt -i "french.txt" -o "../../gamefiles/TEXT/french.gxt"
+./gxt -i "german.txt" -o "../../gamefiles/TEXT/german.gxt"
+./gxt -i "italian.txt" -o "../../gamefiles/TEXT/italian.gxt"
+./gxt -i "spanish.txt" -o "../../gamefiles/TEXT/spanish.gxt"
+./gxt -i "russian_utf-8-BOM.txt" -o "../../../gamefiles/TEXT/russian.gxt" -t "./vc_table_rus_1c.txt"
+./gxt -i "ukrainian_pc_andrulko_utf-8-BOM.txt" -o "../../../gamefiles/TEXT/ukrainian.gxt" -t "./vc_table_pc_ukr_andrulko.txt"
