@@ -43,10 +43,11 @@ Some of them can be toggled at runtime, some cannot.
   - Improved menu and input
   - First person mode
   - Crouching like in San Andreas
-  - Climbing like in San Andreas
-  - Swimming like in San Andreas
-  - Shortcut from Airport to Sunshine Autos
+  - Climbing like in San Andreas (`Climbing` in the `reVC.ini` config)
+  - Swimming like in San Andreas (`Swimming` in the `reVC.ini` config)
 * High-FPS physics fixes from https://github.com/Ogstra/reVC
+* Ukrainian localisation by Andrulko
+* Font spacing in the configuration file
 * Skip phone calls by using Enter/Exit car button
 * Autosaves after mission
 * Fixed the game running on Linux with Wayland
