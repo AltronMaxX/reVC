@@ -18,7 +18,7 @@
 
 - Для работы reVC требуются игровые ассеты, поэтому вы **должны** владеть [копией GTA Vice City](https://store.steampowered.com/app/12110/Grand_Theft_Auto_Vice_City/).
 - Соберите reVC или скачайте последнюю сборку из [actions](https://github.com/AltronMaxX/reVC/actions) репозитория.
-- Распакуйте скачанный zip-архив поверх вашей директории GTA VC и запустите reVC. Скачайте игровые файлы reVC из [этого](https://github.com/AltronMaxX/reVC-gamefiles/tree/main) репозитория.
+- Распакуйте скачанный zip-архив поверх вашей директории GTA VC и запустите reVC.
 
 ## Скриншоты
 
