@@ -1,8 +1,7 @@
-gxt -g VC -i "american.txt" -o "../../gamefiles/TEXT/american.gxt"
-gxt -g VC -i "french.txt" -o "../../gamefiles/TEXT/french.gxt"
-gxt -g VC -i "german.txt" -o "../../gamefiles/TEXT/german.gxt"
-gxt -g VC -i "italian.txt" -o "../../gamefiles/TEXT/italian.gxt"
-gxt -g VC -i "spanish.txt" -o "../../gamefiles/TEXT/spanish.gxt"
-gxt -g VC -i "russian.txt" -o "../../gamefiles/TEXT/russian.gxt"
-cd /d rus_ukr
-build.bat
+gxt -g VC -i "american.txt" -o "../../gamefiles/TEXT/american.gxt" -t "./tables/vc_table_efigs.txt"
+gxt -g VC -i "french.txt" -o "../../gamefiles/TEXT/french.gxt" -t "./tables/vc_table_efigs.txt"
+gxt -g VC -i "german.txt" -o "../../gamefiles/TEXT/german.gxt" -t "./tables/vc_table_efigs.txt"
+gxt -g VC -i "italian.txt" -o "../../gamefiles/TEXT/italian.gxt" -t "./tables/vc_table_efigs.txt"
+gxt -g VC -i "spanish.txt" -o "../../gamefiles/TEXT/spanish.gxt" -t "./tables/vc_table_efigs.txt"
+gxt -g VC -i "russian_utf-8-BOM.txt" -o "../../gamefiles/TEXT/russian.gxt" -t "./tables/vc_table_rus_1c.txt"
+gxt -g VC -i "ukrainian_pc_andrulko_utf-8-BOM.txt" -o "../../gamefiles/TEXT/ukrainian.gxt" -t "./tables/vc_table_pc_ukr_andrulko.txt"
