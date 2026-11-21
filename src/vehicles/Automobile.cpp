@@ -3394,10 +3394,7 @@ CAutomobile::TankControl(void)
 
 	// Rotate turret
 	float prevAngle = m_fCarGunLR;
-#ifdef FREE_CAM
-	if(!CCamera::bFreeCam)
-#endif
-		m_fCarGunLR -= CPad::GetPad(0)->GetCarGunLeftRight() * 0.00015f * CTimer::GetTimeStep();
+	m_fCarGunLR -= CPad::GetPad(0)->GetCarGunLeftRight() * 0.00015f * CTimer::GetTimeStep();
 
 	if(m_fCarGunLR < 0.0f)
 		m_fCarGunLR += TWOPI;
@@ -3431,7 +3428,9 @@ CAutomobile::TankControl(void)
 		CWeapon::DoTankDoomAiming(FindPlayerVehicle(), FindPlayerPed(), &point1, &point2);
 		CColPoint colpoint;
 		CEntity *entity = nil;
+		CWorld::pIgnoreEntity = this;
 		CWorld::ProcessLineOfSight(point1, point2, colpoint, entity, true, true, true, true, true, true, false);
+		CWorld::pIgnoreEntity = nil;
 		if(entity)
 			point2 = colpoint.point - 0.04f*(colpoint.point - point1);
 

@@ -2867,9 +2867,12 @@ CWeapon::DoTankDoomAiming(CEntity *shooter, CEntity *driver, CVector *source, CV
 	CWorld::FindObjectsInRange(*source, (*target-*source).Magnitude(), true, &lastEntity, 15, entities, false, true, false, false, false);
 
 	float closestEntityDist = 10000.0f;
-	int16 closestEntity;
+	int16 closestEntity = -1;
 
-	float normZ = (target->z - source->z) / (*target-*source).Magnitude();
+	CVector src2D(source->x, source->y, 0.0f);
+	CVector dst2D(target->x, target->y, 0.0f);
+	CVector aimDir2D = dst2D - src2D;
+	float aimLen2D = aimDir2D.Magnitude();
 
 	for ( int32 i = 0; i < lastEntity; i++ )
 	{
@@ -2886,20 +2889,23 @@ CWeapon::DoTankDoomAiming(CEntity *shooter, CEntity *driver, CVector *source, CV
 			{
 				if ( !(victim->IsVehicle() && victim->bRenderScorched) )
 				{
-					float distToVictim  = (shooter->GetPosition()-victim->GetPosition()).Magnitude2D();
-					float distToVictimZ = Abs(shooter->GetPosition().z - (distToVictim*normZ + victim->GetPosition().z));
-
-					if ( 3.0f*distToVictimZ < distToVictim )
+					CVector tmp(victim->GetPosition().x, victim->GetPosition().y, 0.0f);
+					// Target must be in front of the gun along the aim ray
+					if ( aimLen2D > 0.001f && DotProduct(tmp - src2D, aimDir2D) > 0.0f )
 					{
-						CVector tmp = CVector(victim->GetPosition().x, victim->GetPosition().y, 0.0f);
-						if ( CCollision::DistToLine(source, target,
-								&tmp) < victim->GetBoundRadius()*3.0f )
+						float lineDist = CCollision::DistToLine(&src2D, &dst2D, &tmp);
+						float maxDist = Max(victim->GetBoundRadius() * 1.5f, 3.5f);
+						if ( lineDist < maxDist )
 						{
-							float vehicleDist = Sqrt(SQR(distToVictim) + SQR(distToVictimZ));
-							if ( vehicleDist < closestEntityDist )
+							float distToVictim = (victim->GetPosition() - *source).Magnitude2D();
+							float distToVictimZ = Abs(victim->GetPosition().z - source->z);
+							if ( distToVictimZ < distToVictim * 0.7f || distToVictim < 6.0f )
 							{
-								closestEntityDist = vehicleDist;
-								closestEntity = i;
+								if ( distToVictim < closestEntityDist )
+								{
+									closestEntityDist = distToVictim;
+									closestEntity = i;
+								}
 							}
 						}
 					}
@@ -2908,15 +2914,21 @@ CWeapon::DoTankDoomAiming(CEntity *shooter, CEntity *driver, CVector *source, CV
 		}
 	}
 
-	if ( closestEntityDist < DOOMAUTOAIMING_MAXDIST )
+	if ( closestEntity != -1 && closestEntityDist < DOOMAUTOAIMING_MAXDIST )
 	{
 		CEntity *victim = entities[closestEntity];
 		ASSERT(victim!=nil);
 
-		float distToTarget = (*target - *source).Magnitude2D();
-		float distToSource = (victim->GetPosition() - *source).Magnitude2D();
+		float distToTarget = (*target - *source).Magnitude();
+		CVector aimPoint = victim->GetPosition();
+		aimPoint.z += 0.3f;
 
-		(*target).z = (distToTarget / distToSource) * (0.3f + victim->GetPosition().z - (*source).z) + (*source).z;
+		CVector aimDir = aimPoint - *source;
+		float distToVictim = aimDir.Magnitude();
+		if (distToVictim > 0.001f) {
+			aimDir /= distToVictim;
+			*target = *source + aimDir * distToTarget;
+		}
 	}
 }
 

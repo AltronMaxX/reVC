@@ -6012,6 +6012,9 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	float stickX = -(pad->GetCarGunLeftRight());
 	float stickY = -pad->GetCarGunUpDown();
 
+	if (car->GetModelIndex() == MI_RHINO)
+		stickX = 0.0f;
+
 	// In SA this checks for m_bUseMouse3rdPerson so num2 / num8 do not move camera
 	// when Keyboard & Mouse controls are used. To make it work better with III/VC, check for actual pad state instead
 	if (!CPad::IsAffectedByController && !isCar)
@@ -6377,14 +6380,14 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	// SA
 	// gTargetCoordsForLookingBehind = TargetCoors;
 
-	// SA code from CAutomobile::TankControl/FireTruckControl.
-	if (car->GetModelIndex() == MI_RHINO || car->GetModelIndex() == MI_FIRETRUCK) {
+	// SA code from CAutomobile::FireTruckControl.
+	if (car->GetModelIndex() == MI_FIRETRUCK) {
 
 		float &carGunLR = ((CAutomobile*)car)->m_fCarGunLR;
 		CVector hi = Multiply3x3(Front, car->GetMatrix());
 
 		// III/VC's firetruck turret angle is reversed
-		float angleToFace = (car->GetModelIndex() == MI_FIRETRUCK ? -hi.Heading() : hi.Heading());
+		float angleToFace = -hi.Heading();
 
 		if (angleToFace <= carGunLR + PI) {
 			if (angleToFace < carGunLR - PI)
@@ -6394,7 +6397,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		}
 
 		float neededTurn = angleToFace - carGunLR;
-		float turnPerFrame = CTimer::GetTimeStep() * (car->GetModelIndex() == MI_FIRETRUCK ? 0.05f : 0.015f);
+		float turnPerFrame = CTimer::GetTimeStep() * 0.05f;
 		if (neededTurn <= turnPerFrame) {
 			if (neededTurn < -turnPerFrame)
 				angleToFace = carGunLR - turnPerFrame;
@@ -6402,9 +6405,6 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 			angleToFace = turnPerFrame + carGunLR;
 		}
 
-		if (car->GetModelIndex() == MI_RHINO && carGunLR != angleToFace) {
-			DMAudio.PlayOneShot(car->m_audioEntityId, SOUND_CAR_TANK_TURRET_ROTATE, Abs(angleToFace - carGunLR));
-		}
 		carGunLR = angleToFace;
 
 		if (carGunLR < -PI) {
