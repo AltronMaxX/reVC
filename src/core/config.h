@@ -293,6 +293,7 @@ enum Config {
 #define GAMEPAD_MENU
 #define FEATURES_INI
 #define FIX_HIGH_FPS_BUGS
+#define RHINO_MOUSE_AIM
 
 //#define NO_MOVIES	// add option to disable intro videos
 #define RANDOM_SPLASH_SCREEN

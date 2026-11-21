@@ -616,6 +616,9 @@ bool LoadINISettings()
 	ReadIniIfExists("Features", "FiringAndAiming", &bEnableFiringAndAiming);
 	//ReadIniIfExists("Features", "DriveByShooting", &bEnableDriveByShooting); TODO: we need to load some anims not from ped.ifp. Will work on this when I implement modloader
 #endif
+#ifdef RHINO_MOUSE_AIM
+	ReadIniIfExists("Features", "RhinoMouseAiming", &bEnableRhinoMouseAiming);
+#endif
 #endif
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
@@ -763,6 +766,9 @@ void SaveINISettings()
 #ifdef FIRING_AND_AIMING
 	StoreIni("Features", "FiringAndAiming", bEnableFiringAndAiming);
 	StoreIni("Features", "DriveByShooting", bEnableDriveByShooting);
+#endif
+#ifdef RHINO_MOUSE_AIM
+	StoreIni("Features", "RhinoMouseAiming", bEnableRhinoMouseAiming);
 #endif
 #endif
 #ifdef CUSTOM_FRONTEND_OPTIONS

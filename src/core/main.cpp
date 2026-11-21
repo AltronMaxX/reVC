@@ -117,6 +117,9 @@ bool bEnableClimbing;
 bool bEnableFiringAndAiming = true;
 bool bEnableDriveByShooting = false;
 #endif
+#ifdef RHINO_MOUSE_AIM
+bool bEnableRhinoMouseAiming = false;
+#endif
 #endif
 
 volatile int32 frameCount;
