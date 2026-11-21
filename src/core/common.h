@@ -425,6 +425,9 @@ extern bool bEnableClimbing;
 extern bool bEnableFiringAndAiming;
 extern bool bEnableDriveByShooting;
 #endif
+#ifdef RHINO_MOUSE_AIM
+extern bool bEnableRhinoMouseAiming;
+#endif
 #endif
 
 #endif // __GTA_COMMON_H__
