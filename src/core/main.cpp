@@ -1753,6 +1753,8 @@ Idle(void *arg)
 
 	if (gbShowTimebars)
 		tbDisplay();
+	else
+		tbPerfLog();
 
 	DoRWStuffEndOfFrame();
 

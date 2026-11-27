@@ -6,11 +6,13 @@ void tbInit();
 void tbStartTimer(int32, Const char*);
 void tbEndTimer(Const char*);
 void tbDisplay();
+void tbPerfLog();
 #else
 #define tbInit()
 #define tbStartTimer(a, b)
 #define tbEndTimer(a)
 #define tbDisplay()
+#define tbPerfLog()
 #endif
 
 #endif // __GTA_TIMEBARS_H__

@@ -874,7 +874,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                     WGPURenderPipeline pipeline = getOrCreateSkinPipeline(
                         passes[p].blend, s_renderState.srcBlend, s_renderState.destBlend,
                         passes[p].zWrite, s_renderState.cullMode, s_renderState.zTest != 0);
-                    wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, pipeline);
+                    passSetPipeline(pipeline);
 
                     // Sub-allocate this draw's uniforms from the ring. When both uniforms
                     // and bones come from the ring, use the cached per-texture bind group
@@ -925,10 +925,11 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
                     uint32 dynOffsets[2] = {uniDynOffset, boneDynOffset}; // binding 0, then 3
                     wgpuRenderPassEncoderSetBindGroup(s_frame.renderPass, 0, bindGroup, 2, dynOffsets);
-                    wgpuRenderPassEncoderSetVertexBuffer(s_frame.renderPass, 0, inst->vertexBuffer, 0, WGPU_WHOLE_SIZE);
-                    wgpuRenderPassEncoderSetIndexBuffer(s_frame.renderPass, inst->indexBuffer, WGPUIndexFormat_Uint16,
-                                                        0, WGPU_WHOLE_SIZE);
+                    passSetVertexBuffer0(inst->vertexBuffer);
+                    passSetIndexBufferU16(inst->indexBuffer);
                     wgpuRenderPassEncoderDrawIndexed(s_frame.renderPass, inst->numIndices, 1, 0, 0, 0);
+                    s_frameStats.draws++;
+                    s_frameStats.drawsSkin++;
 
                     if (throwaway) wgpuBindGroupRelease(throwaway);
                     if (uniFallback) wgpuBufferRelease(uniFallback);

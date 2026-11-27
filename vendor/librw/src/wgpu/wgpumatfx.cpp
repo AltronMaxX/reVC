@@ -696,7 +696,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
                     WGPURenderPipeline pipeline = getOrCreateMatFXPipeline(
                         passes[p].zWrite, s_renderState.cullMode, s_renderState.zTest != 0);
-                    wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, pipeline);
+                    passSetPipeline(pipeline);
 
                     // Sub-allocate uniforms from the ring + cached bind group keyed by the
                     // (base,env) texture pair; fall back to a private buffer on overflow.
@@ -737,10 +737,11 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                     }
 
                     wgpuRenderPassEncoderSetBindGroup(s_frame.renderPass, 0, bindGroup, 1, &dynOffset);
-                    wgpuRenderPassEncoderSetVertexBuffer(s_frame.renderPass, 0, inst->vertexBuffer, 0, WGPU_WHOLE_SIZE);
-                    wgpuRenderPassEncoderSetIndexBuffer(s_frame.renderPass, inst->indexBuffer, WGPUIndexFormat_Uint16,
-                                                        0, WGPU_WHOLE_SIZE);
+                    passSetVertexBuffer0(inst->vertexBuffer);
+                    passSetIndexBufferU16(inst->indexBuffer);
                     wgpuRenderPassEncoderDrawIndexed(s_frame.renderPass, inst->numIndices, 1, 0, 0, 0);
+                    s_frameStats.draws++;
+                    s_frameStats.drawsMatfx++;
 
                     if (throwaway) wgpuBindGroupRelease(throwaway);
                     if (fallbackBuffer) wgpuBufferRelease(fallbackBuffer);

@@ -590,6 +590,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
             wgpuRenderPassEncoderSetVertexBuffer(rp, 0, vb, vbOffset, vbBytes);
             wgpuRenderPassEncoderSetIndexBuffer(rp, ib, WGPUIndexFormat_Uint16, ibOffset, ibBoundBytes);
             wgpuRenderPassEncoderDrawIndexed(rp, (uint32_t)listCount, 1, 0, 0, 0);
+            passBindCacheReset(); // direct binds above desync the pass-state cache
 
             if (vbPrivate) wgpuBufferRelease(vb);
             if (ibPrivate) wgpuBufferRelease(ib);
@@ -976,6 +977,7 @@ fn fs_main(f : VsOut) -> @location(0) vec4<f32> {
                                                  ? WGPUPrimitiveTopology_LineList
                                                  : WGPUPrimitiveTopology_TriangleList;
 
+            passBindCacheReset(); // direct binds below desync the pass-state cache
             wgpuRenderPassEncoderSetPipeline(rp, im3dPipelineForState(topology));
             if (s_im3d.sceneOnRing)
                 wgpuRenderPassEncoderSetBindGroup(rp, 0, bg, 1, &s_im3d.sceneOffset);

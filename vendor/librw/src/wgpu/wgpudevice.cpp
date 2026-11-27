@@ -37,6 +37,56 @@ namespace rw
 
         FrameState s_frame = {};
         RenderState s_renderState = {};
+        FrameStats s_frameStats = {};
+
+        // Repeat-geometry tracker for the instancing-potential stat. A frame draws
+        // ~1-2k meshes over ~1k geometries, so 4096 slots keep collisions rare.
+        static const void* s_seenGeo[4096];
+        static uint32 s_seenGeoFrame;
+
+        void statNoteGeometry(const void* geoInstHeader)
+        {
+            // frame id: bumped by getFrameStats (once per [PERF] window is too coarse,
+            // so instead clear lazily on wrap via a frame counter bumped in submitFrame)
+            uintptr h = (uintptr)geoInstHeader;
+            uint32 idx = (uint32)((h >> 4) * 2654435761u) & 4095;
+            for (uint32 probe = 0; probe < 8; probe++, idx = (idx + 1) & 4095)
+            {
+                if (s_seenGeo[idx] == geoInstHeader)
+                {
+                    s_frameStats.drawsRepeatGeo++;
+                    return;
+                }
+                if (s_seenGeo[idx] == nullptr)
+                {
+                    s_seenGeo[idx] = geoInstHeader;
+                    return;
+                }
+            }
+        }
+
+        void statResetSeenGeo(void)
+        {
+            memset(s_seenGeo, 0, sizeof(s_seenGeo));
+        }
+
+        // Public (rwwgpu.h): copy out the per-frame draw stats and reset them.
+        // out = { atomics, meshes, draws, pipelineBinds, stock, custom, skin,
+        //         matfx, gsEmu2, repeatGeo }.
+        void getFrameStats(uint32 out[10])
+        {
+            out[0] = s_frameStats.atomics;
+            out[1] = s_frameStats.meshes;
+            out[2] = s_frameStats.draws;
+            out[3] = s_frameStats.pipelineBinds;
+            out[4] = s_frameStats.drawsStock;
+            out[5] = s_frameStats.drawsCustom;
+            out[6] = s_frameStats.drawsSkin;
+            out[7] = s_frameStats.drawsMatfx;
+            out[8] = s_frameStats.drawsGsEmu2;
+            out[9] = s_frameStats.drawsRepeatGeo;
+            s_frameStats = FrameStats{};
+        }
 
 #ifdef _WIN32
         bool pollFrameReady(void)
@@ -817,7 +867,50 @@ struct VSOut {
                 wgpuRenderPassEncoderRelease(s_frame.renderPass);
                 s_frame.renderPass = nullptr;
                 s_frame.inRenderPass = false;
+                passBindCacheReset();
             }
+        }
+
+        // ========================================================================
+        // Cached pass-state setters (see wgpu_internal.h). wgpu-native spends a
+        // noticeable amount of CPU per encoder call, and consecutive meshes very
+        // often share the pipeline and the (per-geometry shared) vertex buffer —
+        // skipping the redundant FFI calls is a straight CPU win.
+        // ========================================================================
+        static WGPURenderPipeline s_boundPipeline = nullptr;
+        static WGPUBuffer s_boundVertexBuffer = nullptr;
+        static WGPUBuffer s_boundIndexBuffer = nullptr;
+
+        void passBindCacheReset(void)
+        {
+            s_boundPipeline = nullptr;
+            s_boundVertexBuffer = nullptr;
+            s_boundIndexBuffer = nullptr;
+        }
+
+        void passSetPipeline(WGPURenderPipeline p)
+        {
+            if (p == s_boundPipeline)
+                return;
+            wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, p);
+            s_boundPipeline = p;
+        }
+
+        void passSetVertexBuffer0(WGPUBuffer b)
+        {
+            if (b == s_boundVertexBuffer)
+                return;
+            wgpuRenderPassEncoderSetVertexBuffer(s_frame.renderPass, 0, b, 0, WGPU_WHOLE_SIZE);
+            s_boundVertexBuffer = b;
+        }
+
+        void passSetIndexBufferU16(WGPUBuffer b)
+        {
+            if (b == s_boundIndexBuffer)
+                return;
+            wgpuRenderPassEncoderSetIndexBuffer(s_frame.renderPass, b, WGPUIndexFormat_Uint16, 0,
+                                                WGPU_WHOLE_SIZE);
+            s_boundIndexBuffer = b;
         }
 
         static void beginLoadRenderPass();
@@ -850,6 +943,7 @@ struct VSOut {
         {
             if (!s_frame.inFrame) return;
             endRenderPassIfOpen();
+            statResetSeenGeo(); // repeat-geometry stat window = one submit (frame)
             ringsFlush(); // upload this segment's staged uniform + geometry data
             WGPUCommandBufferDescriptor cmdDesc = {};
             cmdDesc.label = WGPU_STR("frame commands");
@@ -1274,6 +1368,7 @@ struct VSOut {
 
             s_frame.renderPass = wgpuCommandEncoderBeginRenderPass(s_frame.encoder, &rpDesc);
             s_frame.inRenderPass = true;
+            passBindCacheReset();
 
             if (subRect)
             {
@@ -1282,7 +1377,7 @@ struct VSOut {
                 if (clearDepth)
                 {
                     ensureDepthClearPipe();
-                    wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, s_depthClearPipe);
+                    passSetPipeline(s_depthClearPipe);
                     wgpuRenderPassEncoderDraw(s_frame.renderPass, 3, 1, 0, 0);
                 }
             }
@@ -1334,6 +1429,7 @@ struct VSOut {
             rpDesc.depthStencilAttachment = &depthAtt;
             s_frame.renderPass = wgpuCommandEncoderBeginRenderPass(s_frame.encoder, &rpDesc);
             s_frame.inRenderPass = true;
+            passBindCacheReset();
         }
 
         // Copy the presented (or offscreen) frame into the current-context raster.

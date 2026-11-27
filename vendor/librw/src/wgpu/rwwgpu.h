@@ -161,6 +161,12 @@ namespace rw
         void objRenderMeshes(Atomic* atomic, const Matrix* world, uint32 whichMeshes,
                              uint8 fadeAlpha, const RGBAf* ambient);
 
+        // Per-frame draw statistics for profiling: out = { atomics, meshes, draws,
+        // pipelineBinds, stock, custom, skin, matfx, gsEmu2, repeatGeo,
+        // usFillUniforms, usAlloc, usEncode, usBindGroup } accumulated since the
+        // previous call; the call resets them.
+        void getFrameStats(uint32 out[10]);
+
         struct Im2DVertex
         {
             float32 x, y, z, w;

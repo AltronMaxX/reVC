@@ -89,6 +89,29 @@ fn DoDynamicLight(V: vec3<f32>, N: vec3<f32>) -> vec3<f32> {
             Raster* currentFrameBuffer;
         };
 
+        // Per-frame draw statistics, for the game's [PERF] log. Reset by
+        // getFrameStats() (rwwgpu.h public API).
+        struct FrameStats
+        {
+            uint32 atomics;
+            uint32 meshes;
+            uint32 draws;
+            uint32 pipelineBinds;
+            // draw breakdown by path
+            uint32 drawsStock;
+            uint32 drawsCustom;
+            uint32 drawsSkin;
+            uint32 drawsMatfx;
+            uint32 drawsGsEmu2;   // second PS2 GS alpha-test pass (extra draws)
+            uint32 drawsRepeatGeo; // draws whose geometry was already drawn this frame
+        };
+        extern FrameStats s_frameStats;
+
+        // Repeat-geometry tracker: marks geometry pointers seen this frame,
+        // returns true if the pointer was already drawn. Reset per frame.
+        void statNoteGeometry(const void* geoInstHeader);
+        void statResetSeenGeo(void);
+
         struct RenderState
         {
             Raster* currentRaster;
@@ -283,6 +306,15 @@ fn DoDynamicLight(V: vec3<f32>, N: vec3<f32>) -> vec3<f32> {
         bool acquireFrame(void);
         bool acquireOffscreenFrame(Camera* cam);
         void endRenderPassIfOpen(void);
+
+        // Cached pass-state setters: skip the wgpu call when the value is already
+        // bound on the current pass. Every SetPipeline / SetVertexBuffer /
+        // SetIndexBuffer in the backend must go through these — the cache is reset
+        // whenever a render pass begins or ends (wgpudevice.cpp).
+        void passSetPipeline(WGPURenderPipeline p);
+        void passSetVertexBuffer0(WGPUBuffer b);
+        void passSetIndexBufferU16(WGPUBuffer b);
+        void passBindCacheReset(void);
         void mat4Mult(float* dst, const float* a, const float* b);
         WGPUDepthStencilState makeDepthState(bool write);
         WGPUBlendState makeAlphaBlend(void);

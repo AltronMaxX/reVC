@@ -46,7 +46,7 @@ void tbInit()
 #endif
 	}
 #ifdef FRAMETIME
-	FrameInitTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	FrameInitTime = (float)RsTimer();
 #endif
 }
 
@@ -54,7 +54,7 @@ void tbStartTimer(int32 unk, Const char *name)
 {
 	strcpy(TimerBar.Timers[TimerBar.count].name, name);
 	TimerBar.Timers[TimerBar.count].unk = unk;
-	TimerBar.Timers[TimerBar.count].startTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	TimerBar.Timers[TimerBar.count].startTime = (float)RsTimer();
 	TimerBar.count++;
 }
 
@@ -66,12 +66,45 @@ void tbEndTimer(Const char* name)
 			n = i;
 	}
 	assert(n != 1500);
-	TimerBar.Timers[n].endTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	TimerBar.Timers[n].endTime = (float)RsTimer();
 }
 
 float Diag_GetFPS()
 {
 	return 39000.0f / (msCollected[(curMS - 1) % MAX_MS_COLLECTED] - msCollected[curMS % MAX_MS_COLLECTED]);
+}
+
+// Headless perf log: same data as tbDisplay but to stderr, no font drawing.
+// Called every frame from Idle when timebars overlay is off.
+void tbPerfLog()
+{
+#ifdef FRAMETIME
+	float FrameEndTime = (float)RsTimer();
+	MaxFrameTime = Max(MaxFrameTime, FrameEndTime - FrameInitTime);
+#endif
+	for (uint32 i = 0; i < TimerBar.count; i++)
+		MaxTimes[i] = Max(MaxTimes[i], TimerBar.Timers[i].endTime - TimerBar.Timers[i].startTime);
+	msCollected[(curMS++) % MAX_MS_COLLECTED] = RsTimer();
+
+	static uint32 perfLogCounter;
+	if (++perfLogCounter < 128)
+		return;
+	perfLogCounter = 0;
+	fprintf(stderr, "[PERF] fps=%.2f frame=%.2f", Diag_GetFPS(), MaxFrameTime);
+	for (uint32 i = 0; i < TimerBar.count; i++)
+		fprintf(stderr, " %s=%.2f", &TimerBar.Timers[i].name[0], MaxTimes[i]);
+#ifdef RW_WGPU
+	{
+		// accumulated since the previous log line (128 frames)
+		uint32 wstats[10];
+		rw::wgpu::getFrameStats(wstats);
+		fprintf(stderr, " | pf: atm=%u msh=%u drw=%u [stk=%u cst=%u skn=%u mfx=%u gs2=%u rep=%u]",
+		        wstats[0] / 128, wstats[1] / 128, wstats[2] / 128,
+		        wstats[4] / 128, wstats[5] / 128, wstats[6] / 128,
+		        wstats[7] / 128, wstats[8] / 128, wstats[9] / 128);
+	}
+#endif
+	fprintf(stderr, "\n");
 }
 
 void tbDisplay()
@@ -80,7 +113,7 @@ void tbDisplay()
 	wchar wtemp[200];
 
 #ifdef FRAMETIME
-	float FrameEndTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	float FrameEndTime = (float)RsTimer();
 #endif
 
 	msCollected[(curMS++) % MAX_MS_COLLECTED] = RsTimer();

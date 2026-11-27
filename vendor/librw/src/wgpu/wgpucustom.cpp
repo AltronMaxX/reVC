@@ -17,6 +17,10 @@
 
 #define PLUGIN_ID 0
 
+#include <unordered_map>
+#include <functional>
+#include <new>
+
 namespace rw
 {
     namespace wgpu
@@ -571,6 +575,7 @@ fn vs_main(v : VsIn) -> VsOut {
 
             WGPURenderPassEncoder rp = s_frame.renderPass;
             customBind(sh, rp, WGPUPrimitiveTopology_TriangleList);
+            passBindCacheReset(); // direct binds desync the pass-state cache
             wgpuRenderPassEncoderSetVertexBuffer(rp, 0, vb, vbOffset, vbBytes);
             if (ib)
             {
@@ -594,7 +599,6 @@ fn vs_main(v : VsIn) -> VsOut {
         // ========================================================================
 
 #define OBJ_CUSTOM_PARAMS_SIZE 256   // 16 vec4 of user params
-#define OBJ_CUSTOM_MAX_BGS     32
 
         // Prefix prepended to the game's WGSL body: the standard object uniforms
         // (layout must match ObjectUniforms in wgpu_internal.h), the user-params
@@ -647,10 +651,18 @@ fn DoFog(w : f32) -> f32 {
 @group(0) @binding(6) var<uniform> boneMatrices : array<mat4x4<f32>, 64>;
 )";
 
-        struct ObjShaderBG
+        struct ObjShaderBGKey
         {
             WGPUTextureView v0, v1;
-            WGPUBindGroup bg;
+            bool operator==(const ObjShaderBGKey& o) const { return v0 == o.v0 && v1 == o.v1; }
+        };
+        struct ObjShaderBGKeyHash
+        {
+            size_t operator()(const ObjShaderBGKey& k) const
+            {
+                return std::hash<uintptr_t>()((uintptr_t)k.v0) * 31u ^
+                       std::hash<uintptr_t>()((uintptr_t)k.v1);
+            }
         };
 
         struct ObjShader
@@ -661,9 +673,12 @@ fn DoFog(w : f32) -> f32 {
             // staged user params, uploaded from the ring per mesh
             uint8 params[OBJ_CUSTOM_PARAMS_SIZE];
             Im2DPipeCache pc;
-            // bind-group cache keyed by (texture0 view, texture1 view)
-            ObjShaderBG bgs[OBJ_CUSTOM_MAX_BGS];
-            int numBGs;
+            // bind-group cache keyed by (texture0 view, texture1 view). The old
+            // fixed 32-slot array thrashed badly on the world pipe (hundreds of
+            // distinct texture pairs per frame -> wipe + wgpuDeviceCreateBindGroup
+            // per draw, ~1.9 ms/frame); a hash map bounded by the loaded-texture
+            // count has no eviction at all.
+            std::unordered_map<ObjShaderBGKey, WGPUBindGroup, ObjShaderBGKeyHash> bgMap;
             uint32 bgGen;
         };
 
@@ -765,8 +780,10 @@ fn DoFog(w : f32) -> f32 {
             if (mod == nullptr)
                 return nil;
 
+            // ObjShader holds a std::unordered_map now — raw rwNewT+memset is not
+            // enough, the map's constructor must run (and its destructor before free).
             ObjShader* sh = rwNewT(ObjShader, 1, MEMDUR_EVENT);
-            memset(sh, 0, sizeof(*sh));
+            new (sh) ObjShader();
             sh->module = mod;
             sh->skinned = skinned;
             sh->bgGen = 0xFFFFFFFFu;
@@ -800,12 +817,14 @@ fn DoFog(w : f32) -> f32 {
             if (sh == nil)
                 return;
             imPipeCacheRelease(&sh->pc); // (P1-6)
-            for (int i = 0; i < sh->numBGs; i++)
-                wgpuBindGroupRelease(sh->bgs[i].bg);
+            for (auto& kv : sh->bgMap)
+                wgpuBindGroupRelease(kv.second);
+            sh->bgMap.clear();
             if (sh->playout)
                 wgpuPipelineLayoutRelease(sh->playout);
             if (sh->module)
                 wgpuShaderModuleRelease(sh->module);
+            sh->~ObjShader();
             rwFree(sh);
         }
 
@@ -961,14 +980,15 @@ fn DoFog(w : f32) -> f32 {
             uint32 gen = wgpuUniformRingGeneration();
             if (gen != sh->bgGen)
             {
-                for (int i = 0; i < sh->numBGs; i++)
-                    wgpuBindGroupRelease(sh->bgs[i].bg);
-                sh->numBGs = 0;
+                for (auto& kv : sh->bgMap)
+                    wgpuBindGroupRelease(kv.second);
+                sh->bgMap.clear();
                 sh->bgGen = gen;
             }
-            for (int i = 0; i < sh->numBGs; i++)
-                if (sh->bgs[i].v0 == v0 && sh->bgs[i].v1 == v1)
-                    return sh->bgs[i].bg;
+            ObjShaderBGKey key = {v0, v1};
+            auto it = sh->bgMap.find(key);
+            if (it != sh->bgMap.end())
+                return it->second;
 
             WGPUBuffer ring = wgpuUniformRingBuffer();
             WGPUSampler sampler = objDefaultSampler();
@@ -997,15 +1017,7 @@ fn DoFog(w : f32) -> f32 {
             d.entryCount = sh->skinned ? 7 : 6;
             d.entries = e;
             WGPUBindGroup bg = wgpuDeviceCreateBindGroup(wgpuGlobals.device, &d);
-
-            if (sh->numBGs >= OBJ_CUSTOM_MAX_BGS)
-            {
-                for (int i = 0; i < sh->numBGs; i++)
-                    wgpuBindGroupRelease(sh->bgs[i].bg);
-                sh->numBGs = 0;
-            }
-            sh->bgs[sh->numBGs] = {v0, v1, bg};
-            sh->numBGs++;
+            sh->bgMap.emplace(key, bg);
             return bg;
         }
 
@@ -1066,6 +1078,7 @@ fn DoFog(w : f32) -> f32 {
             {
                 WGPUInstanceData* inst = &header->inst[i];
                 Material* mat = inst->material;
+                statNoteGeometry(header);
 
                 if (mat)
                 {
@@ -1157,7 +1170,7 @@ fn DoFog(w : f32) -> f32 {
                     uniforms.alphaTest[2] = passes[p].atFunc;
 
                     WGPURenderPipeline pipeline = objCustomPipeline(sh, passes[p].blend, passes[p].zWrite);
-                    wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, pipeline);
+                    passSetPipeline(pipeline);
 
                     uint32 uniOffset = wgpuUniformAlloc(&uniforms, sizeof(ObjectUniforms));
                     uint32 paramsOffset = wgpuUniformAlloc(sh->params, OBJ_CUSTOM_PARAMS_SIZE);
@@ -1170,10 +1183,12 @@ fn DoFog(w : f32) -> f32 {
                     uint32 dynOffsets[3] = {uniOffset, paramsOffset, boneDynOffset};
                     wgpuRenderPassEncoderSetBindGroup(s_frame.renderPass, 0, bg,
                                                       sh->skinned ? 3 : 2, dynOffsets);
-                    wgpuRenderPassEncoderSetVertexBuffer(s_frame.renderPass, 0, inst->vertexBuffer, 0, WGPU_WHOLE_SIZE);
-                    wgpuRenderPassEncoderSetIndexBuffer(s_frame.renderPass, inst->indexBuffer, WGPUIndexFormat_Uint16,
-                                                        0, WGPU_WHOLE_SIZE);
+                    passSetVertexBuffer0(inst->vertexBuffer);
+                    passSetIndexBufferU16(inst->indexBuffer);
                     wgpuRenderPassEncoderDrawIndexed(s_frame.renderPass, inst->numIndices, 1, 0, 0, 0);
+                    s_frameStats.draws++;
+                    s_frameStats.drawsCustom++;
+                    if (p == 1) s_frameStats.drawsGsEmu2++;
                 }
             }
             s_objTex0View = nullptr;

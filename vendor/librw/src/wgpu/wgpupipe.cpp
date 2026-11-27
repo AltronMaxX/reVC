@@ -829,6 +829,8 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                     continue;
                 WGPUInstanceData* inst = &header->inst[i];
                 Material* mat = inst->material;
+                s_frameStats.meshes++;
+                statNoteGeometry(header);
 
                 // Blend enable (the game's VERTEXALPHA). Original RenderWare enables it
                 // when the geometry has vertex alpha, a translucent material colour, OR
@@ -939,7 +941,11 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                         s_renderState.srcBlend, s_renderState.destBlend,
                         passes[p].zWrite, s_renderState.cullMode,
                         s_renderState.zTest != 0);
-                    wgpuRenderPassEncoderSetPipeline(s_frame.renderPass, pipeline);
+                    passSetPipeline(pipeline);
+                    s_frameStats.draws++;
+                    s_frameStats.pipelineBinds++;
+                    s_frameStats.drawsStock++;
+                    if (p == 1) s_frameStats.drawsGsEmu2++;
 
                     // Sub-allocate this draw's uniforms from the shared ring and bind it
                     // with a dynamic offset + a per-texture cached bind group. On ring
@@ -980,9 +986,8 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
                         wgpuRenderPassEncoderSetBindGroup(s_frame.renderPass, 0, fallbackGroup, 1, &zero);
                     }
 
-                    wgpuRenderPassEncoderSetVertexBuffer(s_frame.renderPass, 0, inst->vertexBuffer, 0, WGPU_WHOLE_SIZE);
-                    wgpuRenderPassEncoderSetIndexBuffer(s_frame.renderPass, inst->indexBuffer, WGPUIndexFormat_Uint16,
-                                                        0, WGPU_WHOLE_SIZE);
+                    passSetVertexBuffer0(inst->vertexBuffer);
+                    passSetIndexBufferU16(inst->indexBuffer);
                     wgpuRenderPassEncoderDrawIndexed(s_frame.renderPass, inst->numIndices, 1, 0, 0, 0);
 
                     if (fallbackGroup) wgpuBindGroupRelease(fallbackGroup);
@@ -1117,6 +1122,7 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
             }
 
             WGPUInstanceDataHeader* header = (WGPUInstanceDataHeader*)geo->instData;
+            s_frameStats.atomics++;
             defaultRenderCB(atomic, header);
         }
     } // namespace wgpu
