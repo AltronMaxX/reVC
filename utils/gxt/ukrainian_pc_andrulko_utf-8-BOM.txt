@@ -14447,6 +14447,21 @@ NINTENDO SWITCH CONTROLLER
 [SKIP]
 Натисніть ~h~~k~~VEHICLE_ENTER_EXIT~~w~ щоб пропустити дзвінок.
 
+[FEM_GBK]
+Графічний API
+
+[FEM_GAU]
+Авто
+
+[FEM_GVK]
+VULKAN
+
+[FEM_GGL]
+OPENGL
+
+[FEM_GDX]
+DIRECT3D 12
+
 [FEA_HRT]
 HRTF
 

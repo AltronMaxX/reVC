@@ -5483,6 +5483,9 @@ Du hast nicht genug Geld, um diese Mission zu beginnen.
 [HELP22]
 Begib dich zu dem grünen Haus-Symbol auf dem Radar.
 
+[FES_FMS]
+Formatierung erfolgreich. Weiter mit OK.
+
 [FES_SSC]
 Daten wurden gespeichert. Weiter mit OK.
 
@@ -7164,8 +7167,14 @@ MAUSTASTE R
 [FEC_TWO]
 Nur zwei Tastaturtasten erlaubt
 
+[FEC_UMS]
+Bitte nur eindeutige Maustasten.
+
 [FEC_OMS]
 Nur eine Maustaste erlaubt
+
+[FEC_UJS]
+Bitte nur eindeutige Joystick-Tasten.
 
 [FEC_OJS]
 Nur ein Joystick-Button pro Aktion erlaubt
@@ -11368,6 +11377,9 @@ Zeig her.
 [INT2_L:INTRO]
 Nein, nein, nein, wartet...
 
+[INT3_N:INTRO]
+Oh Scheiße!
+
 {=================================== MISSION TABLE KENT1 ===================================}
 
 [KPM1_A:KENT1]
@@ -14605,8 +14617,32 @@ FENSTERMODUS
 [FED_FLS]
 VOLLBILD
 
+[FEM_SLA]
+Automatisches Speichern nicht vorhanden
+
 [FED_BDL]
 RAHMENLOS
+
+[AUT_MSG]
+Spiel gespeichert!
+
+[SKIP]
+Drücke ~h~~k~~VEHICLE_ENTER_EXIT~~w~, um den Anruf zu überspringen.
+
+[FEM_GBK]
+GRAFIK-API
+
+[FEM_GAU]
+AUTOMATISCH
+
+[FEM_GVK]
+VULKAN
+
+[FEM_GGL]
+OPENGL
+
+[FEM_GDX]
+DIRECT3D 12
 
 [FEM_CSB]
 CUTSCENE BALKEN
@@ -14727,7 +14763,7 @@ PED DENSITY
 [FEM_CAR]
 CAR DENSITY
 
-FEA_HRT]
+[FEA_HRT]
 HRTF
 
 [FEA_HAU]

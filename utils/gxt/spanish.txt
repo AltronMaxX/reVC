@@ -11204,6 +11204,27 @@ Déjame ver.
 [INT2_L:INTRO]
 no, no, no, espera...
 
+[INT2_M:INTRO]
+Tienen una granja en Panamá.
+
+[INT2_N:INTRO]
+Vale, bien, escuchad -
+
+[INT2_O:INTRO]
+chicos, cuando lleguemos, ¿me quedo en el coche
+
+[INT2_P:INTRO]
+o queréis que entre con vosotros?
+
+[INT2_Q:INTRO]
+No. Quédate en el coche.
+
+[INT2_R:INTRO]
+¿Sabes qué? Lo he pensado,
+
+[INT2_S:INTRO]
+Voy a vigilar el coche.
+
 [INT3_N:INTRO]
 ¡Mierda!
 
@@ -14300,8 +14321,32 @@ VENTANA
 [FED_FLS]
 PANTALLA COMPLETA
 
+[FEM_SLA]
+Guardado automático no disponible
+
 [FED_BDL]
 SIN BORDES
+
+[AUT_MSG]
+¡Partida guardada!
+
+[SKIP]
+Pulsa ~h~~k~~VEHICLE_ENTER_EXIT~~w~ para saltarte la llamada.
+
+[FEM_GBK]
+API GRÁFICA
+
+[FEM_GAU]
+AUTOMÁTICO
+
+[FEM_GVK]
+VULKAN
+
+[FEM_GGL]
+OPENGL
+
+[FEM_GDX]
+DIRECT3D 12
 
 [FEM_CSB]
 BORDES EN CINEMÁTICAS

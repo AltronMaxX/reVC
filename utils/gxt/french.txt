@@ -11392,6 +11392,72 @@ Laisse-moi voir.
 [INT2_L:INTRO]
 non, non, non, attends...
 
+[INT2_M:INTRO]
+Ils ont une ferme au Panama.
+
+[INT2_N:INTRO]
+Bon, d'accord, écoutez -
+
+[INT2_O:INTRO]
+les gars, quand on arrivera, je reste dans la voiture,
+
+[INT2_P:INTRO]
+ou vous voulez que j'entre avec vous ?
+
+[INT2_Q:INTRO]
+Non. Reste dans la voiture.
+
+[INT2_R:INTRO]
+Tu sais quoi, j'y ai réfléchi,
+
+[INT2_S:INTRO]
+Je vais surveiller la voiture.
+
+[INT3_N:INTRO]
+Oh merde !
+
+[INT4_A:INTRO]
+Foutus ! On est foutus !
+
+[INT4_B:INTRO]
+C'est tellement typique,
+
+[INT4_C:INTRO]
+Je sors la tête du caniveau une putain de seconde,
+
+[INT4_D:INTRO]
+et le destin me jette de la merde à la figure !
+
+[INT4_E:INTRO]
+Eh bien, va te faire foutre !
+
+[INT4_F:INTRO]
+Ferme-la et arrête de te plaindre ! T'es vivant, non ?
+
+[INT4_G:INTRO]
+Dépose-moi juste ici.
+
+[INT4_H:INTRO]
+Va te débarrasser de la voiture, puis va dormir.
+
+[INT4_I:INTRO]
+Je passerai à ton bureau demain et on pourra commencer à démêler ce bordel.
+
+[INT4_J:INTRO]
+OK, c'est une bonne idée, je vais dormir.
+
+[INT4_K:INTRO]
+Qu'est-ce que tu vas faire ?
+
+[INT4_L:INTRO]
+Retourner à mon hôtel,
+
+[INT4_M:INTRO]
+me vider la tête et comprendre ce merdier.
+
+[INT4_N:INTRO]
+OK.
+
 {=================================== MISSION TABLE KENT1 ===================================}
 
 [KPM1_A:KENT1]
@@ -14605,8 +14671,32 @@ WINDOWED
 [FED_FLS]
 FULLSCREEN
 
+[FEM_SLA]
+Sauvegarde automatique indisponible
+
 [FED_BDL]
 SANS BORDURE
+
+[AUT_MSG]
+Partie sauvegardée !
+
+[SKIP]
+Appuyez sur ~h~~k~~VEHICLE_ENTER_EXIT~~w~ pour passer l'appel.
+
+[FEM_GBK]
+API GRAPHIQUE
+
+[FEM_GAU]
+AUTOMATIQUE
+
+[FEM_GVK]
+VULKAN
+
+[FEM_GGL]
+OPENGL
+
+[FEM_GDX]
+DIRECT3D 12
 
 [FEM_CSB]
 CUTSCENE BORDERS

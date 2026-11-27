@@ -11398,6 +11398,72 @@ Fammi dare un'occhiata.
 [INT2_L:INTRO]
 no, no, no, aspetta...
 
+[INT2_M:INTRO]
+Hanno una fattoria a Panama.
+
+[INT2_N:INTRO]
+Ok, va bene, ascoltate -
+
+[INT2_O:INTRO]
+ragazzi, quando arriviamo, resto in macchina,
+
+[INT2_P:INTRO]
+o volete che entri con voi?
+
+[INT2_Q:INTRO]
+No. Resta in macchina.
+
+[INT2_R:INTRO]
+Sapete cosa? Ci ho pensato,
+
+[INT2_S:INTRO]
+Terrò d'occhio la macchina.
+
+[INT3_N:INTRO]
+Oh merda!
+
+[INT4_A:INTRO]
+Fregati! Siamo fregati!
+
+[INT4_B:INTRO]
+È proprio tipico,
+
+[INT4_C:INTRO]
+Esco dal canale di scolo per un dannato secondo,
+
+[INT4_D:INTRO]
+e il destino mi butta merda in faccia!
+
+[INT4_E:INTRO]
+Beh, vaffanculo!
+
+[INT4_F:INTRO]
+Chiudi il becco e smettila di lamentarti! Sei vivo, no?
+
+[INT4_G:INTRO]
+Lasciami proprio qui.
+
+[INT4_H:INTRO]
+Vai a liberarti della macchina, poi vai a dormire.
+
+[INT4_I:INTRO]
+Passerò nel tuo ufficio domani e potremo iniziare a sistemare questo casino.
+
+[INT4_J:INTRO]
+OK, buona idea, andrò a dormire.
+
+[INT4_K:INTRO]
+Cosa farai?
+
+[INT4_L:INTRO]
+Tornare al mio hotel,
+
+[INT4_M:INTRO]
+schiarirmi le idee e capire questo casino.
+
+[INT4_N:INTRO]
+OK.
+
 {=================================== MISSION TABLE KENT1 ===================================}
 
 [KPM1_A:KENT1]
@@ -14614,8 +14680,32 @@ WINDOWED
 [FED_FLS]
 FULLSCREEN
 
+[FEM_SLA]
+Salvataggio automatico non presente
+
 [FED_BDL]
 SENZA BORDI
+
+[AUT_MSG]
+Partita salvata!
+
+[SKIP]
+Premi ~h~~k~~VEHICLE_ENTER_EXIT~~w~ per saltare la telefonata.
+
+[FEM_GBK]
+API GRAFICA
+
+[FEM_GAU]
+AUTOMATICO
+
+[FEM_GVK]
+VULKAN
+
+[FEM_GGL]
+OPENGL
+
+[FEM_GDX]
+DIRECT3D 12
 
 [FEM_CSB]
 CUTSCENE BORDERS
